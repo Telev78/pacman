@@ -30,73 +30,21 @@ namespace PacmanWinForms
             levelMap = new LevelMap();
             pacman = new Pacman();
 
-            // --- GESTION DU TILE ENGINE PILOTÉ PAR LES DONNÉES ---
-            string mapDirectory = Path.Combine(Application.StartupPath, "asset", "maps");
-            if (!Directory.Exists(mapDirectory)) Directory.CreateDirectory(mapDirectory);
-            string mapPath = Path.Combine(mapDirectory, "original_maze.txt");
+            // --- CONFIGURATION DU TILE ENGINE VIA FICHIER DATA ---
+            // Le fichier est maintenant inclus dans le projet et déployé par Visual Studio !
+            string mapPath = Path.Combine(Application.StartupPath, "asset", "maps", "original_maze.txt");
 
-            // On vérifie si le fichier existe ET s'il fait bien 72 lignes (Physique + Visuel)
-            if (File.Exists(mapPath) && File.ReadAllLines(mapPath).Length == GameConfig.MapHeight * 2)
+            if (File.Exists(mapPath))
             {
-                // Le fichier complet existe, chargement direct de la physique et du visuel !
                 levelMap.LoadMapFromFile(mapPath);
             }
             else
             {
-                // PREMIER LANCEMENT OU MIGRATION :
-                // On recrée temporairement la grille physique d'origine pour pouvoir l'exporter
-                int[,] bootstrapGrid = new int[36, 28]
-                {
-                    {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
-                    {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
-                    {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
-                    {1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1},
-                    {1,2,2,2,2,2,2,2,2,2,2,2,2,1,1,2,2,2,2,2,2,2,2,2,2,2,2,1},
-                    {1,2,1,1,1,1,2,1,1,1,1,1,2,1,1,2,1,1,1,1,1,2,1,1,1,1,2,1},
-                    {1,3,1,1,1,1,2,1,1,1,1,1,2,1,1,2,1,1,1,1,1,2,1,1,1,1,3,1},
-                    {1,2,1,1,1,1,2,1,1,1,1,1,2,1,1,2,1,1,1,1,1,2,1,1,1,1,2,1},
-                    {1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1},
-                    {1,2,1,1,1,1,2,1,1,2,1,1,1,1,1,1,1,1,2,1,1,2,1,1,1,1,2,1},
-                    {1,2,1,1,1,1,2,1,1,2,1,1,1,1,1,1,1,1,2,1,1,2,1,1,1,1,2,1},
-                    {1,2,2,2,2,2,2,1,1,2,2,2,2,1,1,2,2,2,2,1,1,2,2,2,2,2,2,1},
-                    {1,1,1,1,1,1,2,1,1,1,1,1,0,1,1,0,1,1,1,1,1,2,1,1,1,1,1,1},
-                    {0,0,0,0,0,1,2,1,1,1,1,1,0,1,1,0,1,1,1,1,1,2,1,0,0,0,0,0},
-                    {0,0,0,0,0,1,2,1,1,0,0,0,0,0,0,0,0,0,0,1,1,2,1,0,0,0,0,0},
-                    {0,0,0,0,0,1,2,1,1,0,1,1,1,4,4,1,1,1,0,1,1,2,1,0,0,0,0,0},
-                    {1,1,1,1,1,1,2,1,1,0,1,0,0,0,0,0,0,1,0,1,1,2,1,1,1,1,1,1},
-                    {0,0,0,0,0,0,2,0,0,0,1,0,0,0,0,0,0,1,0,0,0,2,0,0,0,0,0,0},
-                    {1,1,1,1,1,1,2,1,1,0,1,0,0,0,0,0,0,1,0,1,1,2,1,1,1,1,1,1},
-                    {0,0,0,0,0,1,2,1,1,0,1,1,1,1,1,1,1,1,0,1,1,2,1,0,0,0,0,0},
-                    {0,0,0,0,0,1,2,1,1,0,0,0,0,0,0,0,0,0,0,1,1,2,1,0,0,0,0,0},
-                    {0,0,0,0,0,1,2,1,1,0,1,1,1,1,1,1,1,1,0,1,1,2,1,0,0,0,0,0},
-                    {1,1,1,1,1,1,2,1,1,0,1,1,1,1,1,1,1,1,0,1,1,2,1,1,1,1,1,1},
-                    {1,2,2,2,2,2,2,2,2,2,2,2,2,1,1,2,2,2,2,2,2,2,2,2,2,2,2,1},
-                    {1,2,1,1,1,1,2,1,1,1,1,1,2,1,1,2,1,1,1,1,1,2,1,1,1,1,2,1},
-                    {1,2,1,1,1,1,2,1,1,1,1,1,2,1,1,2,1,1,1,1,1,2,1,1,1,1,2,1},
-                    {1,3,2,2,1,1,2,2,2,2,2,2,2,0,0,2,2,2,2,2,2,2,1,1,2,2,3,1},
-                    {1,1,1,2,1,1,2,1,1,2,1,1,1,1,1,1,1,1,2,1,1,2,1,1,2,1,1,1},
-                    {1,1,1,2,1,1,2,1,1,2,1,1,1,1,1,1,1,1,2,1,1,2,1,1,2,1,1,1},
-                    {1,2,2,2,2,2,2,1,1,2,2,2,2,1,1,2,2,2,2,1,1,2,2,2,2,2,2,1},
-                    {1,2,1,1,1,1,1,1,1,1,1,1,2,1,1,2,1,1,1,1,1,1,1,1,1,1,2,1},
-                    {1,2,1,1,1,1,1,1,1,1,1,1,2,1,1,2,1,1,1,1,1,1,1,1,1,1,2,1},
-                    {1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1},
-                    {1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1},
-                    {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
-                    {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}
-                };
-
-                // On injecte cette grille physique dans l'objet levelMap
-                for (int r = 0; r < 36; r++)
-                    for (int c = 0; c < 28; c++)
-                        levelMap.Grid[r, c] = bootstrapGrid[r, c];
-
-                // On lance le scan automatique pour obtenir le visuel
-                spriteManager.AutoScanAndBuildVisualGrid(levelMap);
-
-                // On sauvegarde le tout dans le fichier de 72 lignes !
-                levelMap.SaveMapToFile(mapPath);
+                // Sécurité au cas où le fichier est manquant au runtime
+                MessageBox.Show("Fichier de carte introuvable : " + mapPath, "Erreur Critique", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                Application.Exit();
             }
-            // -----------------------------------------------------------------
+            // -----------------------------------------------------
 
             gameTimer = new Timer();
             gameTimer.Interval = 16;
