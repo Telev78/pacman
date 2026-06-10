@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.IO;
@@ -11,9 +12,20 @@ namespace PacmanWinForms
         private SpriteManager spriteManager;
         private Bitmap backgroundMaze;
         private Timer gameTimer;
+        // Timer dédié à la séquence de mort (indépendant du gameTimer)
+        private Timer deathAnimationTimer;
 
         private LevelMap levelMap;
         private Pacman pacman;
+        private bool isLevelEndingFlash = false; // Passer à true pour déclencher l'animation de fin de niveau
+        private int score = 0;
+        private int dotsRemaining = 0;
+        private int lives = 3; // Pac-Man commence généralement avec 3 vies
+        private List<Ghost> ghosts = new List<Ghost>();
+        private Blinky blinky;
+        private int ghostAnimationFrame = 0;
+        private int frameCounter = 0;
+        private int houseTimer = 0; // Compteur de boucles de jeu
 
         public MainForm()
         {
@@ -29,6 +41,8 @@ namespace PacmanWinForms
             spriteManager = new SpriteManager();
             levelMap = new LevelMap();
             pacman = new Pacman();
+            blinky = new Blinky();
+            ghosts.Add(blinky); // On ajoute Blinky à la liste globale des fantômes
 
             // --- CONFIGURATION DU TILE ENGINE VIA FICHIER DATA ---
             // Le fichier est maintenant inclus dans le projet et déployé par Visual Studio !
@@ -37,6 +51,15 @@ namespace PacmanWinForms
             if (File.Exists(mapPath))
             {
                 levelMap.LoadMapFromFile(mapPath);
+                CountInitialPellets(); // <-- Compte les gommes dès que la map est chargée
+                
+                // INTRO : On affiche le score et les 3 vies initiales, 
+                // mais Pac-Man n'est pas encore injecté.
+                UpdateGameTitleScore();
+
+                // Simulation du "READY!" : On fait spawner Pac-Man juste après.
+                // (Plus tard, on pourra mettre un vrai timer de 2 secondes ici pour la musique d'intro !)
+                ResetPositions();
             }
             else
             {
@@ -45,6 +68,10 @@ namespace PacmanWinForms
                 Application.Exit();
             }
             // -----------------------------------------------------
+
+            deathAnimationTimer = new System.Windows.Forms.Timer();
+            deathAnimationTimer.Interval = 70; // Vitesse de l'animation de mort
+            deathAnimationTimer.Tick += DeathAnimationTimer_Tick;
 
             gameTimer = new Timer();
             gameTimer.Interval = 16;
@@ -65,10 +92,43 @@ namespace PacmanWinForms
 
         private void GameLoop(object sender, EventArgs e)
         {
-            // Mettre à jour la position de Pac-Man à chaque tick
+            // 1. Mouvements de Pac-Man
             pacman.Move(levelMap);
 
-            // Redessiner l'écran
+            // --- GESTION DU TIMING DE SORTIE DU NID ---
+            houseTimer++;
+
+            if (houseTimer == 60)       // ~1 seconde
+            {
+                ReleaseGhostFromHouse("Pinky");
+            }
+            else if (houseTimer == 240)  // ~4 secondes
+            {
+                ReleaseGhostFromHouse("Inky");
+            }
+            else if (houseTimer == 480)  // ~8 secondes
+            {
+                ReleaseGhostFromHouse("Clyde");
+            }
+
+            // 2. Mouvements de TOUS les fantômes de la liste
+            foreach (Ghost ghost in ghosts)
+            {
+                ghost.Move(levelMap, pacman);
+            }
+
+            // 3. Gestion de la frame d'animation des fantômes
+            frameCounter++;
+            if (frameCounter % 6 == 0)
+            {
+                ghostAnimationFrame = (ghostAnimationFrame + 1) % 2;
+            }
+
+            // 4. Vérifications des collisions (Gommes ET Fantômes)
+            CheckPelletCollision();
+            CheckGhostCollisions(); // <-- Nouvelle détection de collision ici !
+
+            // 5. Rendu
             this.Invalidate();
         }
 
@@ -128,26 +188,261 @@ namespace PacmanWinForms
                             }
                         }
                     }
+
+                    // C. DESSIN DE LA PORTE DU NID DES FANTÔMES
+                    if (levelMap.Grid[r, c] == 4 && c == 13 && !isLevelEndingFlash)
+                    {
+                        Bitmap door = spriteManager.GetGhostDoorSprite();
+                        g.DrawImage(door, screenX, screenY, 16 * GameConfig.Zoom, 8 * GameConfig.Zoom);
+                    }
                 }
             }
 
-            // 2. Dessiner Pac-Man (Reste inchangé)
+            
+            
+            // 2. Dessiner Pac-Man (avec correction de l'alignement -4px avant Zoom)
             if (pacman != null)
             {
-                // ... (Ton code de rendu Pac-Man existant)
-
-                // 2. Dessiner Pac-Man (avec correction de l'alignement -4px avant Zoom)
-                if (pacman != null)
+                // CORRECTIF : On retire 4 pixels à X et Y pour centrer le sprite de 16px sur la case de 8px
+                int screenX = (int)((pacman.X - 4) * GameConfig.Zoom);
+                int screenY = (int)((pacman.Y - 4) * GameConfig.Zoom);
+                int spriteSize = 16 * GameConfig.Zoom;
+                if (pacman.State == PacmanState.Alive)
                 {
                     // On passe maintenant l'état de l'animation et de la direction actuelle
-                    Bitmap pacmanSprite = spriteManager.GetPacmanSprite(pacman.AnimFrame, pacman.CurrentDirection);
-
-                    // CORRECTIF : On retire 4 pixels à X et Y pour centrer le sprite de 16px sur la case de 8px
-                    int screenX = (int)((pacman.X - 4) * GameConfig.Zoom);
-                    int screenY = (int)((pacman.Y - 4) * GameConfig.Zoom);
-                    int spriteSize = 16 * GameConfig.Zoom;
-
+                    Bitmap pacmanSprite = spriteManager.GetPacmanSprite(pacman.AnimFrame, pacman.CurrentDirection);              
                     g.DrawImage(pacmanSprite, screenX, screenY, spriteSize, spriteSize);
+                }
+                else if (pacman.State == PacmanState.Dying)
+                {
+                    // Dessin de l'animation de mort
+                    Bitmap deathSprite = spriteManager.GetPacmanDeathSprite(pacman.DeathAnimationFrame);
+                    g.DrawImage(deathSprite, screenX, screenY, spriteSize, spriteSize);
+                }
+            }
+            
+            // En arcade, les fantômes disparaissent dès que l'animation de mort commence
+            if (pacman.State == PacmanState.Alive)
+            {
+                foreach (Ghost ghost in ghosts)
+                {
+                    // Récupère dynamiquement "Blinky", "Pinky", "Inky" ou "Clyde" selon la classe de l'objet
+                    string ghostName = ghost.GetType().Name;
+
+                    Bitmap ghostSprite = spriteManager.GetGhostSprite(ghostName, ghost.CurrentDirection, ghostAnimationFrame);
+
+                    int bx = (int)((ghost.X - 4) * GameConfig.Zoom);
+                    int by = (int)((ghost.Y - 4) * GameConfig.Zoom);
+                    // on triche d'un pixel écran vers le haut ou le bas pour compenser l'arrondi du zoom
+                    if (ghost.CurrentState == GhostState.InHouse)
+                    {
+                        by += 1; // Ou += 1 selon le côté où ça déborde chez toi !
+                    }
+                    int spriteScaledSize = 16 * GameConfig.Zoom;
+
+                    g.DrawImage(ghostSprite, bx, by, spriteScaledSize, spriteScaledSize);
+                }
+            }
+        }
+
+        private void CountInitialPellets()
+        {
+            dotsRemaining = 0;
+            for (int r = 0; r < GameConfig.MapHeight; r++)
+            {
+                for (int c = 0; c < GameConfig.MapWidth; c++)
+                {
+                    int tile = levelMap.Grid[r, c];
+                    if (tile == 2 || tile == 3)
+                    {
+                        dotsRemaining++;
+                    }
+                }
+            }
+        }
+
+        private void CheckPelletCollision()
+        {
+            // Convertir les coordonnées de pixels de Pac-Man en index de grille (tuile 8x8)
+            int tileX = (int)(pacman.X / GameConfig.TileSize);
+            int tileY = (int)(pacman.Y / GameConfig.TileSize);
+
+            // Sécurité pour éviter de sortir des limites du tableau (ex: dans les tunnels)
+            if (tileX >= 0 && tileX < GameConfig.MapWidth && tileY >= 0 && tileY < GameConfig.MapHeight)
+            {
+                int currentTile = levelMap.Grid[tileY, tileX];
+
+                if (currentTile == 2) // Pac-gomme normale
+                {
+                    levelMap.Grid[tileY, tileX] = 0; // On vide la case de la grille physique
+                    score += 10;                     // +10 points en arcade
+                    dotsRemaining--;
+
+                    UpdateGameTitleScore();          // Met à jour l'affichage de debug
+                    CheckLevelClear();
+                }
+                else if (currentTile == 3) // Super Pac-gomme (Energizer)
+                {
+                    levelMap.Grid[tileY, tileX] = 0; // On vide la case
+                    score += 50;                     // +50 points en arcade
+                    dotsRemaining--;
+
+                    UpdateGameTitleScore();
+
+                    // TODO: Déclencher le mode effrayé (Frightened) des fantômes ici plus tard !
+
+                    CheckLevelClear();
+                }
+            }
+        }
+
+        // Petite fonction utilitaire pour voir ton score grimper en temps réel dans la barre de la fenêtre
+        private void UpdateGameTitleScore()
+        {
+            this.Text = $"Pac-Man Arcade (C#) - SCORE: {score} - VIES: {lives} - Gommes: {dotsRemaining}";
+        }
+
+        private void CheckLevelClear()
+        {
+            if (dotsRemaining <= 0)
+            {
+                gameTimer.Stop(); // Arrête le jeu
+                MessageBox.Show($"Félicitations ! Vous avez nettoyé le labyrinthe !\nScore final : {score}", "Victoire !");
+                Application.Exit();
+            }
+        }
+
+        private void SpawnPacman()
+        {
+            // 1. On consomme une tentative pour la mettre en jeu
+            lives--;
+
+            // 2. On actualise immédiatement l'affichage (qui va passer de 3 à 2 au premier spawn)
+            UpdateGameTitleScore();
+
+            // 3. Positionnement initial de Pac-Man sur la grille (+3 pour le HUD)
+            pacman.X = 13 * GameConfig.TileSize;
+            pacman.Y = (23 + 3) * GameConfig.TileSize; 
+            pacman.CurrentDirection = Keys.Left;
+            pacman.NextDirection = Keys.None;
+            pacman.State=PacmanState.Alive;
+        }
+
+        private void ResetPositions()
+        {
+            ghosts.Clear();
+            houseTimer = 0;
+
+            // L'ordre d'instanciation est important car Inky a besoin de Blinky !
+            blinky = new Blinky();
+            Pinky pinky = new Pinky();
+            Inky inky = new Inky(blinky);
+            Clyde clyde = new Clyde();
+
+            ghosts.Add(blinky);
+            ghosts.Add(pinky);
+            ghosts.Add(inky);
+            ghosts.Add(clyde);
+
+            SpawnPacman();
+        }
+
+        private void CheckGhostCollisions()
+        {
+            // On passe en revue tous les fantômes présents dans le jeu
+            foreach (Ghost ghost in ghosts)
+            {
+                // Calcul de la distance absolue en pixels d'origine (0-8 px)
+                float distanceX = Math.Abs(pacman.X - ghost.X);
+                float distanceY = Math.Abs(pacman.Y - ghost.Y);
+
+                // Seuil de collision : moins de 6 pixels de distance
+                if (distanceX < 6 && distanceY < 6)
+                {
+                    if (ghost.CurrentState == GhostState.Frightened)
+                    {
+                        // --- CAS 1 : LE FANTÔME EST EFFRAYÉ ---
+                        ghost.CurrentState = GhostState.Eaten;
+                        score += 200; // En arcade : 200, puis 400, 800, 1600 par cycle
+                        UpdateGameTitleScore();
+                        // TODO: Jouer le son de capture et geler brièvement le jeu
+                    }
+                    else if (ghost.CurrentState == GhostState.Scatter || ghost.CurrentState == GhostState.Chase)
+                    {
+                        // --- CAS 2 : LE FANTÔME EST DANGEREUX ---
+                        StartDeathSequence();
+                        break; // On sort de la boucle immédiatement
+                    }
+                    // Si le fantôme est déjà à l'état 'Eaten' (les yeux seuls), il ne se passe rien !
+                }
+            }
+        }
+
+        private void StartDeathSequence()
+        {
+            // 1. On fige le moteur de jeu (plus de mouvements, plus de gommes mangées)
+            gameTimer.Stop();
+
+            // 2. On change l'état de Pac-Man pour le dessin
+            pacman.State = PacmanState.Dying;
+            pacman.DeathAnimationFrame = 0;
+
+            // 3. Pause historique : En arcade, le jeu se fige 1 seconde avant que Pac-Man ne tourne.
+            // Nous simulons cela par un petit timer de pause (ou Task.Delay plus simplement)
+            System.Threading.Thread.Sleep(1000);
+
+            // 4. On lance l'animation cinématique
+            deathAnimationTimer.Start();
+        }
+
+        private void DeathAnimationTimer_Tick(object sender, EventArgs e)
+        {
+            pacman.DeathAnimationFrame++;
+
+            // Forcer le redessin de l'écran pour voir la frame suivante
+            this.Invalidate();
+
+            // Si l'animation est terminée (12 frames)
+            if (pacman.DeathAnimationFrame >= 12)
+            {
+                deathAnimationTimer.Stop();
+
+                // Pause historique après la mort (Pac-Man a disparu)
+                System.Threading.Thread.Sleep(500);
+
+                // On passe à la gestion administrative de la vie perdue
+                CompleteLifeLostSequence();
+            }
+        }
+
+        private void CompleteLifeLostSequence()
+        {
+            // (Cette méthode contient ton ancienne logique administrative)
+            if (lives <= 0)
+            {
+                MessageBox.Show($"GAME OVER\nScore final : {score}", "Fin de partie");
+                Application.Exit();
+            }
+            else
+            {
+                // En arcade, le message "READY!" s'affiche ici
+                ResetPositions();
+
+                // On remet Pac-Man en vie AVANT de relancer le timer de jeu
+                pacman.State = PacmanState.Alive;
+                gameTimer.Start();
+            }
+        }
+
+        private void ReleaseGhostFromHouse(string ghostType)
+        {
+            foreach (Ghost ghost in ghosts)
+            {
+                // On cherche le bon fantôme s'il est encore dans la maison
+                if (ghost.GetType().Name == ghostType && ghost.CurrentState == GhostState.InHouse)
+                {
+                    ghost.CurrentState = GhostState.Exiting;
+                    break; // On a trouvé, on arrête la boucle
                 }
             }
         }

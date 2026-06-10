@@ -4,10 +4,11 @@ using System.Windows.Forms;
 
 namespace PacmanWinForms
 {
+    public enum PacmanState { Alive, Dying }
     public class Pacman
     {
-        public float X { get; private set; }
-        public float Y { get; private set; }
+        public float X { get; set; }
+        public float Y { get; set; }
         public float Speed { get; private set; } = 1.0f; // 1 pixel par tick pour rester synchro avec la grille de 8
 
         public Keys CurrentDirection { get; set; }
@@ -16,6 +17,8 @@ namespace PacmanWinForms
         public int AnimFrame { get; private set; } = 0;
         private int animTick = 0;
         private const int TicksPerFrame = 4;
+        public PacmanState State { get; set; } = PacmanState.Alive;
+        public int DeathAnimationFrame { get; set; } = 0;
 
         public Pacman()
         {

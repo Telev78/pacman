@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
 using System.Windows.Forms;
@@ -10,6 +11,10 @@ namespace PacmanWinForms
         private Bitmap generalSheet;
         private Bitmap mazeSheet;
         private Bitmap textSheet;
+        private Bitmap ghostDoorSprite;
+        private Bitmap[] pacmanDeathSprites;
+        //private Dictionary<Keys, Bitmap[]> blinkySprites;
+        private Dictionary<string, Dictionary<Keys, Bitmap[]>> ghostSprites;
 
         public SpriteManager()
         {
@@ -17,6 +22,86 @@ namespace PacmanWinForms
             generalSheet = new Bitmap(Path.Combine(assetPath, "general.png"));
             mazeSheet = new Bitmap(Path.Combine(assetPath, "maze.png"));
             textSheet = new Bitmap(Path.Combine(assetPath, "text.png"));
+
+            int doorWidth = 16;
+            int doorHeight = 8;
+            ghostDoorSprite = new Bitmap(doorWidth, doorHeight);
+            using (Graphics g = Graphics.FromImage(ghostDoorSprite))
+            {
+                // X = 228 (début du maze vide) + 104 (colonne 13 * 8 px) = 332
+                // Y = 96 (ligne 12 du maze physique * 8 px) = 96
+                g.DrawImage(generalSheet,
+                    new Rectangle(0, 0, doorWidth, doorHeight),
+                    new Rectangle(332, 96, doorWidth, doorHeight),
+                    GraphicsUnit.Pixel);
+            }
+
+            ghostSprites = new Dictionary<string, Dictionary<Keys, Bitmap[]>>();
+
+            string[] ghostNames = { "Blinky", "Pinky", "Inky", "Clyde" };
+            Keys[] dirOrder = { Keys.Right, Keys.Left, Keys.Up, Keys.Down };
+
+            int spriteSize = 16;
+            int startX = 456; // Ton offset horizontal validé
+            int startY = 64;  // Ligne de Blinky
+
+            for (int i = 0; i < ghostNames.Length; i++)
+            {
+                var currentGhostDict = new Dictionary<Keys, Bitmap[]>();
+                // Chaque fantôme est sur la ligne immédiatement inférieure (offset de 16 pixels verticaux)
+                int currentGhostY = startY + (i * spriteSize);
+
+                for (int d = 0; d < dirOrder.Length; d++)
+                {
+                    Bitmap[] frames = new Bitmap[2];
+                    for (int f = 0; f < 2; f++)
+                    {
+                        frames[f] = new Bitmap(spriteSize, spriteSize);
+                        using (Graphics g = Graphics.FromImage(frames[f]))
+                        {
+                            int sheetX = startX + (d * 2 + f) * spriteSize;
+                            g.DrawImage(generalSheet,
+                                new Rectangle(0, 0, spriteSize, spriteSize),
+                                new Rectangle(sheetX, currentGhostY, spriteSize, spriteSize),
+                                GraphicsUnit.Pixel);
+                        }
+                    }
+                    currentGhostDict.Add(dirOrder[d], frames);
+                }
+                ghostSprites.Add(ghostNames[i], currentGhostDict);
+            }
+
+            pacmanDeathSprites = new Bitmap[12];
+            spriteSize = 16;
+            startX = 456 + (3*16); 
+            startY = 0;
+
+            for (int f = 0; f < 12; f++)
+            {
+                pacmanDeathSprites[f] = new Bitmap(spriteSize, spriteSize);
+                using (Graphics g = Graphics.FromImage(pacmanDeathSprites[f]))
+                {
+                    g.DrawImage(generalSheet,
+                        new Rectangle(0, 0, spriteSize, spriteSize),
+                        // Les frames sont généralement alignées horizontalement
+                        new Rectangle(startX + (f * spriteSize), startY, spriteSize, spriteSize),
+                        GraphicsUnit.Pixel);
+                }
+            }
+        }
+        // Nouvelle méthode de récupération universelle
+        public Bitmap GetGhostSprite(string ghostName, Keys direction, int frame)
+        {
+            if (ghostSprites.ContainsKey(ghostName) && ghostSprites[ghostName].ContainsKey(direction))
+            {
+                return ghostSprites[ghostName][direction][frame % 2];
+            }
+            return ghostSprites["Blinky"][Keys.Left][0]; // Repli de secours
+        }
+
+        public Bitmap GetGhostDoorSprite()
+        {
+            return ghostDoorSprite;
         }
 
         public Bitmap GetEmptyMaze()
@@ -75,6 +160,18 @@ namespace PacmanWinForms
             }
 
             return croppedPacman;
+        }
+
+        // Méthode publique pour récupérer la frame d'animation de mort
+        public Bitmap GetPacmanDeathSprite(int frame)
+        {
+            // Sécurité pour ne pas dépasser le tableau
+            if (frame >= 0 && frame < 12)
+                return pacmanDeathSprites[frame];
+
+            // Si on dépasse, on renvoie une frame vide (Pac-Man a disparu)
+            Bitmap empty = new Bitmap(16, 16);
+            return empty;
         }
 
         /// <summary>
