@@ -104,15 +104,15 @@ namespace PacmanWinForms
                 case 6: specs.FrightenedTimeSec = 5; specs.FlashesCount = 5; break;
                 case 7: specs.FrightenedTimeSec = 2; specs.FlashesCount = 5; break;
                 case 8: specs.FrightenedTimeSec = 2; specs.FlashesCount = 5; break;
-                case 9: specs.FrightenedTimeSec = 1; specs.FlashesCount = 5; break;
+                case 9: specs.FrightenedTimeSec = 1; specs.FlashesCount = 3; break;
                 case 10: specs.FrightenedTimeSec = 5; specs.FlashesCount = 5; break;
                 case 11: specs.FrightenedTimeSec = 2; specs.FlashesCount = 5; break;
-                case 12: specs.FrightenedTimeSec = 1; specs.FlashesCount = 5; break;
-                case 13: specs.FrightenedTimeSec = 1; specs.FlashesCount = 5; break;
+                case 12: specs.FrightenedTimeSec = 1; specs.FlashesCount = 3; break;
+                case 13: specs.FrightenedTimeSec = 1; specs.FlashesCount = 3; break;
                 case 14: specs.FrightenedTimeSec = 3; specs.FlashesCount = 5; break;
-                case 15: specs.FrightenedTimeSec = 1; specs.FlashesCount = 5; break;
-                case 16: specs.FrightenedTimeSec = 1; specs.FlashesCount = 5; break;
-                case 18: specs.FrightenedTimeSec = 1; specs.FlashesCount = 5; break;
+                case 15: specs.FrightenedTimeSec = 1; specs.FlashesCount = 3; break;
+                case 16: specs.FrightenedTimeSec = 1; specs.FlashesCount = 3; break;
+                case 18: specs.FrightenedTimeSec = 1; specs.FlashesCount = 3; break;
 
                 // Niveaux 17, 19, 20 et 21+ : Les fantômes ne deviennent PAS vulnérables. 
                 // Ils changent simplement instantanément de direction (demi-tour réglementaire).

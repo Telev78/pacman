@@ -3,15 +3,14 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.IO;
-using System.Security.Cryptography;
 using System.Windows.Forms;
+using System.Diagnostics;
 
 namespace PacmanWinForms
 {
     public partial class MainForm : Form
     {
         private SpriteManager spriteManager;
-        private Bitmap backgroundMaze;
         private Timer gameTimer;
         // Timer dédié à la séquence de mort (indépendant du gameTimer)
         private Timer deathAnimationTimer;
@@ -30,7 +29,9 @@ namespace PacmanWinForms
         private int currentLevel = 1;
         private bool isFrightenedMode = false; // Sera mis à "true" quand on mangera une grosse gomme
         private LevelSpecs currentSpecs;            // Contient toutes les vitesses et configurations du niveau actuel
-        private int frightenedTicksRemaining = 0;   // Compteur de ticks pour la durée de la Super-Gomme
+        private Stopwatch gameStopwatch = new Stopwatch();
+        private int frightenedMsRemaining = 0; // On passe d'un compteur de Ticks à un compteur de Millisecondes
+        private double accumulatedTimeMs = 0;
 
         public MainForm()
         {
@@ -82,6 +83,8 @@ namespace PacmanWinForms
             gameTimer.Interval = 16;
             gameTimer.Tick += GameLoop;
             gameTimer.Start();
+
+            
         }
 
         // Capture les appuis sur le clavier
@@ -97,12 +100,42 @@ namespace PacmanWinForms
 
         private void GameLoop(object sender, EventArgs e)
         {
+            long elapsedMs = gameStopwatch.ElapsedMilliseconds;
+            gameStopwatch.Restart(); // On remet à zéro pour la prochaine frame
+            
+            // SÉCURITÉ (Anti-spirale de la mort) : Si le PC freeze (ex: déplacement de la fenêtre),
+            // on plafonne le delta à 100ms pour éviter que le jeu n'essaie de calculer 400 frames d'un coup.
+            if (elapsedMs > 100) elapsedMs = 100;
+
+            // On accumule le temps réel écoulé
+            accumulatedTimeMs += elapsedMs;
+
+            // Une frame à 60 Hz dure environ 16.67 millisecondes (1000 / 60)
+            const double TargetFrameTime = 16.67;
+
+            // TANT QUE le jeu a du retard sur le temps réel, on exécute une étape de logique fixe
+            while (accumulatedTimeMs >= TargetFrameTime)
+            {
+                UpdateGameLogic();
+                accumulatedTimeMs -= TargetFrameTime;
+            }
+
+            // Une fois la logique à jour, on demande à Windows de redessiner l'écran UNE seule fois
+            this.Invalidate();
+        }
+
+        // Nouvelle méthode dédiée uniquement aux calculs mécaniques du jeu (60 Hz fixe)
+        private void UpdateGameLogic()
+        {
             // --- 1. GESTION DU TIMING DU MODE FRIGHTENED (SUPER-GOMME) ---
             if (isFrightenedMode)
             {
-                frightenedTicksRemaining--;
-                if (frightenedTicksRemaining <= 0)
+                // Puisque cette boucle tourne strictement à 60 Hz, chaque itération retire
+                // exactement la durée d'une frame (16.67 ms, arrondie ici à 16 pour l'entier)
+                frightenedMsRemaining -= 16;
+                if (frightenedMsRemaining <= 0)
                 {
+                    frightenedMsRemaining = 0;
                     isFrightenedMode = false;
                     // On repasse tous les fantômes vivants en mode Normal (Chase/Scatter)
                     foreach (Ghost ghost in ghosts)
@@ -286,12 +319,25 @@ namespace PacmanWinForms
                     // --- DIRECTION DE L'AIGUILLAGE VISUEL SELON L'ÉTAT ---
                     if (ghost.CurrentState == GhostState.Frightened)
                     {
-                        // Le fantôme est effrayé -> Sprite bleu de panique
-                        bool shouldFlashWhite = isFrightenedMode &&
-                            (frightenedTicksRemaining < 120) &&
-                            ((frightenedTicksRemaining / 8) % 2 == 0);
+                        // FIX : On convertit le temps réel restant en "ticks virtuels à 60 FPS"
+                        // 6000 ms / 16.67f = 360 ticks virtuels au début de la phase
+                        int virtualTicksRemaining = (int)(frightenedMsRemaining / 16.67f);
 
-                        // On passe la variable dynamique ici au lieu de 'false'
+                        // Un cycle complet (Bleu -> Blanc -> Bleu) dure 16 frames à 60 FPS (8 bleu / 8 blanc)
+                        const int TicksPerFlashCycle = 16;
+
+                        // Durée totale en ticks pendant laquelle le fantôme doit clignoter avant la fin du mode
+                        int totalFlashTicks = currentSpecs.FlashesCount * TicksPerFlashCycle;
+
+                        // Le fantôme passe au blanc uniquement si :
+                        // 1. Le mode effrayé est actif
+                        // 2. On est entré dans la zone critique de fin de mode (temps restant < temps total de clignotement)
+                        // 3. Le modulo / 8 est pair (détermine le rythme de l'alternance)
+                        bool shouldFlashWhite = isFrightenedMode &&
+                            (virtualTicksRemaining < totalFlashTicks) &&
+                            ((virtualTicksRemaining / 8) % 2 == 0);
+
+                        // On applique le sprite correspondant
                         ghostSprite = spriteManager.GetGhostFrightenedSprite(ghostAnimationFrame, shouldFlashWhite);
                     }
                     else if (ghost.CurrentState == GhostState.Eaten)
@@ -371,8 +417,8 @@ namespace PacmanWinForms
                     if (currentSpecs.FrightenedTimeSec > 0)
                     {
                         isFrightenedMode = true;
-                        // Conversion des secondes en nombre de frames (ex: 6 sec * 60 fps = 360 ticks)
-                        frightenedTicksRemaining = currentSpecs.FrightenedTimeSec * 60;
+                        // FIX : On stocke des millisecondes réelles (ex: 6 * 1000 = 6000 ms)
+                        frightenedMsRemaining = currentSpecs.FrightenedTimeSec * 1000;
 
                         // On force tous les fantômes qui ne sont pas dans le nid ou déjà mangés à paniquer
                         foreach (Ghost ghost in ghosts)
@@ -455,6 +501,7 @@ namespace PacmanWinForms
             ghosts.Add(clyde);
 
             SpawnPacman();
+            gameStopwatch.Start();
         }
 
         private void CheckGhostCollisions()
