@@ -5,11 +5,13 @@ using System.Windows.Forms;
 namespace PacmanWinForms
 {
     public enum PacmanState { Alive, Dying }
+
     public class Pacman
     {
         public float X { get; set; }
         public float Y { get; set; }
-        public float Speed { get; private set; } = 1.0f; // 1 pixel par tick pour rester synchro avec la grille de 8
+        public float Speed { get; set; } = 1.0f;
+        private float speedAccumulator = 0.0f; // Accumulateur physique
 
         public Keys CurrentDirection { get; set; }
         public Keys NextDirection { get; set; }
@@ -22,17 +24,57 @@ namespace PacmanWinForms
 
         public Pacman()
         {
-            X = 104; // Colonne 13 (13 * 8 = 104)
-            Y = 208; // Ligne 26 (26 * 8 = 208) -> Parfaitement aligné !
-
+            X = 104;
+            Y = 208;
             CurrentDirection = Keys.Left;
             NextDirection = Keys.None;
         }
 
-        // On passe la carte en paramètre pour analyser l'environnement
-        public void Move(LevelMap map)
+        // --- MÉTHODE PRINCIPALE MISE À JOUR ---
+        public void Move(LevelMap map, int currentLevel, bool isFrightenedMode)
         {
-            // 1. Est-on parfaitement aligné sur une tuile de 8x8 ?
+            if (State == PacmanState.Dying) return;
+
+            // 1. Lire la table de vitesse
+            var specs = GameConfig.GetSpecsForLevel(currentLevel);
+
+            // 2. Détecter si Pac-Man se trouve actuellement sur une gomme
+            int currentTileX = (int)(X / 8);
+            int currentTileY = (int)(Y / 8);
+            bool isOnDot = false;
+
+            if (currentTileX >= 0 && currentTileX < GameConfig.MapWidth && currentTileY >= 0 && currentTileY < GameConfig.MapHeight)
+            {
+                int tile = map.Grid[currentTileY, currentTileX];
+                isOnDot = (tile == 2 || tile == 3); // 2 = Gomme, 3 = Super-Gomme
+            }
+
+            // 3. Choix de la vitesse exacte selon le tableau A.1
+            float currentSpeed = specs.PacmanNormal;
+            if (isFrightenedMode)
+            {
+                currentSpeed = isOnDot ? specs.FrightenedPacmanDots : specs.FrightenedPacman;
+            }
+            else
+            {
+                currentSpeed = isOnDot ? specs.PacmanDots : specs.PacmanNormal;
+            }
+
+            // 4. Accumulation mécanique
+            speedAccumulator += currentSpeed;
+            int pixelsToMove = (int)speedAccumulator;
+            speedAccumulator -= pixelsToMove;
+
+            // 5. Déplacement pixel par pixel
+            for (int i = 0; i < pixelsToMove; i++)
+            {
+                MoveOnePixel(map);
+            }
+        }
+
+        // --- DÉPLACEMENT UNITAIRE (1 PIXEL) ---
+        private void MoveOnePixel(LevelMap map)
+        {
             bool isAlignedWithGrid = (X % 8 == 0) && (Y % 8 == 0);
 
             if (isAlignedWithGrid)
@@ -40,7 +82,6 @@ namespace PacmanWinForms
                 int currentTileX = (int)(X / 8);
                 int currentTileY = (int)(Y / 8);
 
-                // Essayer d'appliquer le changement de direction voulu par le joueur
                 if (NextDirection != Keys.None)
                 {
                     if (CanMoveInDirection(currentTileX, currentTileY, NextDirection, map))
@@ -50,27 +91,22 @@ namespace PacmanWinForms
                     }
                 }
 
-                // Vérifier si on va percuter un mur dans notre direction actuelle
                 if (!CanMoveInDirection(currentTileX, currentTileY, CurrentDirection, map))
                 {
-                    // Un mur bloque le passage ! On immobilise Pac-Man sur le centre de la tuile.
-                    return;
+                    return; // Stoppé net contre un mur
                 }
 
-                if (this.X < -8) // On utilise une petite marge pour qu'il disparaisse bien
+                if (this.X < -8)
                 {
-                    this.X = 224 + 8; // On le fait réapparaître à droite
+                    this.X = 224 + 8;
                 }
-                // Si Pac-Man dépasse le bord droit
                 else if (this.X > 224 + 8)
                 {
-                    this.X = -8; // On le fait réapparaître à gauche
+                    this.X = -8;
                 }
             }
             else
             {
-                // Règle de l'arcade : Si le joueur demande un demi-tour immédiat (ex: va à droite alors qu'il avance à gauche),
-                // on n'attend pas d'être aligné sur la grille, on l'autorise direct.
                 if (IsOppositeDirection(CurrentDirection, NextDirection))
                 {
                     CurrentDirection = NextDirection;
@@ -78,16 +114,16 @@ namespace PacmanWinForms
                 }
             }
 
-            // 2. Déplacement physique si la voie est libre
+            // Déplacement physique de 1 pixel
             switch (CurrentDirection)
             {
-                case Keys.Up: Y -= Speed; break;
-                case Keys.Down: Y += Speed; break;
-                case Keys.Left: X -= Speed; break;
-                case Keys.Right: X += Speed; break;
+                case Keys.Up: Y -= 1; break;
+                case Keys.Down: Y += 1; break;
+                case Keys.Left: X -= 1; break;
+                case Keys.Right: X += 1; break;
             }
 
-            // 3. Animation de la bouche (uniquement s'il bouge)
+            // Animation
             animTick++;
             if (animTick >= TicksPerFrame)
             {
@@ -96,7 +132,6 @@ namespace PacmanWinForms
             }
         }
 
-        // Méthode de secours pour valider si la case suivante est praticable
         private bool CanMoveInDirection(int tileX, int tileY, Keys dir, LevelMap map)
         {
             int targetX = tileX;
@@ -111,19 +146,14 @@ namespace PacmanWinForms
                 default: return false;
             }
 
-            // Sécurité pour éviter de sortir des index du tableau (ex: dans le tunnel)
             if (targetX < 0 || targetX >= 28 || targetY < 0 || targetY >= 36)
             {
-                // CORRECTIF : Hors-limites, on valide le mouvement UNIQUE-MENT si on reste sur l'axe du tunnel (ligne 17)
-                // et qu'on progresse de gauche à droite ou de droite à gauche.
                 return (targetY == 17 && (dir == Keys.Left || dir == Keys.Right));
             }
 
-            // On ne peut PAS marcher sur un mur (1). La porte du nid (4) est aussi interdite à Pac-Man.
             return map.Grid[targetY, targetX] != 1 && map.Grid[targetY, targetX] != 4;
         }
 
-        // Vérifie si la nouvelle direction est l'exact opposé de l'actuelle
         private bool IsOppositeDirection(Keys dir1, Keys dir2)
         {
             if (dir1 == Keys.Left && dir2 == Keys.Right) return true;

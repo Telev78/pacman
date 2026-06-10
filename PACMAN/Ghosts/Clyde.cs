@@ -9,7 +9,7 @@ namespace PacmanWinForms
         // Départ : Droite du nid (16, 13+3) | Patrouille : Coin inférieur gauche (0, Max)
         public Clyde() : base(16, 13 + 3, new Point(0, GameConfig.MapHeight - 1))
         {
-            this.Speed = 1.0f;
+            
             this.CurrentState = GhostState.InHouse;
             this.CurrentDirection = Keys.Up;
 

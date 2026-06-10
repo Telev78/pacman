@@ -11,7 +11,6 @@ namespace PacmanWinForms
         public Inky(Ghost blinkyRef) : base(12, 13 + 3, new Point(27, GameConfig.MapHeight - 1))
         {
             this.blinky = blinkyRef;
-            this.Speed = 1.0f;
             this.CurrentState = GhostState.InHouse;
             this.CurrentDirection = Keys.Up;
 

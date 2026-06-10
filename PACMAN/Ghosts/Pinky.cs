@@ -8,7 +8,7 @@ namespace PacmanWinForms
         // Départ : Milieu du nid (14, 13+3) | Patrouille : Coin supérieur gauche (0, 0)
         public Pinky() : base(14, 13 + 3, new Point(0, 0))
         {
-            this.Speed = 1.0f;
+            
             this.CurrentState = GhostState.InHouse;
             this.CurrentDirection = Keys.Up;
 

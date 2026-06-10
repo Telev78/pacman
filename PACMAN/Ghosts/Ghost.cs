@@ -1,25 +1,26 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Drawing;
 using System.Windows.Forms;
 
 namespace PacmanWinForms
 {
+    
     public abstract class Ghost
     {
         public float X { get; protected set; }
         public float Y { get; protected set; }
-        public float Speed { get; protected set; } = 1.0f; // 1 pixel par frame à 60 FPS
+        public float Speed { get; set; } = 1.0f;
+        private float speedAccumulator = 0.0f; // Accumulateur pour la gestion physique fine
 
         public Keys CurrentDirection { get; protected set; }
         public GhostState CurrentState { get; set; } = GhostState.Scatter;
-        protected float initialY;       // Mémorise le Y de départ pour l'oscillation
-        protected int bobDirection = 1; // 1 = descend, -1 = monte
+        protected float initialY;
+        protected int bobDirection = 1;
         protected Point ScatterTargetTile { get; set; }
 
         public Ghost(int startTileX, int startTileY, Point scatterTarget)
         {
-            // Positionnement initial calé sur la grille
+            // On repasse sur un calcul de grille brut et neutre
             this.X = startTileX * GameConfig.TileSize;
             this.Y = startTileY * GameConfig.TileSize;
             this.initialY = this.Y;
@@ -27,116 +28,138 @@ namespace PacmanWinForms
             this.CurrentDirection = Keys.Left;
         }
 
-        // --- MÉTHODE PRINCIPALE DE DÉPLACEMENT ---
-        public virtual void Move(LevelMap map, Pacman pacman)
+        // --- MÉTHODE PRINCIPALE MISE À JOUR ---
+        public virtual void Move(LevelMap map, Pacman pacman, int currentLevel)
+        {
+            int currentTileX = (int)(X / GameConfig.TileSize);
+            int currentTileY = (int)(Y / GameConfig.TileSize);
+
+            // ÉTAPE DE RÉSURRECTION : Si les yeux atteignent la porte du nid (Ligne 14, colonnes 13 ou 14)
+            if (CurrentState == GhostState.Eaten && currentTileY == 14 && (currentTileX == 13 || currentTileX == 14))
+            {
+                // 1. On le passe en mode "Sortie du nid" (il reprend sa couleur normale)
+                this.CurrentState = GhostState.Exiting;
+
+                // 2. On le repositionne proprement à l'intérieur du nid (Ligne 17) pour une transition fluide
+                this.Y = 17 * GameConfig.TileSize;
+                this.X = 14 * GameConfig.TileSize - 4; // Centré au milieu de la porte
+
+                return; // On stoppe l'I.A des yeux pour ce tick afin d'éviter les conflits
+            }
+
+            // 1. Récupération des spécifications de vitesse du niveau
+            var specs = GameConfig.GetSpecsForLevel(currentLevel);
+            float currentSpeed = specs.GhostNormal;
+
+            // 2. Ajustement de la vitesse selon l'état du fantôme
+            if (CurrentState == GhostState.InHouse)
+            {
+                currentSpeed = specs.GhostNormal * 0.5f; // Danse ralentie dans le nid
+            }
+            else if (CurrentState == GhostState.Exiting)
+            {
+                currentSpeed = specs.GhostNormal * 0.4f; // Vitesse de transition pour sortir
+            }
+            else if (CurrentState == GhostState.Frightened)
+            {
+                currentSpeed = specs.FrightenedGhost;   // Ralentissement mode panique
+            }
+            else if (CurrentState == GhostState.Eaten)
+            {
+                currentSpeed = 2.0f; // Les yeux morts foncent au nid à 200% de vitesse (2px/frame)
+            }
+            else
+            {
+                // Vérification du tunnel de l'arcade (Ligne 17, colonnes extérieures)
+                if (currentTileY == 17 && (currentTileX < 6 || currentTileX > 21))
+                {
+                    currentSpeed = specs.GhostTunnel;
+                }
+            }
+
+            // 3. Accumulation de la vitesse fractionnaire
+            speedAccumulator += currentSpeed;
+            int pixelsToMove = (int)speedAccumulator;
+            speedAccumulator -= pixelsToMove;
+
+            // 4. Déplacement physique d'exactement 1 pixel par itération
+            for (int i = 0; i < pixelsToMove; i++)
+            {
+                MoveOnePixel(map, pacman);
+            }
+        }
+
+        // --- DÉPLACEMENT UNITAIRE (1 PIXEL) ---
+        private void MoveOnePixel(LevelMap map, Pacman pacman)
         {
             // --- ROUTINE DU NID ---
             if (CurrentState == GhostState.InHouse)
             {
-                // Vitesse réduite à l'intérieur du nid (historiquement ~50% de la vitesse normale)
-                float houseSpeed = this.Speed * 0.5f;
-
-                // On applique le mouvement vertical
-                Y += bobDirection * houseSpeed;
-
-                // Limite de l'oscillation : 4 pixels vers le haut ou vers le bas
+                Y += bobDirection;
                 int bobRange = 4;
 
                 if (Y >= initialY + bobRange)
                 {
                     Y = initialY + bobRange;
-                    bobDirection = -1;          // On change de sens (on remonte)
-                    CurrentDirection = Keys.Up; // L'animation des yeux regardera vers le bas
+                    bobDirection = -1;
+                    CurrentDirection = Keys.Up;
                 }
                 else if (Y <= initialY - bobRange)
                 {
                     Y = initialY - bobRange;
-                    bobDirection = 1;           // On change de sens (on redescend)
-                    CurrentDirection = Keys.Down;   // L'animation des yeux regardera vers le haut
+                    bobDirection = 1;
+                    CurrentDirection = Keys.Down;
                 }
-
-                // TRÈS IMPORTANT : On fait un "return" ici pour ignorer complètement 
-                // le reste de la méthode Move (pas de calcul de tuiles ni de murs) !
                 return;
             }
 
             // --- CINÉMATIQUE DE SORTIE ---
             if (CurrentState == GhostState.Exiting)
             {
-                // Coordonnées cibles basées sur tes offsets d'alignement (-4)
-                float targetX = 14 * GameConfig.TileSize - 4; // Centre parfait (colonne de Pinky)
-                float targetY = 14 * GameConfig.TileSize; // Juste dehors (ligne de Blinky)
+                float targetX = 14 * GameConfig.TileSize - 4;
+                float targetY = 14 * GameConfig.TileSize;
 
-                // Phase A : On s'aligne horizontalement sur le centre du nid
                 if (X != targetX)
                 {
-                    if (Math.Abs(X - targetX) <= this.Speed)
-                    {
-                        X = targetX; // Alignement précis
-                    }
-                    else if (X < targetX)
-                    {
-                        X += this.Speed;
-                        CurrentDirection = Keys.Right;
-                    }
-                    else if (X > targetX)
-                    {
-                        X -= this.Speed;
-                        CurrentDirection = Keys.Left;
-                    }
+                    if (X < targetX) { X += 1; CurrentDirection = Keys.Right; }
+                    else { X -= 1; CurrentDirection = Keys.Left; }
                 }
-                // Phase B : Une fois centré, on monte vers la sortie
                 else if (Y > targetY)
                 {
-                    if (Math.Abs(Y - targetY) <= this.Speed)
-                    {
-                        Y = targetY;
-                    }
-                    else
-                    {
-                        Y -= this.Speed;
-                        CurrentDirection = Keys.Up; // Les yeux regardent vers le haut
-                    }
+                    Y -= 1;
+                    CurrentDirection = Keys.Up;
                 }
-                // Phase C : Le fantôme est officiellement dehors !
                 else
                 {
-                    CurrentState = GhostState.Scatter; // Il commence sa patrouille extérieure
-                    CurrentDirection = Keys.Left;      // Direction par défaut à la sortie
+                    CurrentState = GhostState.Scatter;
+                    CurrentDirection = Keys.Left;
                 }
-
-                return; // On court-circuite le pathfinding tant qu'on sort
+                return;
             }
 
-            // 1. Sommes-nous parfaitement centrés sur une tuile (grille de 8x8) ?
+            // 1. Sommes-nous alignés au pixel près sur le centre d'une tuile ?
             if ((X % GameConfig.TileSize == 0) && (Y % GameConfig.TileSize == 0))
             {
                 int currentTileX = (int)(X / GameConfig.TileSize);
                 int currentTileY = (int)(Y / GameConfig.TileSize);
 
-                // Gérer le passage secret des tunnels (bords de l'écran)
                 HandleTunnelTeleport(currentTileX);
-
-                // Calculer la prochaine direction à prendre à cette intersection
                 CurrentDirection = ChooseNextDirection(map, pacman, currentTileX, currentTileY);
             }
 
-            // 2. Déplacement physique en fonction de la direction validée
+            // 2. Déplacement physique d'un pixel strict
             switch (CurrentDirection)
             {
-                case Keys.Up: Y -= Speed; break;
-                case Keys.Down: Y += Speed; break;
-                case Keys.Left: X -= Speed; break;
-                case Keys.Right: X += Speed; break;
+                case Keys.Up: Y -= 1; break;
+                case Keys.Down: Y += 1; break;
+                case Keys.Left: X -= 1; break;
+                case Keys.Right: X += 1; break;
             }
         }
 
-        // --- L'ALGORITHME DE DÉCISION ARCADE ---
         private Keys ChooseNextDirection(LevelMap map, Pacman pacman, int currentTileX, int currentTileY)
         {
             Point targetTile = GetCurrentTargetTile(pacman);
-
-            // Liste des directions possibles (Haut, Gauche, Bas, Droite -> Ordre de priorité officiel)
             Keys[] directionsToTest = { Keys.Up, Keys.Left, Keys.Down, Keys.Right };
 
             Keys bestDirection = CurrentDirection;
@@ -144,11 +167,9 @@ namespace PacmanWinForms
 
             foreach (Keys dir in directionsToTest)
             {
-                // Un fantôme ne fait JAMAIS de demi-tour volontaire (180° interdit)
                 if (dir == GetOppositeDirection(CurrentDirection))
                     continue;
 
-                // Calculer la position de la tuile voisine selon la direction testée
                 int nextX = currentTileX;
                 int nextY = currentTileY;
 
@@ -160,19 +181,14 @@ namespace PacmanWinForms
                     case Keys.Right: nextX++; break;
                 }
 
-                // Vérifier si cette tuile est un mur (1) ou s'il s'agit de la grille valide
                 if (nextX >= 0 && nextX < GameConfig.MapWidth && nextY >= 0 && nextY < GameConfig.MapHeight)
                 {
                     int tileType = map.Grid[nextY, nextX];
 
-                    // Le fantôme peut marcher partout SAUF sur les murs (1)
-                    // Note : En mode normal, il ne retourne dans le nid (4) que s'il est mort (Eaten)
                     if (tileType != 1 && (tileType != 4 || CurrentState == GhostState.Eaten))
                     {
-                        // Calcul de la distance de Pythagore (au carré pour optimiser) entre la tuile testée et la cible
                         double distance = Math.Pow(nextX - targetTile.X, 2) + Math.Pow(nextY - targetTile.Y, 2);
 
-                        // Si c'est plus court (ou premier choix égal grâce à l'ordre du tableau), on valide
                         if (distance < shortestDistance)
                         {
                             shortestDistance = distance;
@@ -185,7 +201,6 @@ namespace PacmanWinForms
             return bestDirection;
         }
 
-        // --- GESTION ADMINISTRATIVE DU FANTÔME ---
         private Point GetCurrentTargetTile(Pacman pacman)
         {
             if (CurrentState == GhostState.Scatter)
@@ -196,12 +211,11 @@ namespace PacmanWinForms
 
             if (CurrentState == GhostState.Frightened)
             {
-                // Mode effrayé : Choix semi-aléatoire (Simulé ici par une cible changeante)
                 Random rand = new Random();
                 return new Point(rand.Next(0, GameConfig.MapWidth), rand.Next(0, GameConfig.MapHeight));
             }
 
-            return new Point(13, 14); // Mode Eaten : Ils ciblent le dessus de la porte pour rentrer
+            return new Point(13, 14);
         }
 
         private Keys GetOppositeDirection(Keys dir)
@@ -213,16 +227,24 @@ namespace PacmanWinForms
             return Keys.None;
         }
 
+        public void ForceDemiTour()
+        {
+            // Un fantôme ne fait demi-tour que s'il est actif sur la carte
+            // (On ne force pas le demi-tour s'il est dans le nid ou déjà mort sous forme d'yeux)
+            if (CurrentState == GhostState.Chase || CurrentState == GhostState.Scatter || CurrentState == GhostState.Frightened)
+            {
+                this.CurrentDirection = GetOppositeDirection(this.CurrentDirection);
+            }
+        }
+
         private void HandleTunnelTeleport(int currentTileX)
         {
-            // Téléportation fluide dans le tunnel (gauche <-> droite)
             if (currentTileX < 0 && CurrentDirection == Keys.Left)
                 X = (GameConfig.MapWidth - 1) * GameConfig.TileSize;
             else if (currentTileX >= GameConfig.MapWidth && CurrentDirection == Keys.Right)
                 X = 0;
         }
 
-        // --- MÉTHODE ABSTRAITE ---
         protected abstract Point GetChaseTargetTile(Pacman pacman);
     }
 }

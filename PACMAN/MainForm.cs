@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.IO;
+using System.Security.Cryptography;
 using System.Windows.Forms;
 
 namespace PacmanWinForms
@@ -26,6 +27,10 @@ namespace PacmanWinForms
         private int ghostAnimationFrame = 0;
         private int frameCounter = 0;
         private int houseTimer = 0; // Compteur de boucles de jeu
+        private int currentLevel = 1;
+        private bool isFrightenedMode = false; // Sera mis à "true" quand on mangera une grosse gomme
+        private LevelSpecs currentSpecs;            // Contient toutes les vitesses et configurations du niveau actuel
+        private int frightenedTicksRemaining = 0;   // Compteur de ticks pour la durée de la Super-Gomme
 
         public MainForm()
         {
@@ -92,43 +97,93 @@ namespace PacmanWinForms
 
         private void GameLoop(object sender, EventArgs e)
         {
-            // 1. Mouvements de Pac-Man
-            pacman.Move(levelMap);
+            // --- 1. GESTION DU TIMING DU MODE FRIGHTENED (SUPER-GOMME) ---
+            if (isFrightenedMode)
+            {
+                frightenedTicksRemaining--;
+                if (frightenedTicksRemaining <= 0)
+                {
+                    isFrightenedMode = false;
+                    // On repasse tous les fantômes vivants en mode Normal (Chase/Scatter)
+                    foreach (Ghost ghost in ghosts)
+                    {
+                        if (ghost.CurrentState == GhostState.Frightened)
+                        {
+                            ghost.CurrentState = GhostState.Scatter; // Ou ton état par défaut
+                        }
+                    }
+                }
+            }
 
-            // --- GESTION DU TIMING DE SORTIE DU NID ---
+            // --- 2. CALCUL ET INJECTION DE LA VITESSE DE PAC-MAN ---
+            int pTileX = (int)(pacman.X / GameConfig.TileSize);
+            int pTileY = (int)(pacman.Y / GameConfig.TileSize);
+
+            // Est-ce que Pac-Man est actuellement sur une case contenant une gomme ?
+            bool isPacmanEating = false;
+            if (pTileX >= 0 && pTileX < GameConfig.MapWidth && pTileY >= 0 && pTileY < GameConfig.MapHeight)
+            {
+                int tile = levelMap.Grid[pTileY, pTileX];
+                isPacmanEating = (tile == 2 || tile == 3);
+            }
+
+            // Sélection de la vitesse selon la matrice officielle
+            if (isFrightenedMode)
+            {
+                pacman.Speed = isPacmanEating ? currentSpecs.FrightenedPacmanDots : currentSpecs.FrightenedPacman;
+            }
+            else
+            {
+                pacman.Speed = isPacmanEating ? currentSpecs.PacmanDots : currentSpecs.PacmanNormal;
+            }
+
+            // Déplacement de Pac-Man (tu peux enlever currentLevel s'il utilise désormais pacman.Speed)
+            pacman.Move(levelMap, currentLevel, isFrightenedMode);
+
+
+            // --- 3. GESTION DU TIMING DE SORTIE DU NID ---
             houseTimer++;
+            if (houseTimer == 60) ReleaseGhostFromHouse("Pinky");
+            else if (houseTimer == 240) ReleaseGhostFromHouse("Inky");
+            else if (houseTimer == 480) ReleaseGhostFromHouse("Clyde");
 
-            if (houseTimer == 60)       // ~1 seconde
-            {
-                ReleaseGhostFromHouse("Pinky");
-            }
-            else if (houseTimer == 240)  // ~4 secondes
-            {
-                ReleaseGhostFromHouse("Inky");
-            }
-            else if (houseTimer == 480)  // ~8 secondes
-            {
-                ReleaseGhostFromHouse("Clyde");
-            }
 
-            // 2. Mouvements de TOUS les fantômes de la liste
+            // --- 4. CALCUL ET INJECTION DE LA VITESSE DES FANTÔMES ---
             foreach (Ghost ghost in ghosts)
             {
-                ghost.Move(levelMap, pacman);
+                int gTileX = (int)(ghost.X / GameConfig.TileSize);
+                int gTileY = (int)(ghost.Y / GameConfig.TileSize);
+
+                // Détection du tunnel latéral (Ligne 14 d'origine + 3 lignes de HUD = Ligne 17)
+                // Les tunnels ralentissent fortement les fantômes en arcade
+                bool isInTunnel = (gTileY == 17 && (gTileX <= 5 || gTileX >= 22));
+
+                if (ghost.CurrentState == GhostState.Frightened)
+                {
+                    ghost.Speed = currentSpecs.FrightenedGhost;
+                }
+                else if (isInTunnel)
+                {
+                    ghost.Speed = currentSpecs.GhostTunnel;
+                }
+                else
+                {
+                    ghost.Speed = currentSpecs.GhostNormal;
+                }
+
+                ghost.Move(levelMap, pacman, currentLevel);
             }
 
-            // 3. Gestion de la frame d'animation des fantômes
+            // --- 5. ANIMATIONS, COLLISIONS ET RENDU ---
             frameCounter++;
             if (frameCounter % 6 == 0)
             {
                 ghostAnimationFrame = (ghostAnimationFrame + 1) % 2;
             }
 
-            // 4. Vérifications des collisions (Gommes ET Fantômes)
             CheckPelletCollision();
-            CheckGhostCollisions(); // <-- Nouvelle détection de collision ici !
+            CheckGhostCollisions();
 
-            // 5. Rendu
             this.Invalidate();
         }
 
@@ -220,26 +275,48 @@ namespace PacmanWinForms
                     g.DrawImage(deathSprite, screenX, screenY, spriteSize, spriteSize);
                 }
             }
-            
+
             // En arcade, les fantômes disparaissent dès que l'animation de mort commence
             if (pacman.State == PacmanState.Alive)
             {
                 foreach (Ghost ghost in ghosts)
                 {
-                    // Récupère dynamiquement "Blinky", "Pinky", "Inky" ou "Clyde" selon la classe de l'objet
-                    string ghostName = ghost.GetType().Name;
+                    Bitmap ghostSprite;
 
-                    Bitmap ghostSprite = spriteManager.GetGhostSprite(ghostName, ghost.CurrentDirection, ghostAnimationFrame);
+                    // --- DIRECTION DE L'AIGUILLAGE VISUEL SELON L'ÉTAT ---
+                    if (ghost.CurrentState == GhostState.Frightened)
+                    {
+                        // Le fantôme est effrayé -> Sprite bleu de panique
+                        bool shouldFlashWhite = isFrightenedMode &&
+                            (frightenedTicksRemaining < 120) &&
+                            ((frightenedTicksRemaining / 8) % 2 == 0);
 
+                        // On passe la variable dynamique ici au lieu de 'false'
+                        ghostSprite = spriteManager.GetGhostFrightenedSprite(ghostAnimationFrame, shouldFlashWhite);
+                    }
+                    else if (ghost.CurrentState == GhostState.Eaten)
+                    {
+                        // Le fantôme a été mangé -> On n'affiche que ses yeux
+                        ghostSprite = spriteManager.GetGhostEyesSprite(ghost.CurrentDirection);
+                    }
+                    else
+                    {
+                        // État normal (Scatter, Chase, InHouse, Exiting) -> Look d'origine
+                        string ghostName = ghost.GetType().Name;
+                        ghostSprite = spriteManager.GetGhostSprite(ghostName, ghost.CurrentDirection, ghostAnimationFrame);
+                    }
+
+                    // Calcul des coordonnées à l'écran (identique à ton code)
                     int bx = (int)((ghost.X - 4) * GameConfig.Zoom);
                     int by = (int)((ghost.Y - 4) * GameConfig.Zoom);
-                    // on triche d'un pixel écran vers le haut ou le bas pour compenser l'arrondi du zoom
+
                     if (ghost.CurrentState == GhostState.InHouse)
                     {
-                        by += 1; // Ou += 1 selon le côté où ça déborde chez toi !
+                        by += 1;
                     }
                     int spriteScaledSize = 16 * GameConfig.Zoom;
 
+                    // Dessin du sprite sélectionné
                     g.DrawImage(ghostSprite, bx, by, spriteScaledSize, spriteScaledSize);
                 }
             }
@@ -284,12 +361,44 @@ namespace PacmanWinForms
                 else if (currentTile == 3) // Super Pac-gomme (Energizer)
                 {
                     levelMap.Grid[tileY, tileX] = 0; // On vide la case
-                    score += 50;                     // +50 points en arcade
+                    score += 50;                     // +50 points
                     dotsRemaining--;
 
                     UpdateGameTitleScore();
 
-                    // TODO: Déclencher le mode effrayé (Frightened) des fantômes ici plus tard !
+                    // --- DÉCLENCHEMENT DU MODE FRIGHTENED VIA SPECS ---
+                    // Si le niveau autorise la panique (temps > 0)
+                    if (currentSpecs.FrightenedTimeSec > 0)
+                    {
+                        isFrightenedMode = true;
+                        // Conversion des secondes en nombre de frames (ex: 6 sec * 60 fps = 360 ticks)
+                        frightenedTicksRemaining = currentSpecs.FrightenedTimeSec * 60;
+
+                        // On force tous les fantômes qui ne sont pas dans le nid ou déjà mangés à paniquer
+                        foreach (Ghost ghost in ghosts)
+                        {
+                            if (ghost.CurrentState == GhostState.Chase || ghost.CurrentState == GhostState.Scatter)
+                            {
+                                ghost.CurrentState = GhostState.Frightened;
+                                // En arcade, un changement d'état force aussi un demi-tour immédiat !
+                                ghost.ForceDemiTour();
+                            }
+                            else if (ghost.CurrentState == GhostState.Frightened)
+                            {
+                                // Si une autre super-gomme est mangée alors qu'ils sont déjà bleus,
+                                // l'arcade originale veut qu'ils fassent à nouveau un demi-tour !
+                                ghost.ForceDemiTour();
+                            }
+                        }
+                    }
+                    else
+                    {
+                        // Aux niveaux 17, 19, 20+, les fantômes ne font qu'un demi-tour sans paniquer !
+                        foreach (Ghost ghost in ghosts)
+                        {
+                            ghost.ForceDemiTour();
+                        }
+                    }
 
                     CheckLevelClear();
                 }
@@ -330,6 +439,7 @@ namespace PacmanWinForms
 
         private void ResetPositions()
         {
+            this.currentSpecs = GameConfig.GetSpecsForLevel(this.currentLevel);
             ghosts.Clear();
             houseTimer = 0;
 
