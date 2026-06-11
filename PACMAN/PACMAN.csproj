@@ -46,6 +46,8 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Game.cs" />
+    <Compile Include="GameState.cs" />
     <Compile Include="Ghosts\Blinky.cs" />
     <Compile Include="Ghosts\Clyde.cs" />
     <Compile Include="Ghosts\Ghost.cs" />

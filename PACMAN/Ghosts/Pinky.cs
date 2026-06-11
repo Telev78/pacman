@@ -10,7 +10,7 @@ namespace PacmanWinForms
         {
             
             this.CurrentState = GhostState.InHouse;
-            this.CurrentDirection = Keys.Up;
+            this.CurrentDirection = Keys.Down;
 
             // AJUSTEMENT ARCADE : Centrage parfait dans le nid
             this.X -= 4;
