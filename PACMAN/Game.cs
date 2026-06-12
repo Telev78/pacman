@@ -39,6 +39,19 @@ namespace PacmanWinForms
         private int ghostsEatenInCurrentFrightenedMode = 0;
         private int ghostEatenFreezeTimer = 0;
         private bool isBonusLifeAwarded = false;
+        // --- ÉTAT ET LOGIQUE DES FRUITS ---
+        public bool IsFruitActive { get; private set; } = false;
+        public int FruitX { get; private set; }
+        public int FruitY { get; private set; }
+        public int FruitTimer { get; private set; } = 0;
+
+        public bool IsFruitScoreActive { get; private set; } = false;
+        public int FruitScoreTimer { get; private set; } = 0;
+        public int CurrentFruitValue { get; private set; } = 100;
+
+        private int initialDotsCount = 0;
+        private bool fruit70Spawned = false;
+        private bool fruit170Spawned = false;
 
         public Game()
         {
@@ -84,6 +97,11 @@ namespace PacmanWinForms
                     }
                 }
             }
+
+            // Initialisation pour le suivi des fruits (ne se réinitialise pas à la mort)
+            initialDotsCount = DotsRemaining;
+            fruit70Spawned = false;
+            fruit170Spawned = false;
         }
 
         public void ResetPositions()
@@ -103,6 +121,11 @@ namespace PacmanWinForms
             Ghosts.Add(clyde);
 
             SpawnPacman();
+
+            // Reset du fruit temporaire pour la nouvelle vie
+            IsFruitActive = false;
+            IsFruitScoreActive = false;
+
             State = GameState.Ready;
             readyTimer = 240;        // 240 frames = ~4 secondes à 60 Hz
             ShowCharacters = false;  // Cachés au tout début !
@@ -166,6 +189,43 @@ namespace PacmanWinForms
             }
 
             if (State != GameState.Playing) return;
+
+            // --- GESTION DU FRUIT (TIMERS ET COLLISION) ---
+            if (IsFruitActive)
+            {
+                FruitTimer--;
+                if (FruitTimer <= 0)
+                {
+                    IsFruitActive = false; // Le fruit disparait après ~10 secondes
+                }
+                else
+                {
+                    CheckFruitCollision();
+                }
+            }
+
+            if (IsFruitScoreActive)
+            {
+                FruitScoreTimer--;
+                if (FruitScoreTimer <= 0)
+                {
+                    IsFruitScoreActive = false;
+                }
+            }
+
+            // --- VÉRIFICATION DES SEUILS DE SPAWN (70 et 170 gommes mangées) ---
+            int dotsEaten = initialDotsCount - DotsRemaining;
+
+            if (!fruit70Spawned && dotsEaten >= 70)
+            {
+                fruit70Spawned = true;
+                SpawnFruit();
+            }
+            if (!fruit170Spawned && dotsEaten >= 170)
+            {
+                fruit170Spawned = true;
+                SpawnFruit();
+            }
 
             // TIMING DU MODE FRIGHTENED
             if (IsFrightenedMode)
@@ -341,8 +401,8 @@ namespace PacmanWinForms
 
                         // Sauvegarde des infos pour le dessin stationnaire du score
                         JustEatenGhost = ghost;
-                        EatenGhostScoreX = (int)((ghost.X - 4) * GameConfig.Zoom);
-                        EatenGhostScoreY = (int)((ghost.Y - 4) * GameConfig.Zoom);
+                        EatenGhostScoreX = (int)((ghost.X - 4));
+                        EatenGhostScoreY = (int)((ghost.Y - 4));
                         EatenGhostScoreValue = points;
 
                         // Déclenchement du mode Freeze Arcade (1 seconde)
@@ -452,6 +512,50 @@ namespace PacmanWinForms
 
                 // Note : Si plus tard tu ajoutes des bruitages, 
                 // c'est ici qu'il faudra déclencher le son de la vie supplémentaire !
+            }
+        }
+
+        private void SpawnFruit()
+        {
+            IsFruitActive = true;
+            FruitTimer = 600; // 600 frames = 10 secondes exactes à 60 Hz
+
+            // Alignement parfait sous le nid (Même X que le spawn de Pac-man, ligne 20)
+            FruitX = (13 * GameConfig.TileSize);
+            FruitY = (20 * GameConfig.TileSize) - 4;
+
+            CurrentFruitValue = GetFruitValueForLevel(CurrentLevel);
+        }
+
+        private int GetFruitValueForLevel(int level)
+        {
+            if (level == 1) return 100;
+            if (level == 2) return 300;
+            if (level == 3 || level == 4) return 500;
+            if (level == 5 || level == 6) return 700;
+            if (level == 7 || level == 8) return 1000;
+            if (level == 9 || level == 10) return 2000;
+            if (level == 11 || level == 12) return 3000;
+            return 5000; // Niveau 13+ (Clé)
+        }
+
+        private void CheckFruitCollision()
+        {
+            // Collision basée sur les cases centrales (Règle arcade)
+            int pacmanTileX = (int)((Pacman.X + 4) / GameConfig.TileSize);
+            int pacmanTileY = (int)((Pacman.Y + 4) / GameConfig.TileSize);
+
+            int fruitTileX = (int)((FruitX + 4) / GameConfig.TileSize); // Donnera colonne 14
+            int fruitTileY = (int)((FruitY + 4) / GameConfig.TileSize); // Donnera ligne 20
+
+            if (pacmanTileX == fruitTileX && pacmanTileY == fruitTileY)
+            {
+                IsFruitActive = false;
+                AddScore(CurrentFruitValue);
+
+                // Déclenche l'affichage du score flottant
+                IsFruitScoreActive = true;
+                FruitScoreTimer = 120; // Affiché pendant 2 secondes (120 frames), sans figer le jeu
             }
         }
     }

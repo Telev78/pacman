@@ -19,12 +19,25 @@ namespace PacmanWinForms
         private Bitmap[] frightenedWhiteSprites; // Utile pour la fin du mode panic !
         private Dictionary<Keys, Bitmap> eyesSprites;
 
+        public enum ArcadeColor
+        {
+            White = 0,
+            Red = 1,
+            Pink = 2,
+            Cyan = 3,
+            Orange = 4,
+            Flesh = 5,  // Couleur chair
+            Yellow = 6
+        }
+
         public SpriteManager()
         {
             string assetPath = Path.Combine(Application.StartupPath, "asset");
             generalSheet = new Bitmap(Path.Combine(assetPath, "general.png"));
             mazeSheet = new Bitmap(Path.Combine(assetPath, "maze.png"));
             textSheet = new Bitmap(Path.Combine(assetPath, "text.png"));
+
+            generalSheet.MakeTransparent(Color.Black);
 
             int doorWidth = 16;
             int doorHeight = 8;
@@ -324,10 +337,9 @@ namespace PacmanWinForms
         }
 
         /// <summary>
-        /// Extrait un caractère 8x8 depuis text.png.
-        /// Index des couleurs (colorSet) : 0=Blanc, 1=Rouge, 2=Rose, 3=Cyan, 4=Orange, 5=Chair, 6=Jaune
+        /// Extrait un caractère 8x8 depuis text.png en utilisant la couleur spécifiée.
         /// </summary>
-        public Bitmap GetArcadeCharacter(char c, int colorSet = 6) // 6 = Jaune par défaut pour READY!
+        public Bitmap GetArcadeCharacter(char c, ArcadeColor color = ArcadeColor.Yellow) // Jaune par défaut
         {
             int rowOffset = 0;
             int col = 0;
@@ -384,7 +396,9 @@ namespace PacmanWinForms
 
             // Chaque bloc de couleur fait exactement 4 lignes de 8 pixels de haut (= 32 pixels)
             int pixelX = col * 8;
-            int pixelY = ((colorSet * 4) + rowOffset) * 8;
+
+            // REFACTORING : On cast l'enum en entier pour le calcul mathématique de l'offset Y
+            int pixelY = (((int)color * 4) + rowOffset) * 8;
 
             Rectangle srcRect = new Rectangle(pixelX, pixelY, 8, 8);
             return textSheet.Clone(srcRect, textSheet.PixelFormat);
@@ -393,15 +407,15 @@ namespace PacmanWinForms
         /// <summary>
         /// Extrait le glyphe combiné "PTS" (17x8 pixels) à la fin de la 2ème ligne d'un bloc de couleur.
         /// </summary>
-        public Bitmap GetPtsSprite(int colorSet = 6)
+        public Bitmap GetPtsSprite(ArcadeColor color = ArcadeColor.Yellow)
         {
             int localRow = 1;    // 2ème ligne du sous-bloc de couleur
-            int startCol = 13;   // Commence juste après le '©' (13 * 8 = 104 pixels)
+            int startCol = 13;   // Comme avant
 
             int pixelX = startCol * 8;
-            int pixelY = ((colorSet * 4) + localRow) * 8;
+            int pixelY = (((int)color * 4) + localRow) * 8; // REFACTORING ici
 
-            int width = 17;      // Correction : Largeur exacte en pixels
+            int width = 17;
             int height = 8;
 
             Rectangle srcRect = new Rectangle(pixelX, pixelY, width, height);
@@ -411,19 +425,108 @@ namespace PacmanWinForms
         /// <summary>
         /// Extrait le logo complet "NAMCO" (50x8 pixels) sur la 4ème ligne d'un bloc de couleur.
         /// </summary>
-        public Bitmap GetNamcoLogo(int colorSet = 1)
+        public Bitmap GetNamcoLogo(ArcadeColor color = ArcadeColor.Red) // Rouge réglementaire par défaut
         {
             int localRow = 3;    // 4ème ligne du sous-bloc de couleur
-            int startCol = 0;    // Commence tout au début de la ligne (0 pixel)
+            int startCol = 0;
 
             int pixelX = startCol * 8;
-            int pixelY = ((colorSet * 4) + localRow) * 8;
+            int pixelY = (((int)color * 4) + localRow) * 8; // REFACTORING ici
 
-            int width = 50;      // Correction : Largeur exacte en pixels
+            int width = 50;
             int height = 8;
 
             Rectangle srcRect = new Rectangle(pixelX, pixelY, width, height);
             return textSheet.Clone(srcRect, textSheet.PixelFormat);
+        }
+
+        /// <summary>
+        /// Extrait le sprite de score stylisé d'origine (200, 400, 800, 1600) 
+        /// depuis la generalSheet (Ligne 9) lorsqu'un fantôme est mangé.
+        /// </summary>
+        public Bitmap GetGhostPointsSprite(int points)
+        {
+            int colIndex = 0;
+
+            switch (points)
+            {
+                case 200: colIndex = 0; break; // Case 1
+                case 400: colIndex = 1; break; // Case 2
+                case 800: colIndex = 2; break; // Case 3
+                case 1600: colIndex = 3; break; // Case 4
+                default:
+                    return new Bitmap(16, 16); // Sécurité
+            }
+
+            // Ajustement des coordonnées sur la generalSheet
+            // Si tes sprites de la ligne 9 font 16x16 pixels :
+            int spriteSize = 16;
+            int pixelX = 456+(colIndex * spriteSize);
+            int pixelY = 8 * spriteSize; // 9ème ligne = index 8
+
+            // Note : Si dans ta texture le sprite fait 16x8 au lieu de 16x16,
+            // tu pourras ajuster la hauteur (height) à 8 et le pixelY si nécessaire.
+            Rectangle srcRect = new Rectangle(pixelX, pixelY, spriteSize, spriteSize);
+
+            return generalSheet.Clone(srcRect, generalSheet.PixelFormat);
+        }
+
+        /// <summary>
+        /// Extrait le sprite du fruit correspondant au niveau actuel
+        /// depuis la generalSheet (Ligne 5, à côté de Pac-Man bas).
+        /// </summary>
+        public Bitmap GetFruitSprite(int level)
+        {
+            int fruitIndex = 0; // 0: Cerise, 1: Fraise, 2: Pêche, 3: Pomme, 4: Raisin, 5: Galaxian, 6: Cloche, 7: Clé
+
+            if (level == 1) fruitIndex = 0;
+            else if (level == 2) fruitIndex = 1;
+            else if (level == 3 || level == 4) fruitIndex = 2;
+            else if (level == 5 || level == 6) fruitIndex = 3;
+            else if (level == 7 || level == 8) fruitIndex = 4;
+            else if (level == 9 || level == 10) fruitIndex = 5;
+            else if (level == 11 || level == 12) fruitIndex = 6;
+            else fruitIndex = 7; // Niveau 13 et plus
+
+            int spriteSize = 16;
+            int colIndex = 2 + fruitIndex; // Saute les 2 sprites de Pac-Man orienté vers le bas
+
+            int pixelX = 456 + (colIndex * spriteSize);
+            int pixelY = 3 * spriteSize; // 4ème ligne = index 3
+
+            Rectangle srcRect = new Rectangle(pixelX, pixelY, spriteSize, spriteSize);
+            return generalSheet.Clone(srcRect, generalSheet.PixelFormat);
+        }
+
+        /// <summary>
+        /// Extrait le sprite de score stylisé d'origine pour les fruits (100 à 5000)
+        /// depuis la generalSheet à partir de la coordonnée (456, 144).
+        /// </summary>
+        public Bitmap GetFruitPointsSprite(int points)
+        {
+            int spriteSize = 16;
+            int pixelX = 456;
+            int pixelY = 144; // Ligne de base (index 9) contenant 100, 300, 500, 700, 1000
+
+            switch (points)
+            {
+                case 100: pixelX += 0 * spriteSize; break;
+                case 300: pixelX += 1 * spriteSize; break;
+                case 500: pixelX += 2 * spriteSize; break;
+                case 700: pixelX += 3 * spriteSize; break;
+                case 1000: pixelX += 4 * spriteSize; break; // Fin de la première ligne
+
+                // Empilement vertical sous le 1000 (colonne index 4)
+                case 2000: pixelX += 4 * spriteSize; pixelY += 1 * spriteSize; break;
+                case 3000: pixelX += 4 * spriteSize; pixelY += 2 * spriteSize; break;
+                case 5000: pixelX += 4 * spriteSize; pixelY += 3 * spriteSize; break;
+
+                default:
+                    return new Bitmap(16, 16); // Sécurité
+            }
+
+            Rectangle srcRect = new Rectangle(pixelX, pixelY, spriteSize, spriteSize);
+            return generalSheet.Clone(srcRect, generalSheet.PixelFormat);
         }
     }
 }

@@ -1,8 +1,9 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Windows.Forms;
-using System.Diagnostics;
+using static PacmanWinForms.SpriteManager;
 
 namespace PacmanWinForms
 {
@@ -288,7 +289,7 @@ namespace PacmanWinForms
                     char c = readyText[i];
 
                     // On extrait la lettre en Jaune (Color Set 6)
-                    using (Bitmap charSprite = spriteManager.GetArcadeCharacter(c, 6))
+                    using (Bitmap charSprite = spriteManager.GetArcadeCharacter(c, ArcadeColor.Yellow))
                     {
                         int posX = (startTileX + i) * GameConfig.ScaledTileSize;
                         int posY = tileY * GameConfig.ScaledTileSize;
@@ -313,7 +314,7 @@ namespace PacmanWinForms
                     char c = gameOverText[i];
 
                     // On extrait la lettre depuis le Color Set 1 (Rouge réglementaire du Game Over)
-                    using (Bitmap charSprite = spriteManager.GetArcadeCharacter(c, 1))
+                    using (Bitmap charSprite = spriteManager.GetArcadeCharacter(c, ArcadeColor.Red))
                     {
                         int posX = (startTileX + i) * GameConfig.ScaledTileSize;
                         int posY = tileY * GameConfig.ScaledTileSize;
@@ -324,29 +325,49 @@ namespace PacmanWinForms
                 }
             }
 
-            // 5. TEXTE DU SCORE DU FANTÔME MANGÉ (Dessiné via text.png)
+            // 5. TEXTE DU SCORE DU FANTÔME MANGÉ 
             if (game.State == GameState.GhostEaten)
             {
-                string scoreText = game.EatenGhostScoreValue.ToString();
+                int pointsGagnes = game.EatenGhostScoreValue; // (200, 400, 800 ou 1600)
 
-                // En arcade, le texte du score intermédiaire est Cyan/Bleu clair (Color Set 3 dans beaucoup de sheets)
-                int colorSet = 3;
-
-                // Petit calcul pour centrer le score (ex: "1600") par rapport au centre de la case
-                int totalWidth = scoreText.Length * GameConfig.ScaledTileSize;
-                int startX = game.EatenGhostScoreX - (totalWidth / 4);
-
-                for (int i = 0; i < scoreText.Length; i++)
+                using (Bitmap pointsSprite = spriteManager.GetGhostPointsSprite(pointsGagnes))
                 {
-                    char c = scoreText[i];
-                    using (Bitmap charSprite = spriteManager.GetArcadeCharacter(c, colorSet))
-                    {
-                        int posX = startX + (i * GameConfig.ScaledTileSize);
-                        int posY = game.EatenGhostScoreY + (GameConfig.ScaledTileSize / 4); // Légèrement abaissé pour centrer en Y
-                        int size = GameConfig.ScaledTileSize;
+                    // On centre le sprite de 16x16 à la position où le fantôme a été capturé
+                    int posX = game.EatenGhostScoreX * GameConfig.Zoom;
+                    int posY = game.EatenGhostScoreY * GameConfig.Zoom;
 
-                        g.DrawImage(charSprite, posX, posY, size, size);
-                    }
+                    // Grâce à notre refactoring précédent, ce sprite en provenance de generalSheet
+                    // profite AUTOMATIQUEMENT de la transparence sur le fond noir !
+                    g.DrawImage(pointsSprite, posX, posY, GameConfig.ScaledTileSize * 2, GameConfig.ScaledTileSize * 2);
+                }
+
+                
+            }
+
+            // --- DESSIN DU FRUIT BONUS ---
+            if (game.IsFruitActive)
+            {
+                using (Bitmap fruitSprite = spriteManager.GetFruitSprite(game.CurrentLevel))
+                {
+                    int posX = game.FruitX * GameConfig.Zoom;
+                    int posY = game.FruitY * GameConfig.Zoom;
+
+                    // Dessin du fruit (Taille 16x16 zoomé, hérite de la transparence noire automatiquement !)
+                    g.DrawImage(fruitSprite, posX, posY, GameConfig.ScaledTileSize * 2, GameConfig.ScaledTileSize * 2);
+                }
+            }
+
+            // --- DESSIN DES POINTS DU FRUIT MANGÉ ---
+            if (game.IsFruitScoreActive)
+            {
+                using (Bitmap pointsSprite = spriteManager.GetFruitPointsSprite(game.CurrentFruitValue))
+                {
+                    // On récupère les coordonnées logiques corrigées et on applique le Zoom
+                    int posX = game.FruitX * GameConfig.Zoom;
+                    int posY = game.FruitY * GameConfig.Zoom;
+
+                    // Dessin du sprite de score (16x16 pixels à l'échelle)
+                    g.DrawImage(pointsSprite, posX, posY, GameConfig.ScaledTileSize * 2, GameConfig.ScaledTileSize * 2);
                 }
             }
 
@@ -355,7 +376,7 @@ namespace PacmanWinForms
             // =========================================================================
 
             // Petite fonction locale pour automatiser l'écriture de chaînes de caractères
-            void DrawArcadeString(string text, int startTileX, int tileY, int colorSet)
+            void DrawArcadeString(string text, int startTileX, int tileY, ArcadeColor colorSet)
             {
                 for (int i = 0; i < text.Length; i++)
                 {
@@ -383,11 +404,11 @@ namespace PacmanWinForms
 
             if (show1Up)
             {
-                DrawArcadeString("1UP", 3, 0, 0); // Blanc (Color Set 0)
+                DrawArcadeString("1UP", 3, 0, ArcadeColor.White);
             }
 
             // Inscription centrale HIGH SCORE
-            DrawArcadeString("HIGH SCORE", 9, 0, 0); // Blanc (Color Set 0)
+            DrawArcadeString("HIGH SCORE", 9, 0, ArcadeColor.White);
 
 
             // --- LIGNE 1 : SCORES ALIGNÉS À DROITE ---
@@ -427,6 +448,31 @@ namespace PacmanWinForms
                     int spriteSize = 16 * GameConfig.Zoom;
 
                     g.DrawImage(lifeSprite, posX, posY, spriteSize, spriteSize);
+                }
+            }
+
+            // --- LIGNE 34 : INDICATEUR DE NIVEAU (Fruits en bas à droite) ---
+
+            // On affiche au maximum les 7 derniers niveaux joués
+            int fruitsToDraw = Math.Min(game.CurrentLevel, 7);
+
+            for (int i = 0; i < fruitsToDraw; i++)
+            {
+                // i = 0 correspond au niveau actuel (tout à droite)
+                // i = 1 correspond au niveau précédent, etc.
+                int targetLevel = game.CurrentLevel - i;
+
+                using (Bitmap fruitIndicatorSprite = spriteManager.GetFruitSprite(targetLevel))
+                {
+                    // Colonne de départ tout à droite : 26 (la grille fait 28 colonnes, de 0 à 27).
+                    // On recule de 2 cases (16 pixels) pour chaque fruit précédent (i).
+                    int tileX = 26 - (i * 2);
+
+                    int posX = tileX * GameConfig.ScaledTileSize;
+                    int posY = 34 * GameConfig.ScaledTileSize; // Même ligne que les icônes de vie
+
+                    // Dessin du fruit de l'indicateur (Taille 16x16 pixels à l'échelle)
+                    g.DrawImage(fruitIndicatorSprite, posX, posY, GameConfig.ScaledTileSize * 2, GameConfig.ScaledTileSize * 2);
                 }
             }
         }
