@@ -322,5 +322,108 @@ namespace PacmanWinForms
             }
             return true;
         }
+
+        /// <summary>
+        /// Extrait un caractère 8x8 depuis text.png.
+        /// Index des couleurs (colorSet) : 0=Blanc, 1=Rouge, 2=Rose, 3=Cyan, 4=Orange, 5=Chair, 6=Jaune
+        /// </summary>
+        public Bitmap GetArcadeCharacter(char c, int colorSet = 6) // 6 = Jaune par défaut pour READY!
+        {
+            int rowOffset = 0;
+            int col = 0;
+            char upperC = char.ToUpper(c);
+
+            // Ligne 1 du bloc de couleur : A-O
+            if (upperC >= 'A' && upperC <= 'O')
+            {
+                rowOffset = 0;
+                col = upperC - 'A';
+            }
+            // Ligne 2 du bloc de couleur : P-Z, !, ©
+            else if (upperC >= 'P' && upperC <= 'Z')
+            {
+                rowOffset = 1;
+                col = upperC - 'P';
+            }
+            else if (upperC == '!')
+            {
+                rowOffset = 1;
+                col = 11;
+            }
+            else if (upperC == '©')
+            {
+                rowOffset = 1;
+                col = 12;
+            }
+            // Ligne 3 du bloc de couleur : 0-9, /, -, "
+            else if (upperC >= '0' && upperC <= '9')
+            {
+                rowOffset = 2;
+                col = upperC - '0';
+            }
+            else if (upperC == '/')
+            {
+                rowOffset = 2;
+                col = 10;
+            }
+            else if (upperC == '-')
+            {
+                rowOffset = 2;
+                col = 11;
+            }
+            else if (upperC == '"')
+            {
+                rowOffset = 2;
+                col = 12;
+            }
+            else
+            {
+                // Espace ou caractère inconnu -> renvoie un carré transparent vide de 8x8
+                return new Bitmap(8, 8);
+            }
+
+            // Chaque bloc de couleur fait exactement 4 lignes de 8 pixels de haut (= 32 pixels)
+            int pixelX = col * 8;
+            int pixelY = ((colorSet * 4) + rowOffset) * 8;
+
+            Rectangle srcRect = new Rectangle(pixelX, pixelY, 8, 8);
+            return textSheet.Clone(srcRect, textSheet.PixelFormat);
+        }
+
+        /// <summary>
+        /// Extrait le glyphe combiné "PTS" (17x8 pixels) à la fin de la 2ème ligne d'un bloc de couleur.
+        /// </summary>
+        public Bitmap GetPtsSprite(int colorSet = 6)
+        {
+            int localRow = 1;    // 2ème ligne du sous-bloc de couleur
+            int startCol = 13;   // Commence juste après le '©' (13 * 8 = 104 pixels)
+
+            int pixelX = startCol * 8;
+            int pixelY = ((colorSet * 4) + localRow) * 8;
+
+            int width = 17;      // Correction : Largeur exacte en pixels
+            int height = 8;
+
+            Rectangle srcRect = new Rectangle(pixelX, pixelY, width, height);
+            return textSheet.Clone(srcRect, textSheet.PixelFormat);
+        }
+
+        /// <summary>
+        /// Extrait le logo complet "NAMCO" (50x8 pixels) sur la 4ème ligne d'un bloc de couleur.
+        /// </summary>
+        public Bitmap GetNamcoLogo(int colorSet = 1)
+        {
+            int localRow = 3;    // 4ème ligne du sous-bloc de couleur
+            int startCol = 0;    // Commence tout au début de la ligne (0 pixel)
+
+            int pixelX = startCol * 8;
+            int pixelY = ((colorSet * 4) + localRow) * 8;
+
+            int width = 50;      // Correction : Largeur exacte en pixels
+            int height = 8;
+
+            Rectangle srcRect = new Rectangle(pixelX, pixelY, width, height);
+            return textSheet.Clone(srcRect, textSheet.PixelFormat);
+        }
     }
 }

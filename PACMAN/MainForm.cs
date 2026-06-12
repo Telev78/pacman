@@ -84,11 +84,15 @@ namespace PacmanWinForms
                 }
                 else if (game.State == GameState.Victory)
                 {
-                    gameTimer.Stop();
+                    // On force le rafraîchissement pour voir le labyrinthe vide
                     this.Refresh();
-                    System.Threading.Thread.Sleep(500);
-                    MessageBox.Show($"Félicitations ! Vous avez nettoyé le labyrinthe !\nScore final : {game.Score}", "Victoire !");
-                    Application.Exit();
+
+                    // Pause de satisfaction d'arcade (2 secondes) avant le niveau suivant
+                    System.Threading.Thread.Sleep(2000);
+
+                    // On appelle notre nouvelle méthode au lieu de quitter !
+                    game.StartNextLevel();
+                    UpdateGameTitleScore();
                     return;
                 }
             }
@@ -113,25 +117,27 @@ namespace PacmanWinForms
             game.Pacman.DeathAnimationFrame++;
             this.Invalidate();
 
+            // L'animation de mort (12 frames) est terminée
             if (game.Pacman.DeathAnimationFrame >= 12)
             {
                 deathAnimationTimer.Stop();
-                System.Threading.Thread.Sleep(500); // Pause historique après disparition
 
+                System.Threading.Thread.Sleep(500); // Pause historique après la disparition de Pac-Man
+
+                // Le moteur vérifie les vies :
+                // - S'il reste des vies -> passe en GameState.Ready et réinitialise les positions
+                // - S'il n'y a plus de vies -> passe en GameState.GameOver et active le timer de 3s (180 frames)
                 game.PrepareNextLifeOrGameOver();
 
-                if (game.State == GameState.GameOver)
-                {
-                    MessageBox.Show($"GAME OVER\nScore final : {game.Score}", "Fin de partie");
-                    Application.Exit();
-                }
-                else
-                {
-                    game.ResetPositions();
-                    game.SetPacmanState(PacmanState.Alive);
-                    UpdateGameTitleScore();
-                    gameTimer.Start();
-                }
+                // Dans les deux cas, on remet l'état de Pac-Man à Vivant pour la suite
+                game.SetPacmanState(PacmanState.Alive);
+
+                // On rafraîchit la barre de titre (pour voir instantanément la perte d'une vie)
+                UpdateGameTitleScore();
+
+                // CRITIQUE : On relance TOUJOURS la boucle de jeu principale (60 Hz).
+                // C'est elle qui va faire défiler soit le "READY!" (si vivant), soit le "GAME OVER" (si mort).
+                gameTimer.Start();
             }
         }
 
@@ -260,17 +266,134 @@ namespace PacmanWinForms
                 }
             }
 
-            // 3. TEXTE "READY!" (Reste affiché pendant TOUTE la phase Ready, personnages là ou pas)
+            // 3. TEXTE "READY!" RETRO (Dessiné lettre par lettre via text.png)
             if (game.State == GameState.Ready)
             {
-                using (Font arcadeFont = new Font("Courier New", 14, FontStyle.Bold))
-                using (Brush yellowBrush = new SolidBrush(Color.Yellow))
-                {
-                    string readyText = "READY!";
-                    int textX = (11 * GameConfig.ScaledTileSize) + 4;
-                    int textY = 20 * GameConfig.ScaledTileSize;
+                string readyText = "READY!";
 
-                    g.DrawString(readyText, arcadeFont, yellowBrush, textX, textY);
+                // Alignement sur la grille arcade : 
+                // Le labyrinthe fait 28 tuiles de large. (28 - 6 lettres) / 2 = Tuile 11 pour centrer horizontalement.
+                int startTileX = 11;
+                int tileY = 20; // Ta ligne d'origine sous la cage des fantômes
+
+                for (int i = 0; i < readyText.Length; i++)
+                {
+                    char c = readyText[i];
+
+                    // On extrait la lettre en Jaune (Color Set 6)
+                    using (Bitmap charSprite = spriteManager.GetArcadeCharacter(c, 6))
+                    {
+                        int posX = (startTileX + i) * GameConfig.ScaledTileSize;
+                        int posY = tileY * GameConfig.ScaledTileSize;
+                        int size = GameConfig.ScaledTileSize; // Taille d'une tuile (8x8 zoomé)
+
+                        g.DrawImage(charSprite, posX, posY, size, size);
+                    }
+                }
+            }
+
+            // 4. TEXTE "GAME OVER" RETRO (Dessiné lettre par lettre en Rouge via text.png)
+            if (game.State == GameState.GameOver)
+            {
+                // Astuce arcade : "GAME  OVER" avec 2 espaces au milieu fait 10 caractères.
+                // L'écran faisant 28 tuiles de large : (28 - 10) / 2 = Tuile 9 pour un centrage parfait.
+                string gameOverText = "GAME  OVER";
+                int startTileX = 9;
+                int tileY = 20; // Même ligne que le "READY!", juste sous le nid des fantômes
+
+                for (int i = 0; i < gameOverText.Length; i++)
+                {
+                    char c = gameOverText[i];
+
+                    // On extrait la lettre depuis le Color Set 1 (Rouge réglementaire du Game Over)
+                    using (Bitmap charSprite = spriteManager.GetArcadeCharacter(c, 1))
+                    {
+                        int posX = (startTileX + i) * GameConfig.ScaledTileSize;
+                        int posY = tileY * GameConfig.ScaledTileSize;
+                        int size = GameConfig.ScaledTileSize;
+
+                        g.DrawImage(charSprite, posX, posY, size, size);
+                    }
+                }
+            }
+
+            // =========================================================================
+            // DESSIN DU HUD RETRO (BANDEAUX SUPÉRIEUR ET INFÉRIEUR)
+            // =========================================================================
+
+            // Petite fonction locale pour automatiser l'écriture de chaînes de caractères
+            void DrawArcadeString(string text, int startTileX, int tileY, int colorSet)
+            {
+                for (int i = 0; i < text.Length; i++)
+                {
+                    char c = text[i];
+                    if (c == ' ') continue; // On ne dessine rien pour un espace
+
+                    using (Bitmap charSprite = spriteManager.GetArcadeCharacter(c, colorSet))
+                    {
+                        int posX = (startTileX + i) * GameConfig.ScaledTileSize;
+                        int posY = tileY * GameConfig.ScaledTileSize;
+                        int size = GameConfig.ScaledTileSize;
+                        g.DrawImage(charSprite, posX, posY, size, size);
+                    }
+                }
+            }
+
+            // --- LIGNE 0 : BANDEAU SUPÉRIEUR (Textes fixes et clignotement) ---
+
+            // Gestion du clignotement réglementaire du "1UP" (uniquement en cours de partie)
+            bool show1Up = true;
+            if (game.State == GameState.Playing)
+            {
+                show1Up = (Environment.TickCount / 220) % 2 == 0; // Clignote toutes les ~220ms
+            }
+
+            if (show1Up)
+            {
+                DrawArcadeString("1UP", 3, 0, 0); // Blanc (Color Set 0)
+            }
+
+            // Inscription centrale HIGH SCORE
+            DrawArcadeString("HIGH SCORE", 9, 0, 0); // Blanc (Color Set 0)
+
+
+            // --- LIGNE 1 : SCORES ALIGNÉS À DROITE ---
+
+            // Score Joueur 1 : S'affiche "00" si à zéro, sinon recule vers la gauche
+            string scoreStr = (game.Score == 0) ? "00" : game.Score.ToString();
+            int scoreStartX = 6 - scoreStr.Length + 1; // Aligné à droite sur la colonne 6
+            DrawArcadeString(scoreStr, scoreStartX, 1, 0);
+
+            // CORRECTION HIGH SCORE : Si la borne vient d'être allumée (HighScore == 0),
+            // la zone reste vide. Elle s'affichera dès que le joueur marque ses premiers points.
+            if (game.HighScore > 0)
+            {
+                string highScoreStr = game.HighScore.ToString();
+                int highScoreStartX = 16 - highScoreStr.Length + 1; // Aligné à droite sur la colonne 16
+                DrawArcadeString(highScoreStr, highScoreStartX, 1, 0);
+            }
+
+
+            // --- LIGNE 34 : RÉSERVE DE VIES (En bas à gauche) ---
+
+            // LOGIQUE DE TRANSITION :
+            // - Au début du jeu ou après une mort : Tant que Pac-Man est caché, on montre tout le stock (ex: 3),
+            //   puis dès qu'il apparaît, le stock en bas diminue de 1 (ex: 2).
+            // - Lors d'un changement de niveau (IsNextLevelTransition == true) : Pac-Man n'est pas mort,
+            //   on force donc le maintien du compteur à sa valeur normale pour éviter l'effet de fluctuation (+1 / -1).
+            bool subtractLifeIcon = game.ShowCharacters || game.IsNextLevelTransition;
+            int livesToDraw = subtractLifeIcon ? game.Lives - 1 : game.Lives;
+            int maxVisibleLives = Math.Min(livesToDraw, 5);
+
+            for (int i = 0; i < maxVisibleLives; i++)
+            {
+                using (Bitmap lifeSprite = spriteManager.GetPacmanSprite(1, Keys.Left))
+                {
+                    int posX = (2 + (i * 2)) * GameConfig.ScaledTileSize;
+                    int posY = 34 * GameConfig.ScaledTileSize;
+                    int spriteSize = 16 * GameConfig.Zoom;
+
+                    g.DrawImage(lifeSprite, posX, posY, spriteSize, spriteSize);
                 }
             }
         }
