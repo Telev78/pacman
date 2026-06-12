@@ -26,12 +26,19 @@ namespace PacmanWinForms
         public bool ShowCharacters { get; private set; } = true;
         public int HighScore { get; private set; } = 0;
         public bool IsNextLevelTransition { get; private set; } = false;
+        public int EatenGhostScoreX { get; private set; }
+        public int EatenGhostScoreY { get; private set; }
+        public int EatenGhostScoreValue { get; private set; }
+        public Ghost JustEatenGhost { get; private set; } // Permet de savoir quel fantôme masquer
 
         // Variables privées de logique
         private int frameCounter = 0;
         private int houseTimer = 0;
         private int readyTimer = 0;
         private int gameOverTimer = 0;
+        private int ghostsEatenInCurrentFrightenedMode = 0;
+        private int ghostEatenFreezeTimer = 0;
+        private bool isBonusLifeAwarded = false;
 
         public Game()
         {
@@ -133,6 +140,17 @@ namespace PacmanWinForms
                     IsNextLevelTransition = false;
                 }
                 return;
+            }
+
+            // GESTION DU GEL FANTÔME MANGÉ (Spécification Arcade : 60 frames = 1 seconde)
+            if (State == GameState.GhostEaten)
+            {
+                ghostEatenFreezeTimer--;
+                if (ghostEatenFreezeTimer <= 0)
+                {
+                    State = GameState.Playing; // Reprise du jeu normale
+                }
+                return; // Fige toute la physique et le mouvement du labyrinthe
             }
 
             // GESTION DU GAME OVER (Compte à rebours à 60 Hz)
@@ -254,15 +272,17 @@ namespace PacmanWinForms
                 if (currentTile == 2) // Normal
                 {
                     Map.Grid[tileY, tileX] = 0;
-                    Score += 10;
+                    AddScore(10);
                     DotsRemaining--;
                     CheckLevelClear();
                 }
                 else if (currentTile == 3) // Super gomme
                 {
                     Map.Grid[tileY, tileX] = 0;
-                    Score += 50;
+                    AddScore(50);
                     DotsRemaining--;
+
+                    ghostsEatenInCurrentFrightenedMode = 0;
 
                     if (CurrentSpecs.FrightenedTimeSec > 0)
                     {
@@ -309,8 +329,27 @@ namespace PacmanWinForms
                 {
                     if (ghost.CurrentState == GhostState.Frightened)
                     {
+                        // Passage immédiat en mode yeux (il commencera à courir APRÈS le freeze)
                         ghost.CurrentState = GhostState.Eaten;
-                        Score += 200;
+
+                        // Calcul du score exponentiel (200, 400, 800, 1600)
+                        ghostsEatenInCurrentFrightenedMode++;
+                        int points = 200 * (int)Math.Pow(2, ghostsEatenInCurrentFrightenedMode - 1);
+                        if (points > 1600) points = 1600; // Sécurité au cas où
+
+                        AddScore(points);
+
+                        // Sauvegarde des infos pour le dessin stationnaire du score
+                        JustEatenGhost = ghost;
+                        EatenGhostScoreX = (int)((ghost.X - 4) * GameConfig.Zoom);
+                        EatenGhostScoreY = (int)((ghost.Y - 4) * GameConfig.Zoom);
+                        EatenGhostScoreValue = points;
+
+                        // Déclenchement du mode Freeze Arcade (1 seconde)
+                        State = GameState.GhostEaten;
+                        ghostEatenFreezeTimer = 60;
+
+                        break; // On sort immédiatement de la boucle de détection
                     }
                     else if (ghost.CurrentState == GhostState.Scatter || ghost.CurrentState == GhostState.Chase)
                     {
@@ -392,9 +431,28 @@ namespace PacmanWinForms
             Lives = 3;
             CurrentLevel = 1;
             IsNextLevelTransition = false;
+            isBonusLifeAwarded = false;
 
             // Recharge la carte initiale, compte les pellets et déclenche le ResetPositions en mode Ready
             InitializeGameValue();
+        }
+
+        /// <summary>
+        /// Ajoute des points au score et vérifie l'attribution de la vie bonus arcade.
+        /// </summary>
+        private void AddScore(int points)
+        {
+            Score += points;
+
+            // Règle Arcade : Si on franchit le seuil et qu'on ne l'a pas encore eu dans cette partie
+            if (!isBonusLifeAwarded && Score >= GameConfig.BonusLifeThreshold)
+            {
+                Lives++;
+                isBonusLifeAwarded = true;
+
+                // Note : Si plus tard tu ajoutes des bruitages, 
+                // c'est ici qu'il faudra déclencher le son de la vie supplémentaire !
+            }
         }
     }
 }

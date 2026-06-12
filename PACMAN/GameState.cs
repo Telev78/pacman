@@ -4,6 +4,7 @@
     {
         Ready,
         Playing,
+        GhostEaten,
         Dying,
         Victory,
         GameOver

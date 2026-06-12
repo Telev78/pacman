@@ -25,7 +25,7 @@ namespace PacmanWinForms
             this.MaximizeBox = false;
             this.BackColor = Color.Black;
             this.DoubleBuffered = true;
-
+            this.StartPosition = FormStartPosition.CenterScreen;
             this.KeyDown += new KeyEventHandler(OnKeyDown);
 
             spriteManager = new SpriteManager();
@@ -203,10 +203,11 @@ namespace PacmanWinForms
             }
 
             // 2. Dessiner Pac-Man et les Fantômes uniquement s'ils doivent être visibles
-            if (game.ShowCharacters)
+            if (game.ShowCharacters && game.State != GameState.GameOver)
             {
                 // --- BLOC DESSIN DE PAC-MAN ---
-                if (game.Pacman != null)
+                // REGLE ARCADE : Pac-Man disparaît complètement pendant le freeze de point !
+                if (game.Pacman != null && game.State != GameState.GhostEaten)
                 {
                     int screenX = (int)((game.Pacman.X - 4) * GameConfig.Zoom);
                     int screenY = (int)((game.Pacman.Y - 4) * GameConfig.Zoom);
@@ -231,6 +232,12 @@ namespace PacmanWinForms
                 {
                     foreach (Ghost ghost in game.Ghosts)
                     {
+                        // REGLE ARCADE : On ne dessine pas le fantôme qui vient d'être mangé (le score prend sa place)
+                        if (game.State == GameState.GhostEaten && ghost == game.JustEatenGhost)
+                        {
+                            continue;
+                        }
+
                         Bitmap ghostSprite;
 
                         if (ghost.CurrentState == GhostState.Frightened)
@@ -310,6 +317,32 @@ namespace PacmanWinForms
                     {
                         int posX = (startTileX + i) * GameConfig.ScaledTileSize;
                         int posY = tileY * GameConfig.ScaledTileSize;
+                        int size = GameConfig.ScaledTileSize;
+
+                        g.DrawImage(charSprite, posX, posY, size, size);
+                    }
+                }
+            }
+
+            // 5. TEXTE DU SCORE DU FANTÔME MANGÉ (Dessiné via text.png)
+            if (game.State == GameState.GhostEaten)
+            {
+                string scoreText = game.EatenGhostScoreValue.ToString();
+
+                // En arcade, le texte du score intermédiaire est Cyan/Bleu clair (Color Set 3 dans beaucoup de sheets)
+                int colorSet = 3;
+
+                // Petit calcul pour centrer le score (ex: "1600") par rapport au centre de la case
+                int totalWidth = scoreText.Length * GameConfig.ScaledTileSize;
+                int startX = game.EatenGhostScoreX - (totalWidth / 4);
+
+                for (int i = 0; i < scoreText.Length; i++)
+                {
+                    char c = scoreText[i];
+                    using (Bitmap charSprite = spriteManager.GetArcadeCharacter(c, colorSet))
+                    {
+                        int posX = startX + (i * GameConfig.ScaledTileSize);
+                        int posY = game.EatenGhostScoreY + (GameConfig.ScaledTileSize / 4); // Légèrement abaissé pour centrer en Y
                         int size = GameConfig.ScaledTileSize;
 
                         g.DrawImage(charSprite, posX, posY, size, size);
