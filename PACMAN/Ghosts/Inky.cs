@@ -29,7 +29,10 @@ namespace PacmanWinForms
             // 1. Déterminer la case pivot (2 cases devant Pac-Man)
             switch (pacman.CurrentDirection)
             {
-                case Keys.Up: pacmanY -= 2; break;
+                case Keys.Up:
+                    pacmanY -= 2;
+                    pacmanX -= 2; // Application du bug d'overflow officiel
+                    break;
                 case Keys.Down: pacmanY += 2; break;
                 case Keys.Left: pacmanX -= 2; break;
                 case Keys.Right: pacmanX += 2; break;
@@ -43,7 +46,10 @@ namespace PacmanWinForms
             int vectorX = pacmanX - blinkyX;
             int vectorY = pacmanY - blinkyY;
 
-            return new Point(blinkyX + (vectorX * 2), blinkyY + (vectorY * 2));
+            int targetX = blinkyX + (vectorX * 2);
+            int targetY = blinkyY + (vectorY * 2);
+
+            return new Point(targetX, targetY);
         }
     }
 }

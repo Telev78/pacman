@@ -26,7 +26,11 @@ namespace PacmanWinForms
             // On ajoute 4 cases d'avance selon la direction de Pac-Man
             switch (pacman.CurrentDirection)
             {
-                case Keys.Up: targetY -= 4; break;
+                // Correction pour intégrer le bug officiel de l'arcade :
+                case Keys.Up:
+                    targetY -= 4;
+                    targetX -= 4; // Le fameux overflow de l'arcade !
+                    break;
                 case Keys.Down: targetY += 4; break;
                 case Keys.Left: targetX -= 4; break;
                 case Keys.Right: targetX += 4; break;
