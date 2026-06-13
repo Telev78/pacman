@@ -56,6 +56,15 @@ namespace PacmanWinForms
         private bool fruit70Spawned = false;
         private bool fruit170Spawned = false;
 
+        // Suivi des vagues Scatter/Chase
+        private int currentWaveIndex = 0;       // Index de la vague actuelle (0 à 7)
+        private double waveTimerMs = 0;         // Temps accumulé dans la vague actuelle
+
+        /// <summary>
+        /// L'état de comportement global actuel imposé par le timer du jeu (Scatter ou Chase).
+        /// </summary>
+        public GhostState GlobalGhostState { get; private set; } = GhostState.Scatter;
+
         public Game()
         {
             Map = new LevelMap();
@@ -143,6 +152,9 @@ namespace PacmanWinForms
 
             globalDotCounter = 0;
 
+            currentWaveIndex = 0;
+            waveTimerMs = 0;
+            GlobalGhostState = GhostState.Scatter;
 
             State = GameState.Ready;
             readyTimer = 240;        // 240 frames = ~4 secondes à 60 Hz
@@ -213,6 +225,8 @@ namespace PacmanWinForms
 
             if (State != GameState.Playing) return;
 
+            UpdateTimerVagues(16.67);
+
             // --- GESTION DU FRUIT (TIMERS ET COLLISION) ---
             if (IsFruitActive)
             {
@@ -257,15 +271,7 @@ namespace PacmanWinForms
                 if (FrightenedMsRemaining <= 0)
                 {
                     FrightenedMsRemaining = 0;
-                    IsFrightenedMode = false;
-                    foreach (Ghost ghost in Ghosts)
-                    {
-                        ghost.IsFrightened = false;
-                        if (ghost.CurrentState == GhostState.Frightened)
-                        {
-                            ghost.CurrentState = GhostState.Scatter;
-                        }
-                    }
+                    EndFrightenedMode();
                 }
             }
 
@@ -335,7 +341,7 @@ namespace PacmanWinForms
                     ghost.Speed = CurrentSpecs.GhostNormal;
                 }
 
-                ghost.Move(Map, Pacman, CurrentLevel);
+                ghost.Move(Map, Pacman, CurrentLevel, GlobalGhostState);
             }
 
             // ANIMATIONS ET COLLISIONS
@@ -658,6 +664,64 @@ namespace PacmanWinForms
                 }
             }
             return null;
+        }
+
+        public void UpdateTimerVagues(double elapsedTimeMs)
+        {
+            // Règle Arcade : Le timer global des vagues est figé si le jeu est en mode Frightened
+            if (IsFrightenedMode)
+                return;
+
+            // Si on est sur la dernière vague (Chase infini), inutile d'incrémenter
+            if (currentWaveIndex >= 7)
+                return;
+
+            waveTimerMs += elapsedTimeMs;
+            double currentDuration = GameConfig.GetWaveDurationMs(CurrentLevel, currentWaveIndex);
+
+            if (waveTimerMs >= currentDuration)
+            {
+                // Passage à la vague suivante
+                currentWaveIndex++;
+                waveTimerMs = 0;
+
+                // Index pair = Scatter, Index impair = Chase
+                GhostState newState = (currentWaveIndex % 2 == 0) ? GhostState.Scatter : GhostState.Chase;
+
+                if (newState != GlobalGhostState)
+                {
+                    GlobalGhostState = newState;
+                    ChangerVagueGlobale();
+                }
+            }
+        }
+
+        private void EndFrightenedMode()
+        {
+            IsFrightenedMode = false;
+            foreach (Ghost ghost in Ghosts)
+            {
+                ghost.IsFrightened = false;
+                if (ghost.CurrentState == GhostState.Frightened)
+                {
+                    ghost.CurrentState = GlobalGhostState; // On les réaligne sur la vague globale !
+                }
+            }
+        }
+
+        private void ChangerVagueGlobale()
+        {
+            foreach (Ghost ghost in Ghosts)
+            {
+                // Règle très importante : On ne change l'état et on ne force le demi-tour 
+                // QUE pour les fantômes actuellement actifs en mode Chase ou Scatter.
+                // Si un fantôme est InHouse, Exiting ou Eaten (yeux), on ne casse pas son état !
+                if (ghost.CurrentState == GhostState.Scatter || ghost.CurrentState == GhostState.Chase)
+                {
+                    ghost.CurrentState = GlobalGhostState;
+                    ghost.ForceDemiTour();
+                }
+            }
         }
 
     }

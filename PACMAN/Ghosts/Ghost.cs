@@ -20,6 +20,8 @@ namespace PacmanWinForms
         public bool IsFrightened { get; set; } = false;
         public int DotLimit { get; set; }
         public int DotCounter { get; set; } = 0;
+        // À placer en haut de la classe Ghost avec tes autres variables (X, Y, Speed...)
+        private static readonly Random rand = new Random();
 
         public Ghost(int startTileX, int startTileY, Point scatterTarget)
         {
@@ -32,7 +34,7 @@ namespace PacmanWinForms
         }
 
         // --- MÉTHODE PRINCIPALE MISE À JOUR ---
-        public virtual void Move(LevelMap map, Pacman pacman, int currentLevel)
+        public virtual void Move(LevelMap map, Pacman pacman, int currentLevel, GhostState globalGhostState)
         {
             int currentTileX = (int)(X / GameConfig.TileSize);
             int currentTileY = (int)(Y / GameConfig.TileSize);
@@ -88,12 +90,12 @@ namespace PacmanWinForms
             // 4. Déplacement physique d'exactement 1 pixel par itération
             for (int i = 0; i < pixelsToMove; i++)
             {
-                MoveOnePixel(map, pacman);
+                MoveOnePixel(map, pacman, globalGhostState);
             }
         }
 
         // --- DÉPLACEMENT UNITAIRE (1 PIXEL) ---
-        private void MoveOnePixel(LevelMap map, Pacman pacman)
+        private void MoveOnePixel(LevelMap map, Pacman pacman, GhostState globalGhostState)
         {
             // --- ROUTINE DU NID ---
             if (CurrentState == GhostState.InHouse)
@@ -143,8 +145,8 @@ namespace PacmanWinForms
                     }
                     else
                     {
-                        // Sinon, il reprend sa routine normale (ici Scatter par défaut)
-                        CurrentState = GhostState.Scatter;
+                        // Sinon, il reprend sa routine normale
+                        CurrentState = globalGhostState;
                     }
 
                     CurrentDirection = Keys.Left;
@@ -159,7 +161,15 @@ namespace PacmanWinForms
                 int currentTileY = (int)(Y / GameConfig.TileSize);
 
                 HandleTunnelTeleport(currentTileX);
-                CurrentDirection = ChooseNextDirection(map, pacman, currentTileX, currentTileY);
+                if (CurrentState == GhostState.Frightened)
+                {
+                    // On applique directement l'algorithme de l'arcade sans calculer de distances
+                    CurrentDirection = ChooseFrightenedDirection(map);
+                }
+                else
+                {
+                    CurrentDirection = ChooseNextDirection(map, pacman, currentTileX, currentTileY);
+                }
             }
 
             // 2. Déplacement physique d'un pixel strict
@@ -224,11 +234,6 @@ namespace PacmanWinForms
             if (CurrentState == GhostState.Chase)
                 return GetChaseTargetTile(pacman);
 
-            if (CurrentState == GhostState.Frightened)
-            {
-                Random rand = new Random();
-                return new Point(rand.Next(0, GameConfig.MapWidth), rand.Next(0, GameConfig.MapHeight));
-            }
 
             return new Point(13, 14);
         }
@@ -258,6 +263,61 @@ namespace PacmanWinForms
                 X = (GameConfig.MapWidth - 1) * GameConfig.TileSize;
             else if (currentTileX >= GameConfig.MapWidth && CurrentDirection == Keys.Right)
                 X = 0;
+        }
+
+        private Keys ChooseFrightenedDirection(LevelMap map)
+        {
+            Keys oppositeDir = GetOppositeDirection(this.CurrentDirection);
+            // L'ordre horaire officiel de l'arcade : Nord (Up), Est (Right), Sud (Down), Ouest (Left)
+            Keys[] clockwiseOrder = { Keys.Up, Keys.Right, Keys.Down, Keys.Left };
+
+
+            // 1. Le PRNG choisit un index de direction de départ (0 à 3)
+            int startIndex = rand.Next(0, 4);
+
+            int currentTileX = (int)(X / GameConfig.TileSize);
+            int currentTileY = (int)(Y / GameConfig.TileSize);
+
+            // 2. On teste les directions l'une après l'autre dans le sens horaire
+            for (int i = 0; i < 4; i++)
+            {
+                Keys testDir = clockwiseOrder[(startIndex + i) % 4];
+
+                // Règle A : Le demi-tour est strictement interdit à une intersection
+                if (testDir == GetOppositeDirection(CurrentDirection))
+                    continue;
+
+                // Règle B : Vérification du mur
+                int targetX = currentTileX;
+                int targetY = currentTileY;
+
+                switch (testDir)
+                {
+                    case Keys.Up: targetY--; break;
+                    case Keys.Down: targetY++; break;
+                    case Keys.Left: targetX--; break;
+                    case Keys.Right: targetX++; break;
+                }
+
+                // Hors limites (gestion du tunnel)
+                if (targetX < 0 || targetX >= GameConfig.MapWidth || targetY < 0 || targetY >= GameConfig.MapHeight)
+                {
+                    // Le tunnel est valide si on est sur la bonne ligne
+                    if (targetY == 17 && (testDir == Keys.Left || testDir == Keys.Right))
+                        return testDir;
+                    continue;
+                }
+
+                // Si ce n'est ni un mur (1) ni la porte des fantômes (4) (sauf s'ils sont morts, mais ici ils sont effrayés)
+                if (map.Grid[targetY, targetX] != 1 && map.Grid[targetY, targetX] != 4)
+                {
+                    // Dès qu'une direction est valide, l'arcade la valide immédiatement !
+                    return testDir;
+                }
+            }
+
+            // Sécurité au cas où le fantôme se retrouverait coincé (ne devrait jamais arriver)
+            return CurrentDirection;
         }
 
         protected abstract Point GetChaseTargetTile(Pacman pacman);
