@@ -237,6 +237,7 @@ namespace PacmanWinForms
                     IsFrightenedMode = false;
                     foreach (Ghost ghost in Ghosts)
                     {
+                        ghost.IsFrightened = false;
                         if (ghost.CurrentState == GhostState.Frightened)
                         {
                             ghost.CurrentState = GhostState.Scatter;
@@ -351,6 +352,11 @@ namespace PacmanWinForms
 
                         foreach (Ghost ghost in Ghosts)
                         {
+                            if (ghost.CurrentState == GhostState.Eaten)
+                                continue;
+                            
+                            ghost.IsFrightened = true;
+
                             if (ghost.CurrentState == GhostState.Chase || ghost.CurrentState == GhostState.Scatter)
                             {
                                 ghost.CurrentState = GhostState.Frightened;
@@ -387,7 +393,7 @@ namespace PacmanWinForms
                 // 3. Règle Arcade : Collision STRICTEMENT sur la même case
                 if (pacmanTileX == ghostTileX && pacmanTileY == ghostTileY)
                 {
-                    if (ghost.CurrentState == GhostState.Frightened)
+                    if (ghost.CurrentState == GhostState.Frightened || (ghost.IsFrightened && ghost.CurrentState != GhostState.Eaten))
                     {
                         // Passage immédiat en mode yeux (il commencera à courir APRÈS le freeze)
                         ghost.CurrentState = GhostState.Eaten;
@@ -408,6 +414,7 @@ namespace PacmanWinForms
                         // Déclenchement du mode Freeze Arcade (1 seconde)
                         State = GameState.GhostEaten;
                         ghostEatenFreezeTimer = 60;
+                        ghost.IsFrightened = false;
 
                         break; // On sort immédiatement de la boucle de détection
                     }

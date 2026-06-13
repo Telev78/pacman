@@ -17,6 +17,7 @@ namespace PacmanWinForms
         protected float initialY;
         protected int bobDirection = 1;
         protected Point ScatterTargetTile { get; set; }
+        public bool IsFrightened { get; set; } = false;
 
         public Ghost(int startTileX, int startTileY, Point scatterTarget)
         {
@@ -131,7 +132,19 @@ namespace PacmanWinForms
                 }
                 else
                 {
-                    CurrentState = GhostState.Scatter;
+                    // Le fantôme vient de franchir le seuil de la maison !
+                    if (IsFrightened)
+                    {
+                        // S'il a été terrifié pendant qu'il était dedans ou qu'il sortait,
+                        // il bascule immédiatement dans le comportement de fuite du labyrinthe
+                        CurrentState = GhostState.Frightened;
+                    }
+                    else
+                    {
+                        // Sinon, il reprend sa routine normale (ici Scatter par défaut)
+                        CurrentState = GhostState.Scatter;
+                    }
+
                     CurrentDirection = Keys.Left;
                 }
                 return;

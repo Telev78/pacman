@@ -241,8 +241,8 @@ namespace PacmanWinForms
 
                         Bitmap ghostSprite;
 
-                        if (ghost.CurrentState == GhostState.Frightened)
-                        {
+                        if (ghost.CurrentState == GhostState.Frightened || (ghost.IsFrightened && ghost.CurrentState != GhostState.Eaten))
+                            {
                             int virtualTicksRemaining = (int)(game.FrightenedMsRemaining / 16.67f);
                             const int TicksPerFlashCycle = 16;
                             int totalFlashTicks = game.CurrentSpecs.FlashesCount * TicksPerFlashCycle;
@@ -362,12 +362,19 @@ namespace PacmanWinForms
             {
                 using (Bitmap pointsSprite = spriteManager.GetFruitPointsSprite(game.CurrentFruitValue))
                 {
-                    // On récupère les coordonnées logiques corrigées et on applique le Zoom
                     int posX = game.FruitX * GameConfig.Zoom;
                     int posY = game.FruitY * GameConfig.Zoom;
 
-                    // Dessin du sprite de score (16x16 pixels à l'échelle)
-                    g.DrawImage(pointsSprite, posX, posY, GameConfig.ScaledTileSize * 2, GameConfig.ScaledTileSize * 2);
+                    // Si le score est de 2000 ou plus, le sprite extrait commence 3 pixels plus à gauche.
+                    // On décale le dessin de -3 pixels (au niveau du zoom) pour que la bordure droite
+                    // reste parfaitement alignée avec celle du score 1000 !
+                    if (game.CurrentFruitValue >= 2000)
+                    {
+                        posX -= 3 * GameConfig.Zoom;
+                    }
+
+                    // Dessin en utilisant la largeur RÉELLE (pointsSprite.Width) pour éviter tout écrasement
+                    g.DrawImage(pointsSprite, posX, posY, pointsSprite.Width * GameConfig.Zoom, pointsSprite.Height * GameConfig.Zoom);
                 }
             }
 

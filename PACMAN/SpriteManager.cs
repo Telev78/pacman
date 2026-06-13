@@ -500,32 +500,50 @@ namespace PacmanWinForms
 
         /// <summary>
         /// Extrait le sprite de score stylisé d'origine pour les fruits (100 à 5000)
-        /// depuis la generalSheet à partir de la coordonnée (456, 144).
+        /// depuis la generalSheet (Ligne index 9, Y=144) en gérant les largeurs variables et l'alignement.
         /// </summary>
         public Bitmap GetFruitPointsSprite(int points)
         {
-            int spriteSize = 16;
             int pixelX = 456;
-            int pixelY = 144; // Ligne de base (index 9) contenant 100, 300, 500, 700, 1000
+            int pixelY = 144; // Ligne index 9
+            int width = 16;
+            int height = 16;
 
             switch (points)
             {
-                case 100: pixelX += 0 * spriteSize; break;
-                case 300: pixelX += 1 * spriteSize; break;
-                case 500: pixelX += 2 * spriteSize; break;
-                case 700: pixelX += 3 * spriteSize; break;
-                case 1000: pixelX += 4 * spriteSize; break; // Fin de la première ligne
+                case 100: pixelX += 0 * 16; width = 16; break;
+                case 300: pixelX += 1 * 16; width = 16; break;
+                case 500: pixelX += 2 * 16; width = 16; break;
+                case 700: pixelX += 3 * 16; width = 16; break;
 
-                // Empilement vertical sous le 1000 (colonne index 4)
-                case 2000: pixelX += 4 * spriteSize; pixelY += 1 * spriteSize; break;
-                case 3000: pixelX += 4 * spriteSize; pixelY += 2 * spriteSize; break;
-                case 5000: pixelX += 4 * spriteSize; pixelY += 3 * spriteSize; break;
+                case 1000:
+                    pixelX += 4 * 16; // 520
+                    width = 18;       // 18 pixels de large (déborde à droite)
+                    break;
+
+                case 2000:
+                    pixelX += (4 * 16) - 3; // 517 (3 pixels plus tôt à gauche)
+                    pixelY += 1 * 16;       // 1 ligne en dessous (160)
+                    width = 21;             // 21 pixels de large
+                    break;
+
+                case 3000:
+                    pixelX += (4 * 16) - 3; // 517
+                    pixelY += 2 * 16;       // 2 lignes en dessous (176)
+                    width = 21;
+                    break;
+
+                case 5000:
+                    pixelX += (4 * 16) - 3; // 517
+                    pixelY += 3 * 16;       // 3 lignes en dessous (192)
+                    width = 21;
+                    break;
 
                 default:
                     return new Bitmap(16, 16); // Sécurité
             }
 
-            Rectangle srcRect = new Rectangle(pixelX, pixelY, spriteSize, spriteSize);
+            Rectangle srcRect = new Rectangle(pixelX, pixelY, width, height);
             return generalSheet.Clone(srcRect, generalSheet.PixelFormat);
         }
     }
