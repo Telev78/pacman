@@ -18,6 +18,8 @@ namespace PacmanWinForms
         protected int bobDirection = 1;
         protected Point ScatterTargetTile { get; set; }
         public bool IsFrightened { get; set; } = false;
+        public int DotLimit { get; set; }
+        public int DotCounter { get; set; } = 0;
 
         public Ghost(int startTileX, int startTileY, Point scatterTarget)
         {

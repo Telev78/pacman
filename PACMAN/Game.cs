@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Windows.Forms;
 
 namespace PacmanWinForms
@@ -33,12 +34,14 @@ namespace PacmanWinForms
 
         // Variables privées de logique
         private int frameCounter = 0;
-        private int houseTimer = 0;
         private int readyTimer = 0;
         private int gameOverTimer = 0;
         private int ghostsEatenInCurrentFrightenedMode = 0;
         private int ghostEatenFreezeTimer = 0;
         private bool isBonusLifeAwarded = false;
+        private bool useGlobalDotCounter = false;
+        private int globalDotCounter = 0;
+        private int inactivityTimerMs = 0;
         // --- ÉTAT ET LOGIQUE DES FRUITS ---
         public bool IsFruitActive { get; private set; } = false;
         public int FruitX { get; private set; }
@@ -108,7 +111,6 @@ namespace PacmanWinForms
         {
             this.CurrentSpecs = GameConfig.GetSpecsForLevel(this.CurrentLevel);
             Ghosts.Clear();
-            houseTimer = 0;
 
             Blinky blinky = new Blinky();
             Pinky pinky = new Pinky();
@@ -125,6 +127,22 @@ namespace PacmanWinForms
             // Reset du fruit temporaire pour la nouvelle vie
             IsFruitActive = false;
             IsFruitScoreActive = false;
+
+            inactivityTimerMs = 0;
+            // Si on est au tout début du niveau 1, on veut le mode individuel.
+            // Mais si on réinitialise après une mort (Lives < 3 par exemple), on active le compteur global.
+            if (Score > 0)
+            {
+                useGlobalDotCounter = true;
+            }
+            else
+            {
+                useGlobalDotCounter = false;
+                ConfigureGhostDotLimits(); // Initialise les limites de base (0, 30, 60)
+            }
+
+            globalDotCounter = 0;
+
 
             State = GameState.Ready;
             readyTimer = 240;        // 240 frames = ~4 secondes à 60 Hz
@@ -159,8 +177,13 @@ namespace PacmanWinForms
                 if (readyTimer <= 0)
                 {
                     State = GameState.Playing;
-                    ReleaseGhostFromHouse("Pinky");
+                    
                     IsNextLevelTransition = false;
+                    Ghost preferred = GetPreferredGhostInHouse();
+                    if (preferred != null && preferred.DotCounter >= preferred.DotLimit && !useGlobalDotCounter)
+                    {
+                        preferred.CurrentState = GhostState.Exiting;
+                    }
                 }
                 return;
             }
@@ -246,6 +269,28 @@ namespace PacmanWinForms
                 }
             }
 
+            // Le chrono de sortie ne tourne QUE si le joueur est en train de jouer activement
+            if (State == GameState.Playing)
+            {
+                Ghost ghostToRelease = GetPreferredGhostInHouse();
+
+                if (ghostToRelease != null)
+                {
+                    inactivityTimerMs += 16; // ~16.67ms par frame sous 60Hz
+
+                    // Règle des 4 secondes d'inactivité
+                    if (inactivityTimerMs >= 4000)
+                    {
+                        inactivityTimerMs = 0;
+                        ghostToRelease.CurrentState = GhostState.Exiting; // Sortie forcée !
+                    }
+                }
+                else
+                {
+                    inactivityTimerMs = 0; // Personne dans le nid, on reset le timer
+                }
+            }
+
             // VITESSE ET MOUVEMENT DE PAC-MAN
             // COMPORTEMENT ARCADE : On ajoute +4 pour tester le centre de Pac-Man
             int pTileX = (int)((Pacman.X + 4) / GameConfig.TileSize);
@@ -269,18 +314,8 @@ namespace PacmanWinForms
 
             Pacman.Move(Map, CurrentLevel, IsFrightenedMode);
 
-            // 3. SORTIE DU NID
-            houseTimer++;
-            if (houseTimer == 180)       // ~3 secondes après le début
-            {
-                ReleaseGhostFromHouse("Inky");
-            }
-            else if (houseTimer == 420)  // ~7 secondes après le début
-            {
-                ReleaseGhostFromHouse("Clyde");
-            }
 
-            // 4. VITESSE ET MOUVEMENT DES FANTÔMES
+            // VITESSE ET MOUVEMENT DES FANTÔMES
             foreach (Ghost ghost in Ghosts)
             {
                 int gTileX = (int)(ghost.X / GameConfig.TileSize);
@@ -303,7 +338,7 @@ namespace PacmanWinForms
                 ghost.Move(Map, Pacman, CurrentLevel);
             }
 
-            // 5. ANIMATIONS ET COLLISIONS
+            // ANIMATIONS ET COLLISIONS
             frameCounter++;
             if (frameCounter % 6 == 0)
             {
@@ -317,6 +352,50 @@ namespace PacmanWinForms
             if (Score > HighScore)
             {
                 HighScore = Score;
+            }
+        }
+
+        private void PelletEated()
+        {
+            
+            inactivityTimerMs = 0; // Une gomme est mangée ! On reset immédiatement le timer de sécurité.
+
+            if (useGlobalDotCounter)
+            {
+                globalDotCounter++;
+
+                Ghost pinky = Ghosts.FirstOrDefault(g => g.GetType().Name == "Pinky" && g.CurrentState == GhostState.InHouse);
+                Ghost inky = Ghosts.FirstOrDefault(g => g.GetType().Name == "Inky" && g.CurrentState == GhostState.InHouse);
+
+                // Règle post-mort : Pinky sort à 7, Inky à 17
+                if (pinky != null && globalDotCounter == 7)
+                {
+                    pinky.CurrentState = GhostState.Exiting;
+                }
+                else if (inky != null && globalDotCounter == 17)
+                {
+                    inky.CurrentState = GhostState.Exiting;
+                }
+                // Règle absolue de l'arcade : si le compteur global atteint 32 et que Clyde est dedans,
+                // on stoppe le compteur global et on repasse instantanément aux compteurs individuels !
+                else if (globalDotCounter >= 32)
+                {
+                    useGlobalDotCounter = false;
+                    globalDotCounter = 0;
+                }
+            }
+            else
+            {
+                // Mode Normal : On incrémente le compteur du fantôme prioritaire dans le nid
+                Ghost preferredGhost = GetPreferredGhostInHouse();
+                if (preferredGhost != null)
+                {
+                    preferredGhost.DotCounter++;
+                    if (preferredGhost.DotCounter >= preferredGhost.DotLimit)
+                    {
+                        preferredGhost.CurrentState = GhostState.Exiting;
+                    }
+                }
             }
         }
 
@@ -335,6 +414,7 @@ namespace PacmanWinForms
                     Map.Grid[tileY, tileX] = 0;
                     AddScore(10);
                     DotsRemaining--;
+                    PelletEated();
                     CheckLevelClear();
                 }
                 else if (currentTile == 3) // Super gomme
@@ -342,7 +422,7 @@ namespace PacmanWinForms
                     Map.Grid[tileY, tileX] = 0;
                     AddScore(50);
                     DotsRemaining--;
-
+                    PelletEated();
                     ghostsEatenInCurrentFrightenedMode = 0;
 
                     if (CurrentSpecs.FrightenedTimeSec > 0)
@@ -435,18 +515,6 @@ namespace PacmanWinForms
             if (DotsRemaining <= 0)
             {
                 State = GameState.Victory;
-            }
-        }
-
-        private void ReleaseGhostFromHouse(string ghostType)
-        {
-            foreach (Ghost ghost in Ghosts)
-            {
-                if (ghost.GetType().Name == ghostType && ghost.CurrentState == GhostState.InHouse)
-                {
-                    ghost.CurrentState = GhostState.Exiting;
-                    break;
-                }
             }
         }
 
@@ -565,5 +633,32 @@ namespace PacmanWinForms
                 FruitScoreTimer = 120; // Affiché pendant 2 secondes (120 frames), sans figer le jeu
             }
         }
+        private void ConfigureGhostDotLimits()
+        {
+            foreach (Ghost ghost in Ghosts)
+            {
+                ghost.DotCounter = 0;
+                string name = ghost.GetType().Name;
+
+                if (name == "Pinky") ghost.DotLimit = 0;    // Sort immédiatement
+                if (name == "Inky") ghost.DotLimit = 30;    // Sort après 30 gommes
+                if (name == "Clyde") ghost.DotLimit = 60;   // Sort après 60 gommes
+            }
+        }
+
+        private Ghost GetPreferredGhostInHouse()
+        {
+            // Ordre de priorité immuable de l'arcade
+            foreach (var name in new[] { "Pinky", "Inky", "Clyde" })
+            {
+                Ghost g = Ghosts.FirstOrDefault(x => x.GetType().Name == name);
+                if (g != null && g.CurrentState == GhostState.InHouse)
+                {
+                    return g;
+                }
+            }
+            return null;
+        }
+
     }
 }
