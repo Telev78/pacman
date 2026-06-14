@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Windows.Forms;
 
 namespace PacmanWinForms
@@ -81,17 +82,24 @@ namespace PacmanWinForms
 
         private void InitializeGameValue()
         {
-            string mapPath = Path.Combine(Application.StartupPath, "asset", "maps", "original_maze.txt");
+            Assembly assembly = Assembly.GetExecutingAssembly();
+            // Note la conversion des dossiers en points : asset.maps.original_maze.txt
+            string resourceName = "PacmanWinForms.asset.maps.original_maze.txt";
 
-            if (File.Exists(mapPath))
+            using (Stream stream = assembly.GetManifestResourceStream(resourceName))
             {
-                Map.LoadMapFromFile(mapPath);
-                CountInitialPellets();
-                ResetPositions();
-            }
-            else
-            {
-                throw new FileNotFoundException("Fichier de carte introuvable : " + mapPath);
+                if (stream != null)
+                {
+                    // On charge la carte directement depuis le flux de l'exécutable !
+                    Map.LoadMapFromStream(stream);
+
+                    CountInitialPellets();
+                    ResetPositions();
+                }
+                else
+                {
+                    throw new FileNotFoundException("Fichier de carte embarqué introuvable : " + resourceName);
+                }
             }
         }
 
@@ -324,6 +332,18 @@ namespace PacmanWinForms
             // VITESSE ET MOUVEMENT DES FANTÔMES
             foreach (Ghost ghost in Ghosts)
             {
+
+                if (ghost is Blinky blinky)
+                {
+                    // On met à jour Elroy TOUT LE TEMPS (flags + vitesse de base d'Blinky)
+                    blinky.UpdateElroyStatus(CurrentLevel, DotsRemaining, CurrentSpecs);
+                }
+                else
+                {
+                    // Vitesse de base standard pour Pinky, Inky et Clyde
+                    ghost.Speed = CurrentSpecs.GhostNormal;
+                }
+
                 int gTileX = (int)(ghost.X / GameConfig.TileSize);
                 int gTileY = (int)(ghost.Y / GameConfig.TileSize);
                 bool isInTunnel = (gTileY == 17 && (gTileX <= 5 || gTileX >= 22));
@@ -336,11 +356,7 @@ namespace PacmanWinForms
                 {
                     ghost.Speed = CurrentSpecs.GhostTunnel;
                 }
-                else
-                {
-                    ghost.Speed = CurrentSpecs.GhostNormal;
-                }
-
+              
                 ghost.Move(Map, Pacman, CurrentLevel, GlobalGhostState);
             }
 
@@ -552,15 +568,7 @@ namespace PacmanWinForms
             CurrentLevel++;
             IsNextLevelTransition = true;
 
-            // On recharge la carte pour replacer toutes les gommes
-            string mapPath = Path.Combine(Application.StartupPath, "asset", "maps", "original_maze.txt");
-
-            if (File.Exists(mapPath))
-            {
-                Map.LoadMapFromFile(mapPath);
-                CountInitialPellets();
-                ResetPositions(); // Remet l'état à GameState.Ready, ShowCharacters = false, etc.
-            }
+            InitializeGameValue();
         }
 
         /// <summary>

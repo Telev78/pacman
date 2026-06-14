@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 
 namespace PacmanWinForms
@@ -25,6 +26,40 @@ namespace PacmanWinForms
                     Grid[r, c] = 0;
                     VisualGrid[r, c] = -1;
                 }
+            }
+        }
+
+        public void LoadMapFromStream(Stream stream)
+        {
+            using (StreamReader reader = new StreamReader(stream))
+            {
+                List<string> lines = new List<string>();
+                while (!reader.EndOfStream)
+                {
+                    lines.Add(reader.ReadLine());
+                }
+
+                // 1. Les 36 premières lignes = La physique (Grid)
+                for (int r = 0; r < GameConfig.MapHeight; r++)
+                {
+                    string[] tokens = lines[r].Split(',');
+                    for (int c = 0; c < GameConfig.MapWidth; c++)
+                    {
+                        Grid[r, c] = int.Parse(tokens[c]);
+                    }
+                }
+
+                // 2. Les 36 lignes suivantes = Le visuel (VisualGrid)
+                for (int r = 0; r < GameConfig.MapHeight; r++)
+                {
+                    string[] tokens = lines[GameConfig.MapHeight + r].Split(',');
+                    for (int c = 0; c < GameConfig.MapWidth; c++)
+                    {
+                        VisualGrid[r, c] = int.Parse(tokens[c]);
+                    }
+                }
+
+
             }
         }
 

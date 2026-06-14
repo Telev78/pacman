@@ -226,7 +226,7 @@ namespace PacmanWinForms
             return bestDirection;
         }
 
-        private Point GetCurrentTargetTile(Pacman pacman)
+        protected virtual Point GetCurrentTargetTile(Pacman pacman)
         {
             if (CurrentState == GhostState.Scatter)
                 return ScatterTargetTile;

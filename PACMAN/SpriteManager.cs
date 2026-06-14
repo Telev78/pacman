@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
+using System.Reflection;
 using System.Windows.Forms;
 
 namespace PacmanWinForms
@@ -30,12 +31,27 @@ namespace PacmanWinForms
             Yellow = 6
         }
 
+        private Bitmap LoadEmbeddedBitmap(string resourcePath)
+        {
+            Assembly assembly = Assembly.GetExecutingAssembly();
+            // Format cible : PacmanWinForms.asset.general.png
+            string fullResourceName = $"PacmanWinForms.{resourcePath}";
+
+            using (Stream stream = assembly.GetManifestResourceStream(fullResourceName))
+            {
+                if (stream == null)
+                {
+                    throw new FileNotFoundException($"Ressource image embarquée introuvable : {fullResourceName}");
+                }
+                return new Bitmap(stream);
+            }
+        }
+
         public SpriteManager()
         {
-            string assetPath = Path.Combine(Application.StartupPath, "asset");
-            generalSheet = new Bitmap(Path.Combine(assetPath, "general.png"));
-            mazeSheet = new Bitmap(Path.Combine(assetPath, "maze.png"));
-            textSheet = new Bitmap(Path.Combine(assetPath, "text.png"));
+            generalSheet = LoadEmbeddedBitmap("asset.general.png");
+            mazeSheet = LoadEmbeddedBitmap("asset.maze.png");
+            textSheet = LoadEmbeddedBitmap("asset.text.png");
 
             generalSheet.MakeTransparent(Color.Black);
 
