@@ -173,7 +173,7 @@ namespace PacmanWinForms
                 }
             }
         }
-        // Nouvelle méthode de récupération universelle
+        
         public Bitmap GetGhostSprite(string ghostName, Keys direction, int frame)
         {
             if (ghostSprites.ContainsKey(ghostName) && ghostSprites[ghostName].ContainsKey(direction))
@@ -275,18 +275,28 @@ namespace PacmanWinForms
         /// <summary>
         /// Extrait une tuile 8x8 de maze.png selon sa colonne et sa ligne dans la feuille
         /// </summary>
-        public Bitmap GetMazeTile(int sheetColumn, int sheetRow)
+        public Bitmap GetMazeTile(int sheetColumn, int sheetRow, MazeColor color = MazeColor.Blue)
         {
             int size = GameConfig.TileSize; // 8
+            sheetRow = sheetRow + ((int)color*3);
+
             Bitmap tile = new Bitmap(size, size);
             using (Graphics g = Graphics.FromImage(tile))
             {
+
                 g.DrawImage(mazeSheet,
                     new Rectangle(0, 0, size, size),
                     new Rectangle((sheetColumn * size)+225+sheetColumn, (sheetRow * size)+sheetRow, size, size),
                     GraphicsUnit.Pixel);
             }
             return tile;
+        }
+
+        public enum MazeColor
+        {  
+            Red = 0,
+            Blue = 1, 
+            White = 2
         }
 
         /// <summary>

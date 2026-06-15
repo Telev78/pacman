@@ -147,13 +147,30 @@ namespace PacmanWinForms
             this.Text = $"Pac-Man Arcade (C#) - SCORE: {game.Score} - VIES: {game.Lives} - Gommes: {game.DotsRemaining}";
         }
 
+        private void DrawArcadeString(Graphics g, string text, int startTileX, int tileY, ArcadeColor colorSet)
+        {
+            for (int i = 0; i < text.Length; i++)
+            {
+                char c = text[i];
+                if (c == ' ') continue; // On ne dessine rien pour un espace
+
+                using (Bitmap charSprite = spriteManager.GetArcadeCharacter(c, colorSet))
+                {
+                    int posX = (startTileX + i) * GameConfig.ScaledTileSize;
+                    int posY = tileY * GameConfig.ScaledTileSize;
+                    int size = GameConfig.ScaledTileSize;
+                    g.DrawImage(charSprite, posX, posY, size, size);
+                }
+            }
+        }
+
         protected override void OnPaint(PaintEventArgs e)
         {
             Graphics g = e.Graphics;
             g.InterpolationMode = InterpolationMode.NearestNeighbor;
             g.PixelOffsetMode = PixelOffsetMode.HighQuality;
 
-            int colorRowOffset = 3; // Bleu d'origine
+            //int colorRowOffset = 3; // Bleu d'origine
 
             // 1. DESSIN DU LABYRINTHE (via game.Map)
             for (int r = 0; r < GameConfig.MapHeight; r++)
@@ -168,7 +185,7 @@ namespace PacmanWinForms
                     {
                         int tileID = game.Map.VisualGrid[r, c];
                         int sheetCol = tileID % 16;
-                        int sheetRow = (tileID / 16) + colorRowOffset;
+                        int sheetRow = (tileID / 16) ;
 
                         using (Bitmap tileSprite = spriteManager.GetMazeTile(sheetCol, sheetRow))
                         {
@@ -179,7 +196,7 @@ namespace PacmanWinForms
                     int cellPhysic = game.Map.Grid[r, c];
                     if (cellPhysic == 2)
                     {
-                        using (Bitmap dotSprite = spriteManager.GetMazeTile(13, 2 + colorRowOffset))
+                        using (Bitmap dotSprite = spriteManager.GetMazeTile(13, 2 ))
                         {
                             g.DrawImage(dotSprite, screenX, screenY, size, size);
                         }
@@ -188,7 +205,7 @@ namespace PacmanWinForms
                     {
                         if ((Environment.TickCount / 200) % 2 == 0)
                         {
-                            using (Bitmap energizerSprite = spriteManager.GetMazeTile(15, 2 + colorRowOffset))
+                            using (Bitmap energizerSprite = spriteManager.GetMazeTile(15, 2 ))
                             {
                                 g.DrawImage(energizerSprite, screenX, screenY, size, size);
                             }
@@ -277,52 +294,13 @@ namespace PacmanWinForms
             // 3. TEXTE "READY!" RETRO (Dessiné lettre par lettre via text.png)
             if (game.State == GameState.Ready)
             {
-                string readyText = "READY!";
-
-                // Alignement sur la grille arcade : 
-                // Le labyrinthe fait 28 tuiles de large. (28 - 6 lettres) / 2 = Tuile 11 pour centrer horizontalement.
-                int startTileX = 11;
-                int tileY = 20; // Ta ligne d'origine sous la cage des fantômes
-
-                for (int i = 0; i < readyText.Length; i++)
-                {
-                    char c = readyText[i];
-
-                    // On extrait la lettre en Jaune (Color Set 6)
-                    using (Bitmap charSprite = spriteManager.GetArcadeCharacter(c, ArcadeColor.Yellow))
-                    {
-                        int posX = (startTileX + i) * GameConfig.ScaledTileSize;
-                        int posY = tileY * GameConfig.ScaledTileSize;
-                        int size = GameConfig.ScaledTileSize; // Taille d'une tuile (8x8 zoomé)
-
-                        g.DrawImage(charSprite, posX, posY, size, size);
-                    }
-                }
+                DrawArcadeString(g, "READY!", 11, 20, ArcadeColor.Yellow);
             }
 
             // 4. TEXTE "GAME OVER" RETRO (Dessiné lettre par lettre en Rouge via text.png)
             if (game.State == GameState.GameOver)
             {
-                // Astuce arcade : "GAME  OVER" avec 2 espaces au milieu fait 10 caractères.
-                // L'écran faisant 28 tuiles de large : (28 - 10) / 2 = Tuile 9 pour un centrage parfait.
-                string gameOverText = "GAME  OVER";
-                int startTileX = 9;
-                int tileY = 20; // Même ligne que le "READY!", juste sous le nid des fantômes
-
-                for (int i = 0; i < gameOverText.Length; i++)
-                {
-                    char c = gameOverText[i];
-
-                    // On extrait la lettre depuis le Color Set 1 (Rouge réglementaire du Game Over)
-                    using (Bitmap charSprite = spriteManager.GetArcadeCharacter(c, ArcadeColor.Red))
-                    {
-                        int posX = (startTileX + i) * GameConfig.ScaledTileSize;
-                        int posY = tileY * GameConfig.ScaledTileSize;
-                        int size = GameConfig.ScaledTileSize;
-
-                        g.DrawImage(charSprite, posX, posY, size, size);
-                    }
-                }
+                DrawArcadeString(g, "GAME  OVER", 9, 20, ArcadeColor.Red);
             }
 
             // 5. TEXTE DU SCORE DU FANTÔME MANGÉ 
@@ -344,7 +322,7 @@ namespace PacmanWinForms
                 
             }
 
-            // --- DESSIN DU FRUIT BONUS ---
+            // 6. DESSIN DU FRUIT BONUS
             if (game.IsFruitActive)
             {
                 using (Bitmap fruitSprite = spriteManager.GetFruitSprite(game.CurrentLevel))
@@ -357,7 +335,7 @@ namespace PacmanWinForms
                 }
             }
 
-            // --- DESSIN DES POINTS DU FRUIT MANGÉ ---
+            // 7. DESSIN DES POINTS DU FRUIT MANGÉ ---
             if (game.IsFruitScoreActive)
             {
                 using (Bitmap pointsSprite = spriteManager.GetFruitPointsSprite(game.CurrentFruitValue))
@@ -382,23 +360,7 @@ namespace PacmanWinForms
             // DESSIN DU HUD RETRO (BANDEAUX SUPÉRIEUR ET INFÉRIEUR)
             // =========================================================================
 
-            // Petite fonction locale pour automatiser l'écriture de chaînes de caractères
-            void DrawArcadeString(string text, int startTileX, int tileY, ArcadeColor colorSet)
-            {
-                for (int i = 0; i < text.Length; i++)
-                {
-                    char c = text[i];
-                    if (c == ' ') continue; // On ne dessine rien pour un espace
 
-                    using (Bitmap charSprite = spriteManager.GetArcadeCharacter(c, colorSet))
-                    {
-                        int posX = (startTileX + i) * GameConfig.ScaledTileSize;
-                        int posY = tileY * GameConfig.ScaledTileSize;
-                        int size = GameConfig.ScaledTileSize;
-                        g.DrawImage(charSprite, posX, posY, size, size);
-                    }
-                }
-            }
 
             // --- LIGNE 0 : BANDEAU SUPÉRIEUR (Textes fixes et clignotement) ---
 
@@ -411,11 +373,11 @@ namespace PacmanWinForms
 
             if (show1Up)
             {
-                DrawArcadeString("1UP", 3, 0, ArcadeColor.White);
+                DrawArcadeString(g, "1UP", 3, 0, ArcadeColor.White);
             }
 
             // Inscription centrale HIGH SCORE
-            DrawArcadeString("HIGH SCORE", 9, 0, ArcadeColor.White);
+            DrawArcadeString(g, "HIGH SCORE", 9, 0, ArcadeColor.White);
 
 
             // --- LIGNE 1 : SCORES ALIGNÉS À DROITE ---
@@ -423,7 +385,7 @@ namespace PacmanWinForms
             // Score Joueur 1 : S'affiche "00" si à zéro, sinon recule vers la gauche
             string scoreStr = (game.Score == 0) ? "00" : game.Score.ToString();
             int scoreStartX = 6 - scoreStr.Length + 1; // Aligné à droite sur la colonne 6
-            DrawArcadeString(scoreStr, scoreStartX, 1, 0);
+            DrawArcadeString(g, scoreStr, scoreStartX, 1, 0);
 
             // CORRECTION HIGH SCORE : Si la borne vient d'être allumée (HighScore == 0),
             // la zone reste vide. Elle s'affichera dès que le joueur marque ses premiers points.
@@ -431,7 +393,7 @@ namespace PacmanWinForms
             {
                 string highScoreStr = game.HighScore.ToString();
                 int highScoreStartX = 16 - highScoreStr.Length + 1; // Aligné à droite sur la colonne 16
-                DrawArcadeString(highScoreStr, highScoreStartX, 1, 0);
+                DrawArcadeString(g, highScoreStr, highScoreStartX, 1, 0);
             }
 
 
