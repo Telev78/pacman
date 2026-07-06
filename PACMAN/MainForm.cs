@@ -45,7 +45,7 @@ namespace PacmanWinForms
             }
 
             deathAnimationTimer = new Timer();
-            deathAnimationTimer.Interval = 70;
+            deathAnimationTimer.Interval = 200;
             deathAnimationTimer.Tick += DeathAnimationTimer_Tick;
 
             gameTimer = new Timer();
