@@ -20,6 +20,12 @@ namespace PacmanWinForms
 
         public MainForm()
         {
+            try
+            {
+                this.Icon = System.Drawing.Icon.ExtractAssociatedIcon(System.Windows.Forms.Application.ExecutablePath);
+                this.ShowIcon = true;
+            }
+            catch { /* Sécurité */ }
             this.Text = "Pac-Man Arcade (C#)";
             this.Size = new Size(GameConfig.ScreenWidth + 16, GameConfig.ScreenHeight + 39);
             this.FormBorderStyle = FormBorderStyle.FixedSingle;
