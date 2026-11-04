@@ -17,7 +17,7 @@ namespace PacmanWinForms
 
         public AudioManager()
         {
-            // 1. Extraction en masse de la liste d'assets d'après ta capture d'écran
+            // 1. Extraction en masse de la liste d'assets
             string[] soundsToExtract = new string[]
             {
                 "credit", "death_0", "death_1", "eat_dot_0", "eat_dot_1", "eat_fruit",
@@ -29,7 +29,6 @@ namespace PacmanWinForms
             foreach (string sound in soundsToExtract)
             {
                 ExtractResourceToTemp(sound, $"asset.sounds.{sound}.wav");
-                //InitializePlayer(sound);
             }
         }
 

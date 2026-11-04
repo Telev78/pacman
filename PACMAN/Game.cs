@@ -78,8 +78,7 @@ namespace PacmanWinForms
             Ghosts = new List<Ghost>();
 
             audioManager = new AudioManager();
-            audioManager.StopAll();
-
+            
             Score = 0;
             Lives = 3;
             CurrentLevel = 1;
@@ -91,7 +90,7 @@ namespace PacmanWinForms
         private void InitializeGameValue()
         {
             audioManager.StopAll();
-            currentSirenIndex = -1;
+            
             Assembly assembly = Assembly.GetExecutingAssembly();
             // Note la conversion des dossiers en points : asset.maps.original_maze.txt
             string resourceName = "PacmanWinForms.asset.maps.original_maze.txt";
@@ -177,8 +176,7 @@ namespace PacmanWinForms
             currentWaveIndex = 0;
             waveTimerMs = 0;
             GlobalGhostState = GhostState.Scatter;
-            currentSirenIndex = -1;
-
+            
             State = GameState.Ready;
             readyTimer = 240;        // 240 frames = ~4 secondes à 60 Hz
             ShowCharacters = false;  // Cachés au tout début !
@@ -201,7 +199,7 @@ namespace PacmanWinForms
             }
         }
 
-        // Ta logique fixe à 60 Hz isolée
+        // Logique fixe à 60 Hz
         public void Update()
         {
             // GESTION DU READY
@@ -299,28 +297,27 @@ namespace PacmanWinForms
             }
 
             // Le chrono de sortie ne tourne QUE si le joueur est en train de jouer activement
-            if (State == GameState.Playing)
+            
+            CheckSirenUpdate();
+
+            Ghost ghostToRelease = GetPreferredGhostInHouse();
+
+            if (ghostToRelease != null)
             {
-                CheckSirenUpdate();
+                inactivityTimerMs += 16; // ~16.67ms par frame sous 60Hz
 
-                Ghost ghostToRelease = GetPreferredGhostInHouse();
-
-                if (ghostToRelease != null)
+                // Règle des 4 secondes d'inactivité
+                if (inactivityTimerMs >= 4000)
                 {
-                    inactivityTimerMs += 16; // ~16.67ms par frame sous 60Hz
-
-                    // Règle des 4 secondes d'inactivité
-                    if (inactivityTimerMs >= 4000)
-                    {
-                        inactivityTimerMs = 0;
-                        ghostToRelease.CurrentState = GhostState.Exiting; // Sortie forcée !
-                    }
-                }
-                else
-                {
-                    inactivityTimerMs = 0; // Personne dans le nid, on reset le timer
+                    inactivityTimerMs = 0;
+                    ghostToRelease.CurrentState = GhostState.Exiting; // Sortie forcée !
                 }
             }
+            else
+            {
+                inactivityTimerMs = 0; // Personne dans le nid, on reset le timer
+            }
+            
 
             // VITESSE ET MOUVEMENT DE PAC-MAN
             // COMPORTEMENT ARCADE : On ajoute +4 pour tester le centre de Pac-Man
@@ -376,15 +373,10 @@ namespace PacmanWinForms
                 
                 ghost.Move(Map, Pacman, CurrentLevel, GlobalGhostState);
             }
-            bool isEyesExist = false;
-            foreach (Ghost ghost in Ghosts)
-            {
-                if (ghost.CurrentState == GhostState.Eaten) { 
-                    isEyesExist = true;
-                }
-            }
-            if (!isEyesExist)
+            
+            if (!Ghosts.Any(g => g.CurrentState == GhostState.Eaten))
                 audioManager.Stop("eyes");
+            
 
 
             // ANIMATIONS ET COLLISIONS
@@ -467,7 +459,7 @@ namespace PacmanWinForms
                 }
                 else if (currentTile == 3) // Super gomme
                 {
-                    audioManager.Stop($"siren{currentSirenIndex}"); // Coupe la sirène en cours (pense à couper siren1, siren2 etc. selon le niveau)
+                    audioManager.Stop($"siren{currentSirenIndex}"); // Coupe la sirène en cours
                     audioManager.PlaySequence("fright_firstloop", "fright", loopNext: true);
 
                     Map.Grid[tileY, tileX] = 0;
@@ -517,7 +509,7 @@ namespace PacmanWinForms
 
             foreach (Ghost ghost in Ghosts)
             {
-                // 2. Détermination de la tuile du fantôme (en cohérence avec ton étape 4 de Update())
+                // 2. Détermination de la tuile du fantôme
                 int ghostTileX = (int)(ghost.X / GameConfig.TileSize);
                 int ghostTileY = (int)(ghost.Y / GameConfig.TileSize);
 

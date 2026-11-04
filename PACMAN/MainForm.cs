@@ -176,8 +176,6 @@ namespace PacmanWinForms
             g.InterpolationMode = InterpolationMode.NearestNeighbor;
             g.PixelOffsetMode = PixelOffsetMode.HighQuality;
 
-            //int colorRowOffset = 3; // Bleu d'origine
-
             // 1. DESSIN DU LABYRINTHE (via game.Map)
             for (int r = 0; r < GameConfig.MapHeight; r++)
             {
@@ -391,7 +389,7 @@ namespace PacmanWinForms
             // Score Joueur 1 : S'affiche "00" si à zéro, sinon recule vers la gauche
             string scoreStr = (game.Score == 0) ? "00" : game.Score.ToString();
             int scoreStartX = 6 - scoreStr.Length + 1; // Aligné à droite sur la colonne 6
-            DrawArcadeString(g, scoreStr, scoreStartX, 1, 0);
+            DrawArcadeString(g, scoreStr, scoreStartX, 1, ArcadeColor.White);
 
             // CORRECTION HIGH SCORE : Si la borne vient d'être allumée (HighScore == 0),
             // la zone reste vide. Elle s'affichera dès que le joueur marque ses premiers points.
@@ -399,7 +397,7 @@ namespace PacmanWinForms
             {
                 string highScoreStr = game.HighScore.ToString();
                 int highScoreStartX = 16 - highScoreStr.Length + 1; // Aligné à droite sur la colonne 16
-                DrawArcadeString(g, highScoreStr, highScoreStartX, 1, 0);
+                DrawArcadeString(g, highScoreStr, highScoreStartX, 1, ArcadeColor.White);
             }
 
 

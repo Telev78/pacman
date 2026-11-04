@@ -14,7 +14,6 @@ namespace PacmanWinForms
         private Bitmap textSheet;
         private Bitmap ghostDoorSprite;
         private Bitmap[] pacmanDeathSprites;
-        //private Dictionary<Keys, Bitmap[]> blinkySprites;
         private Dictionary<string, Dictionary<Keys, Bitmap[]>> ghostSprites;
         private Bitmap[] frightenedBlueSprites;
         private Bitmap[] frightenedWhiteSprites; // Utile pour la fin du mode panic !
@@ -47,6 +46,20 @@ namespace PacmanWinForms
             }
         }
 
+        // Découpe un rectangle de general.png dans un nouveau Bitmap
+        private Bitmap CropGeneral(int x, int y, int width = 16, int height = 16)
+        {
+            Bitmap bmp = new Bitmap(width, height);
+            using (Graphics g = Graphics.FromImage(bmp))
+            {
+                g.DrawImage(generalSheet,
+                    new Rectangle(0, 0, width, height),
+                    new Rectangle(x, y, width, height),
+                    GraphicsUnit.Pixel);
+            }
+            return bmp;
+        }
+
         public SpriteManager()
         {
             generalSheet = LoadEmbeddedBitmap("asset.general.png");
@@ -55,125 +68,60 @@ namespace PacmanWinForms
 
             generalSheet.MakeTransparent(Color.Black);
 
-            int doorWidth = 16;
-            int doorHeight = 8;
-            ghostDoorSprite = new Bitmap(doorWidth, doorHeight);
-            using (Graphics g = Graphics.FromImage(ghostDoorSprite))
-            {
-                // X = 228 (début du maze vide) + 104 (colonne 13 * 8 px) = 332
-                // Y = 96 (ligne 12 du maze physique * 8 px) = 96
-                g.DrawImage(generalSheet,
-                    new Rectangle(0, 0, doorWidth, doorHeight),
-                    new Rectangle(332, 96, doorWidth, doorHeight),
-                    GraphicsUnit.Pixel);
-            }
+            const int SpriteSize = 16;
+            const int SpritesX = 456; // Début des sprites de personnages dans general.png
 
+            // Porte du nid (16x8)
+            ghostDoorSprite = CropGeneral(332, 96, 16, 8);
+
+            // Fantômes : 4 directions x 2 frames, une ligne de 16 px par fantôme
             ghostSprites = new Dictionary<string, Dictionary<Keys, Bitmap[]>>();
-
             string[] ghostNames = { "Blinky", "Pinky", "Inky", "Clyde" };
             Keys[] dirOrder = { Keys.Right, Keys.Left, Keys.Up, Keys.Down };
-
-            int spriteSize = 16;
-            int startX = 456; // Ton offset horizontal validé
-            int startY = 64;  // Ligne de Blinky
 
             for (int i = 0; i < ghostNames.Length; i++)
             {
                 var currentGhostDict = new Dictionary<Keys, Bitmap[]>();
-                // Chaque fantôme est sur la ligne immédiatement inférieure (offset de 16 pixels verticaux)
-                int currentGhostY = startY + (i * spriteSize);
+                int y = 64 + (i * SpriteSize);
 
                 for (int d = 0; d < dirOrder.Length; d++)
                 {
                     Bitmap[] frames = new Bitmap[2];
                     for (int f = 0; f < 2; f++)
                     {
-                        frames[f] = new Bitmap(spriteSize, spriteSize);
-                        using (Graphics g = Graphics.FromImage(frames[f]))
-                        {
-                            int sheetX = startX + (d * 2 + f) * spriteSize;
-                            g.DrawImage(generalSheet,
-                                new Rectangle(0, 0, spriteSize, spriteSize),
-                                new Rectangle(sheetX, currentGhostY, spriteSize, spriteSize),
-                                GraphicsUnit.Pixel);
-                        }
+                        frames[f] = CropGeneral(SpritesX + (d * 2 + f) * SpriteSize, y);
                     }
                     currentGhostDict.Add(dirOrder[d], frames);
                 }
                 ghostSprites.Add(ghostNames[i], currentGhostDict);
             }
 
-            // --- CHARGEMENT DES SPRITES DE PANIQUE ET DES YEUX ---
+            // Fantômes effrayés : à droite des 8 sprites de Blinky (2 bleus puis 2 blancs)
+            int frightX = SpritesX + (8 * SpriteSize);
             frightenedBlueSprites = new Bitmap[2];
             frightenedWhiteSprites = new Bitmap[2];
-            int fY = 64; // Situé juste sur la ligne de Blinky 
-            startX = 456 + (8 * spriteSize); //Tout à droite des 8 sprites de Blinky
-            // 1. Fantôme effrayé Bleu (2 frames d'animation)
             for (int f = 0; f < 2; f++)
             {
-                frightenedBlueSprites[f] = new Bitmap(spriteSize, spriteSize);
-                using (Graphics g = Graphics.FromImage(frightenedBlueSprites[f]))
-                {
-                    g.DrawImage(generalSheet,
-                        new Rectangle(0, 0, spriteSize, spriteSize),
-                        new Rectangle(startX + (f * spriteSize), fY, spriteSize, spriteSize),
-                        GraphicsUnit.Pixel);
-                }
+                frightenedBlueSprites[f] = CropGeneral(frightX + f * SpriteSize, 64);
+                frightenedWhiteSprites[f] = CropGeneral(frightX + (2 + f) * SpriteSize, 64);
             }
 
-            // 2. Fantôme effrayé Blanc/Bleu clignotant (2 frames d'animation)
-            fY = 64; // Situé juste sur la ligne de Blinky 
-            startX = 456 + (8 * spriteSize); 
-            for (int f = 0; f < 2; f++)
-            {
-                frightenedWhiteSprites[f] = new Bitmap(spriteSize, spriteSize);
-                using (Graphics g = Graphics.FromImage(frightenedWhiteSprites[f]))
-                {
-                    g.DrawImage(generalSheet,
-                        new Rectangle(0, 0, spriteSize, spriteSize),
-                        new Rectangle(startX + ((2 + f) * spriteSize), fY, spriteSize, spriteSize),
-                        GraphicsUnit.Pixel);
-                }
-            }
-
-            // 3. Yeux seuls pour le retour au nid (4 directions : Droite, Gauche, Haut, Bas)
+            // Yeux (Droite, Gauche, Haut, Bas) : ligne en dessous
             eyesSprites = new Dictionary<Keys, Bitmap>();
             Keys[] eyeDirs = { Keys.Right, Keys.Left, Keys.Up, Keys.Down };
             for (int d = 0; d < eyeDirs.Length; d++)
             {
-                Bitmap eyeBmp = new Bitmap(spriteSize, spriteSize);
-                using (Graphics g = Graphics.FromImage(eyeBmp))
-                {
-                    // Les yeux commencent en dessous des 4 sprites de panique 
-                    int eyeY = 80;
-                    int eyeX = 456 + ((8 + d) * spriteSize);
-                    g.DrawImage(generalSheet,
-                        new Rectangle(0, 0, spriteSize, spriteSize),
-                        new Rectangle(eyeX, eyeY, spriteSize, spriteSize),
-                        GraphicsUnit.Pixel);
-                }
-                eyesSprites.Add(eyeDirs[d], eyeBmp);
+                eyesSprites.Add(eyeDirs[d], CropGeneral(SpritesX + (8 + d) * SpriteSize, 80));
             }
 
+            // Animation de mort de Pac-Man (12 frames alignées horizontalement)
             pacmanDeathSprites = new Bitmap[12];
-            spriteSize = 16;
-            startX = 456 + (3*16); 
-            startY = 0;
-
             for (int f = 0; f < 12; f++)
             {
-                pacmanDeathSprites[f] = new Bitmap(spriteSize, spriteSize);
-                using (Graphics g = Graphics.FromImage(pacmanDeathSprites[f]))
-                {
-                    g.DrawImage(generalSheet,
-                        new Rectangle(0, 0, spriteSize, spriteSize),
-                        // Les frames sont généralement alignées horizontalement
-                        new Rectangle(startX + (f * spriteSize), startY, spriteSize, spriteSize),
-                        GraphicsUnit.Pixel);
-                }
+                pacmanDeathSprites[f] = CropGeneral(SpritesX + (3 + f) * SpriteSize, 0);
             }
         }
-        
+
         public Bitmap GetGhostSprite(string ghostName, Keys direction, int frame)
         {
             if (ghostSprites.ContainsKey(ghostName) && ghostSprites[ghostName].ContainsKey(direction))
@@ -186,18 +134,6 @@ namespace PacmanWinForms
         public Bitmap GetGhostDoorSprite()
         {
             return ghostDoorSprite;
-        }
-
-        public Bitmap GetEmptyMaze()
-        {
-            int width = 224;
-            int height = 248;
-            Bitmap croppedMaze = new Bitmap(width, height);
-            using (Graphics g = Graphics.FromImage(croppedMaze))
-            {
-                g.DrawImage(generalSheet, new Rectangle(0, 0, width, height), new Rectangle(228, 0, width, height), GraphicsUnit.Pixel);
-            }
-            return croppedMaze;
         }
 
         /// <summary>
@@ -297,69 +233,6 @@ namespace PacmanWinForms
             Red = 0,
             Blue = 1, 
             White = 2
-        }
-
-        /// <summary>
-        /// Scanne le labyrinthe de general.png et génère automatiquement la matrice VisualGrid
-        /// </summary>
-        public void AutoScanAndBuildVisualGrid(LevelMap map)
-        {
-            Bitmap emptyMaze = GetEmptyMaze(); // Image bleue de 224x248
-            int size = GameConfig.TileSize;
-
-            // 1. Précharger les 48 tuiles de la variante BLEUE (Lignes 3 à 5 de maze.png)
-            Bitmap[] bank = new Bitmap[48];
-            for (int i = 0; i < 48; i++)
-            {
-                int col = i % 16;
-                int row = (i / 16) + 3; // AJOUT : +3 car le bleu est en deuxième position (lignes 3, 4, 5)
-                bank[i] = GetMazeTile(col, row);
-            }
-
-            // 2. Parcourir uniquement la zone du labyrinthe (lignes 3 à 33 sur 36)
-            for (int r = 3; r < 34; r++)
-            {
-                for (int c = 0; c < GameConfig.MapWidth; c++)
-                {
-                    // Si la physique dit que c'est un mur, on cherche sa tuile visuelle
-                    if (map.Grid[r, c] == 1)
-                    {
-                        int srcX = c * size;
-                        int srcY = (r - 3) * size; // Décalage car emptyMaze commence à la ligne 3
-
-                        using (Bitmap currentTile = emptyMaze.Clone(new Rectangle(srcX, srcY, size, size), emptyMaze.PixelFormat))
-                        {
-                            // Comparer avec la banque de tuiles bleues
-                            for (int tileID = 0; tileID < 48; tileID++)
-                            {
-                                if (CompareBitmaps(currentTile, bank[tileID]))
-                                {
-                                    map.VisualGrid[r, c] = tileID; // On a trouvé l'index exact !
-                                    break;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            // Nettoyage de la mémoire
-            for (int i = 0; i < 48; i++) bank[i].Dispose();
-            emptyMaze.Dispose();
-        }
-
-        // Méthode utilitaire rapide pour comparer deux Bitmaps de 8x8 pixels
-        private bool CompareBitmaps(Bitmap bmp1, Bitmap bmp2)
-        {
-            for (int y = 0; y < 8; y++)
-            {
-                for (int x = 0; x < 8; x++)
-                {
-                    if (bmp1.GetPixel(x, y).ToArgb() != bmp2.GetPixel(x, y).ToArgb())
-                        return false;
-                }
-            }
-            return true;
         }
 
         /// <summary>

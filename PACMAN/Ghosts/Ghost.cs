@@ -20,7 +20,6 @@ namespace PacmanWinForms
         public bool IsFrightened { get; set; } = false;
         public int DotLimit { get; set; }
         public int DotCounter { get; set; } = 0;
-        // À placer en haut de la classe Ghost avec tes autres variables (X, Y, Speed...)
         private static readonly Random rand = new Random();
 
         public Ghost(int startTileX, int startTileY, Point scatterTarget)
@@ -267,7 +266,6 @@ namespace PacmanWinForms
 
         private Keys ChooseFrightenedDirection(LevelMap map)
         {
-            Keys oppositeDir = GetOppositeDirection(this.CurrentDirection);
             // L'ordre horaire officiel de l'arcade : Nord (Up), Est (Right), Sud (Down), Ouest (Left)
             Keys[] clockwiseOrder = { Keys.Up, Keys.Right, Keys.Down, Keys.Left };
 
