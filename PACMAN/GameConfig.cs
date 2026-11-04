@@ -18,6 +18,12 @@
         // Paramètres de configuration du mode Frightened
         public int FrightenedTimeSec { get; set; }     // Durée de la vulnérabilité en secondes
         public int FlashesCount { get; set; }          // Nombre de clignotements bleus/blancs avant la fin
+        
+        // Cruise Elroy (Blinky)
+        public int Elroy1Dots { get; set; }       // Gommes restantes pour Elroy 1
+        public int Elroy2Dots { get; set; }       // Gommes restantes pour Elroy 2
+        public float Elroy1Speed { get; set; }
+        public float Elroy2Speed { get; set; }
     }
 
     public static class GameConfig
@@ -112,6 +118,24 @@
                 // Ils changent simplement instantanément de direction (demi-tour réglementaire).
                 default: specs.FrightenedTimeSec = 0; specs.FlashesCount = 0; break;
             }
+            
+            // --- PARTIE 3 : CRUISE ELROY ---
+            if (level == 1) { specs.Elroy1Speed = 0.80f * BaseMultiplier; specs.Elroy2Speed = 0.85f * BaseMultiplier; }
+            else if (level <= 4) { specs.Elroy1Speed = 0.90f * BaseMultiplier; specs.Elroy2Speed = 0.95f * BaseMultiplier; }
+            else { specs.Elroy1Speed = 1.00f * BaseMultiplier; specs.Elroy2Speed = 1.05f * BaseMultiplier; }
+
+            int elroyDots;
+            if (level == 1) elroyDots = 20;
+            else if (level == 2) elroyDots = 30;
+            else if (level <= 5) elroyDots = 40;
+            else if (level <= 8) elroyDots = 50;
+            else if (level <= 11) elroyDots = 60;
+            else if (level <= 14) elroyDots = 80;
+            else if (level <= 18) elroyDots = 100;
+            else elroyDots = 120;
+
+            specs.Elroy1Dots = elroyDots;
+            specs.Elroy2Dots = elroyDots / 2;
 
             return specs;
         }

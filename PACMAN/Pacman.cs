@@ -8,7 +8,6 @@ namespace PacmanWinForms
     {
         public float X { get; set; }
         public float Y { get; set; }
-        public float Speed { get; set; } = 1.0f;
         private float speedAccumulator = 0.0f; // Accumulateur physique
 
         public Keys CurrentDirection { get; set; }

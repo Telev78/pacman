@@ -9,7 +9,6 @@ namespace PacmanWinForms
     {
         public float X { get; protected set; }
         public float Y { get; protected set; }
-        public float Speed { get; set; } = 1.0f;
         private float speedAccumulator = 0.0f; // Accumulateur pour la gestion physique fine
 
         public Keys CurrentDirection { get; protected set; }
@@ -21,6 +20,7 @@ namespace PacmanWinForms
         public int DotLimit { get; set; }
         public int DotCounter { get; set; } = 0;
         private static readonly Random rand = new Random();
+        private bool reverseRequested = false;
 
         public Ghost(int startTileX, int startTileY, Point scatterTarget)
         {
@@ -53,7 +53,7 @@ namespace PacmanWinForms
 
             // 1. Récupération des spécifications de vitesse du niveau
             var specs = GameConfig.GetSpecsForLevel(currentLevel);
-            float currentSpeed = specs.GhostNormal;
+            float currentSpeed = GetNormalSpeed(specs);
 
             // 2. Ajustement de la vitesse selon l'état du fantôme
             if (CurrentState == GhostState.InHouse)
@@ -160,14 +160,23 @@ namespace PacmanWinForms
                 int currentTileY = (int)(Y / GameConfig.TileSize);
 
                 HandleTunnelTeleport(currentTileX);
-                if (CurrentState == GhostState.Frightened)
+                bool isActive = CurrentState == GhostState.Chase
+                                || CurrentState == GhostState.Scatter
+                                || CurrentState == GhostState.Frightened;
+
+                if (reverseRequested && isActive)
                 {
-                    // On applique directement l'algorithme de l'arcade sans calculer de distances
-                    CurrentDirection = ChooseFrightenedDirection(map);
+                    CurrentDirection = GetOppositeDirection(CurrentDirection);
+                    reverseRequested = false;
                 }
                 else
                 {
-                    CurrentDirection = ChooseNextDirection(map, pacman, currentTileX, currentTileY);
+                    reverseRequested = false;
+
+                    if (CurrentState == GhostState.Frightened)
+                        CurrentDirection = ChooseFrightenedDirection(map);
+                    else
+                        CurrentDirection = ChooseNextDirection(map, pacman, currentTileX, currentTileY);
                 }
             }
 
@@ -225,6 +234,12 @@ namespace PacmanWinForms
             return bestDirection;
         }
 
+        // Vitesse "normale" du fantôme (hors nid, yeux, effrayé, tunnel). Blinky la surcharge pour Elroy.
+        protected virtual float GetNormalSpeed(LevelSpecs specs)
+        {
+            return specs.GhostNormal;
+        }
+
         protected virtual Point GetCurrentTargetTile(Pacman pacman)
         {
             if (CurrentState == GhostState.Scatter)
@@ -248,11 +263,11 @@ namespace PacmanWinForms
 
         public void ForceDemiTour()
         {
-            // Un fantôme ne fait demi-tour que s'il est actif sur la carte
-            // (On ne force pas le demi-tour s'il est dans le nid ou déjà mort sous forme d'yeux)
+            // Seuls les fantômes actifs sur la carte sont concernés.
+            // Le demi-tour n'est effectif qu'au prochain centre de tuile.
             if (CurrentState == GhostState.Chase || CurrentState == GhostState.Scatter || CurrentState == GhostState.Frightened)
             {
-                this.CurrentDirection = GetOppositeDirection(this.CurrentDirection);
+                reverseRequested = true;
             }
         }
 
