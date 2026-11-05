@@ -1,5 +1,4 @@
 ﻿using System.Drawing;
-using System.Windows.Forms;
 
 namespace PacmanWinForms
 {
@@ -9,28 +8,21 @@ namespace PacmanWinForms
         public bool IsCruiseElroy1 { get { return elroyLevel == 1; } }
         public bool IsCruiseElroy2 { get { return elroyLevel == 2; } }
 
-        // Constructeur de Blinky
-        // - Position initiale : Case (14, 11) -> Juste au-dessus du nid des fantômes, prêt à attaquer.
-        // - Cible Scatter (Patrouille) : Case (27, 0) -> Le coin supérieur droit de l'écran.
-        public Blinky() : base(14, 11+3, new Point(27, 0))
+        // Départ : juste au-dessus du nid | Patrouille : coin supérieur droit
+        public Blinky() : base(14, 11 + 3, new Point(27, 0))
         {
-            
             this.X -= 4;
-            this.CurrentState = GhostState.Scatter; // Blinky est déjà dehors !
-            this.CurrentDirection = Keys.Left;
+            this.Phase = GhostPhase.Active; // Blinky est déjà dehors !
+            this.Mode = GhostMode.Scatter;
+            this.CurrentDirection = Direction.Left;
         }
 
-        // L'intelligence artificielle unique de Blinky en mode Chasse (Chase) :
-        // Il cible directement la case où se trouve Pac-Man, sans fioritures.
+        // Chase : cible directement la case de Pac-Man
         protected override Point GetChaseTargetTile(Pacman pacman)
         {
-            int targetX = (int)(pacman.X / GameConfig.TileSize);
-            int targetY = (int)(pacman.Y / GameConfig.TileSize);
-
-            return new Point(targetX, targetY);
+            return new Point(pacman.TileX, pacman.TileY);
         }
 
-        // Déterminer si Blinky passe en Elroy et ajuster sa vitesse
         public void UpdateElroyStatus(int dotsRemaining, LevelSpecs specs, bool enabled)
         {
             if (!enabled) elroyLevel = 0;
@@ -48,15 +40,12 @@ namespace PacmanWinForms
 
         protected override Point GetCurrentTargetTile(Pacman pacman)
         {
-            // RÈGLE CRUISE ELROY : Si Elroy est actif et qu'on est en mode Scatter, 
-            // on court-circuite le comportement normal pour foncer sur Pac-Man (Chase).
-            if ((IsCruiseElroy1 || IsCruiseElroy2) && this.CurrentState == GhostState.Scatter)
+            // Cruise Elroy : en Scatter, Blinky continue de foncer sur Pac-Man
+            if ((IsCruiseElroy1 || IsCruiseElroy2) && this.Phase == GhostPhase.Active && this.Mode == GhostMode.Scatter)
             {
                 return GetChaseTargetTile(pacman);
             }
 
-            // Pour TOUS les autres cas (Chase normal, Scatter normal, Eaten, Frightened, InHouse, Exiting),
-            // on fait confiance à la logique générique définie dans la classe Ghost.
             return base.GetCurrentTargetTile(pacman);
         }
     }

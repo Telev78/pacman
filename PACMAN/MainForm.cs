@@ -64,8 +64,23 @@ namespace PacmanWinForms
 
         private void OnKeyDown(object sender, KeyEventArgs e)
         {
-            // On transfère la touche au "Cerveau"
-            game.HandleInput(e.KeyCode);
+            Direction direction = KeyToDirection(e.KeyCode);
+            if (direction != Direction.None)
+            {
+                game.HandleInput(direction);
+            }
+        }
+
+        private static Direction KeyToDirection(Keys key)
+        {
+            switch (key)
+            {
+                case Keys.Up: return Direction.Up;
+                case Keys.Down: return Direction.Down;
+                case Keys.Left: return Direction.Left;
+                case Keys.Right: return Direction.Right;
+                default: return Direction.None;
+            }
         }
 
         private void GameLoop(object sender, EventArgs e)
@@ -197,15 +212,15 @@ namespace PacmanWinForms
                         }
                     }
 
-                    int cellPhysic = game.Map.Grid[r, c];
-                    if (cellPhysic == 2)
+                    TileType cellPhysic = game.Map.Grid[r, c];
+                    if (cellPhysic == TileType.Dot)
                     {
                         using (Bitmap dotSprite = spriteManager.GetMazeTile(13, 2 ))
                         {
                             g.DrawImage(dotSprite, screenX, screenY, size, size);
                         }
                     }
-                    else if (cellPhysic == 3)
+                    else if (cellPhysic == TileType.Energizer)
                     {
                         if ((Environment.TickCount / 200) % 2 == 0)
                         {
@@ -216,7 +231,7 @@ namespace PacmanWinForms
                         }
                     }
 
-                    if (game.Map.Grid[r, c] == 4 && c == 13)
+                    if (game.Map.Grid[r, c] == TileType.GhostDoor && c == 13)
                     {
                         Bitmap door = spriteManager.GetGhostDoorSprite();
                         g.DrawImage(door, screenX, screenY, 16 * GameConfig.Zoom, 8 * GameConfig.Zoom);
@@ -262,8 +277,12 @@ namespace PacmanWinForms
 
                         Bitmap ghostSprite;
 
-                        if (ghost.CurrentState == GhostState.Frightened || (ghost.IsFrightened && ghost.CurrentState != GhostState.Eaten))
-                            {
+                        if (ghost.Phase == GhostPhase.Eaten)
+                        {
+                            ghostSprite = spriteManager.GetGhostEyesSprite(ghost.CurrentDirection);
+                        }
+                        else if (ghost.IsFrightened)
+                        {
                             int virtualTicksRemaining = (int)(game.FrightenedMsRemaining / 16.67f);
                             const int TicksPerFlashCycle = 16;
                             int totalFlashTicks = game.CurrentSpecs.FlashesCount * TicksPerFlashCycle;
@@ -274,10 +293,6 @@ namespace PacmanWinForms
 
                             ghostSprite = spriteManager.GetGhostFrightenedSprite(game.GhostAnimationFrame, shouldFlashWhite);
                         }
-                        else if (ghost.CurrentState == GhostState.Eaten)
-                        {
-                            ghostSprite = spriteManager.GetGhostEyesSprite(ghost.CurrentDirection);
-                        }
                         else
                         {
                             string ghostName = ghost.GetType().Name;
@@ -287,7 +302,7 @@ namespace PacmanWinForms
                         int bx = (int)((ghost.X - 4) * GameConfig.Zoom);
                         int by = (int)((ghost.Y - 4) * GameConfig.Zoom);
 
-                        if (ghost.CurrentState == GhostState.InHouse) by += 1;
+                        if (ghost.Phase == GhostPhase.InHouse) by += 1;
                         int spriteScaledSize = 16 * GameConfig.Zoom;
 
                         g.DrawImage(ghostSprite, bx, by, spriteScaledSize, spriteScaledSize);
@@ -414,7 +429,7 @@ namespace PacmanWinForms
 
             for (int i = 0; i < maxVisibleLives; i++)
             {
-                using (Bitmap lifeSprite = spriteManager.GetPacmanSprite(1, Keys.Left))
+                using (Bitmap lifeSprite = spriteManager.GetPacmanSprite(1, Direction.Left))
                 {
                     int posX = (2 + (i * 2)) * GameConfig.ScaledTileSize;
                     int posY = 34 * GameConfig.ScaledTileSize;

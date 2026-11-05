@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Windows.Forms;
 
 namespace PacmanWinForms
 {
@@ -67,9 +66,9 @@ namespace PacmanWinForms
         private bool elroySuspended = false;
 
         /// <summary>
-        /// L'état de comportement global actuel imposé par le timer du jeu (Scatter ou Chase).
+        /// Le mode de comportement global imposé par le timer des vagues (Scatter ou Chase).
         /// </summary>
-        public GhostState GlobalGhostState { get; private set; } = GhostState.Scatter;
+        public GhostMode GlobalGhostMode { get; private set; } = GhostMode.Scatter;
 
         public Game()
         {
@@ -121,8 +120,8 @@ namespace PacmanWinForms
             {
                 for (int c = 0; c < GameConfig.MapWidth; c++)
                 {
-                    int tile = Map.Grid[r, c];
-                    if (tile == 2 || tile == 3)
+                    TileType tile = Map.Grid[r, c];
+                    if (tile == TileType.Dot || tile == TileType.Energizer)
                     {
                         DotsRemaining++;
                     }
@@ -179,7 +178,7 @@ namespace PacmanWinForms
 
             currentWaveIndex = 0;
             waveTimerMs = 0;
-            GlobalGhostState = GhostState.Scatter;
+            GlobalGhostMode = GhostMode.Scatter;
 
             State = GameState.Ready;
             readyTimer = 240;
@@ -188,18 +187,18 @@ namespace PacmanWinForms
 
         private void SpawnPacman()
         {
-            Pacman.X = (13 * GameConfig.TileSize)+4;
-            Pacman.Y = (23 + 3) * GameConfig.TileSize;
-            Pacman.CurrentDirection = Keys.Left;
-            Pacman.NextDirection = Keys.None;
+            Pacman.X = MazeLayout.PacmanStartX;
+            Pacman.Y = MazeLayout.PacmanStartY;
+            Pacman.CurrentDirection = Direction.Left;
+            Pacman.NextDirection = Direction.None;
             Pacman.State = PacmanState.Alive;
         }
 
-        public void HandleInput(Keys key)
+        public void HandleInput(Direction direction)
         {
-            if (key == Keys.Up || key == Keys.Down || key == Keys.Left || key == Keys.Right)
+            if (direction != Direction.None)
             {
-                Pacman.NextDirection = key;
+                Pacman.NextDirection = direction;
             }
         }
 
@@ -295,11 +294,11 @@ namespace PacmanWinForms
                 }
             }
 
-            // Le chrono de sortie ne tourne QUE si le joueur est en train de jouer activement
             CheckSirenUpdate();
             
             ReleaseGhostByCounter();
-
+            
+            // Le chrono de sortie ne tourne QUE si le joueur est en train de jouer activement
             Ghost ghostToRelease = GetPreferredGhostInHouse();
 
             if (ghostToRelease != null)
@@ -311,7 +310,7 @@ namespace PacmanWinForms
                 if (inactivityTimerMs >= inactivityLimitMs)
                 {
                     inactivityTimerMs = 0;
-                    ghostToRelease.CurrentState = GhostState.Exiting; // Sortie forcée !
+                    ghostToRelease.Phase = GhostPhase.Exiting; // Sortie forcée !
                 }
             }
             else
@@ -329,7 +328,8 @@ namespace PacmanWinForms
             if (elroySuspended)
             {
                 Ghost clyde = Ghosts.FirstOrDefault(g => g is Clyde);
-                if (clyde == null || (clyde.CurrentState != GhostState.InHouse && clyde.CurrentState != GhostState.Exiting))
+                // Suspension d'Elroy
+                if (clyde == null || (clyde.Phase != GhostPhase.InHouse && clyde.Phase != GhostPhase.Exiting))
                     elroySuspended = false;
             }
 
@@ -338,12 +338,12 @@ namespace PacmanWinForms
                 if (ghost is Blinky blinky)
                     blinky.UpdateElroyStatus(DotsRemaining, CurrentSpecs, !elroySuspended);
 
-                ghost.Move(Map, Pacman, CurrentLevel, GlobalGhostState);
+                ghost.Move(Map, Pacman, CurrentLevel, GlobalGhostMode);
             }
 
-            if (!Ghosts.Any(g => g.CurrentState == GhostState.Eaten))
+            if (!Ghosts.Any(g => g.Phase == GhostPhase.Eaten))
                 audioManager.Stop("eyes");
-            
+
 
 
             // ANIMATIONS ET COLLISIONS
@@ -367,17 +367,16 @@ namespace PacmanWinForms
             {
                 globalDotCounter++;
 
-                Ghost pinky = Ghosts.FirstOrDefault(g => g is Pinky && g.CurrentState == GhostState.InHouse);
-                Ghost inky = Ghosts.FirstOrDefault(g => g is Inky && g.CurrentState == GhostState.InHouse);
-                Ghost clyde = Ghosts.FirstOrDefault(g => g is Clyde && g.CurrentState == GhostState.InHouse);
+                Ghost pinky = Ghosts.FirstOrDefault(g => g is Pinky && g.Phase == GhostPhase.InHouse);
+                Ghost inky = Ghosts.FirstOrDefault(g => g is Inky && g.Phase == GhostPhase.InHouse);
+                Ghost clyde = Ghosts.FirstOrDefault(g => g is Clyde && g.Phase == GhostPhase.InHouse);
 
-                if (globalDotCounter == 7 && pinky != null) pinky.CurrentState = GhostState.Exiting;
-                if (globalDotCounter == 17 && inky != null) inky.CurrentState = GhostState.Exiting;
+                if (globalDotCounter == 7 && pinky != null) pinky.Phase = GhostPhase.Exiting;
+                if (globalDotCounter == 17 && inky != null) inky.Phase = GhostPhase.Exiting;
 
-                // À 32, Clyde sort et on repasse aux compteurs individuels
                 if (globalDotCounter == 32 && clyde != null)
                 {
-                    clyde.CurrentState = GhostState.Exiting;
+                    clyde.Phase = GhostPhase.Exiting;
                     useGlobalDotCounter = false;
                     globalDotCounter = 0;
                 }
@@ -391,31 +390,30 @@ namespace PacmanWinForms
 
         private void CheckPelletCollision()
         {
-            // COMPORTEMENT ARCADE : Collision basée sur le centre (+4 pixels)
-            int tileX = (int)((Pacman.X + 4) / GameConfig.TileSize);
-            int tileY = (int)((Pacman.Y + 4) / GameConfig.TileSize);
+            int tileX = Pacman.TileX;
+            int tileY = Pacman.TileY;
 
             if (tileX >= 0 && tileX < GameConfig.MapWidth && tileY >= 0 && tileY < GameConfig.MapHeight)
             {
-                int currentTile = Map.Grid[tileY, tileX];
+                TileType currentTile = Map.Grid[tileY, tileX];
 
-                if (currentTile == 2) // Normal
+                if (currentTile == TileType.Dot) // Normal
                 {
                     wakaToggle = !wakaToggle;
                     audioManager.Play(wakaToggle ? "eat_dot_0" : "eat_dot_1");
 
-                    Map.Grid[tileY, tileX] = 0;
+                    Map.Grid[tileY, tileX] = TileType.Empty;
                     AddScore(10);
                     DotsRemaining--;
                     PelletEated();
                     CheckLevelClear();
                 }
-                else if (currentTile == 3) // Super gomme
+                else if (currentTile == TileType.Energizer) // Super gomme
                 {
                     audioManager.Stop($"siren{currentSirenIndex}"); // Coupe la sirène en cours
                     audioManager.PlaySequence("fright_firstloop", "fright", loopNext: true);
 
-                    Map.Grid[tileY, tileX] = 0;
+                    Map.Grid[tileY, tileX] = TileType.Empty;
                     AddScore(50);
                     DotsRemaining--;
                     PelletEated();
@@ -428,20 +426,11 @@ namespace PacmanWinForms
 
                         foreach (Ghost ghost in Ghosts)
                         {
-                            if (ghost.CurrentState == GhostState.Eaten)
+                            if (ghost.Phase == GhostPhase.Eaten)
                                 continue;
-                            
-                            ghost.IsFrightened = true;
 
-                            if (ghost.CurrentState == GhostState.Chase || ghost.CurrentState == GhostState.Scatter)
-                            {
-                                ghost.CurrentState = GhostState.Frightened;
-                                ghost.ForceDemiTour();
-                            }
-                            else if (ghost.CurrentState == GhostState.Frightened)
-                            {
-                                ghost.ForceDemiTour();
-                            }
+                            ghost.IsFrightened = true;
+                            ghost.ForceDemiTour(); // Sans effet si le fantôme n'est pas Active
                         }
                     }
                     else
@@ -457,25 +446,24 @@ namespace PacmanWinForms
         private void CheckGhostCollisions()
         {
             // 1. Détermination de la tuile de Pac-Man (basée sur son centre)
-            int pacmanTileX = (int)((Pacman.X + 4) / GameConfig.TileSize);
-            int pacmanTileY = (int)((Pacman.Y + 4) / GameConfig.TileSize);
+            int pacmanTileX = Pacman.TileX;
+            int pacmanTileY = Pacman.TileY;
 
             foreach (Ghost ghost in Ghosts)
             {
                 // 2. Détermination de la tuile du fantôme
-                int ghostTileX = (int)(ghost.X / GameConfig.TileSize);
-                int ghostTileY = (int)(ghost.Y / GameConfig.TileSize);
+                int ghostTileX = ghost.TileX;
+                int ghostTileY = ghost.TileY;
 
                 // 3. Règle Arcade : Collision STRICTEMENT sur la même case
                 if (pacmanTileX == ghostTileX && pacmanTileY == ghostTileY)
                 {
-                    if (ghost.CurrentState == GhostState.Frightened || (ghost.IsFrightened && ghost.CurrentState != GhostState.Eaten))
+                    if (ghost.IsFrightened)
                     {
-                        //audioManager.Stop("fright"); // On coupe le son de panique global
                         audioManager.Play("eat_ghost");
 
                         // Passage immédiat en mode yeux (il commencera à courir APRÈS le freeze)
-                        ghost.CurrentState = GhostState.Eaten;
+                        ghost.Phase = GhostPhase.Eaten;
 
                         // Calcul du score exponentiel (200, 400, 800, 1600)
                         ghostsEatenInCurrentFrightenedMode++;
@@ -499,9 +487,9 @@ namespace PacmanWinForms
 
                         break; // On sort immédiatement de la boucle de détection
                     }
-                    else if (ghost.CurrentState == GhostState.Scatter || ghost.CurrentState == GhostState.Chase)
+                    else if (ghost.Phase == GhostPhase.Active)
                     {
-                        audioManager.StopAll(); // On coupe impérativement les sirènes de fond !
+                        audioManager.StopAll();
                         // On change l'état interne pour signaler la mort au MainForm
                         State = GameState.Dying;
                         Pacman.State = PacmanState.Dying;
@@ -621,11 +609,11 @@ namespace PacmanWinForms
         private void CheckFruitCollision()
         {
             // Collision basée sur les cases centrales (Règle arcade)
-            int pacmanTileX = (int)((Pacman.X + 4) / GameConfig.TileSize);
-            int pacmanTileY = (int)((Pacman.Y + 4) / GameConfig.TileSize);
+            int pacmanTileX = Pacman.TileX;
+            int pacmanTileY = Pacman.TileY;
 
-            int fruitTileX = (int)((FruitX + 4) / GameConfig.TileSize); // Donnera colonne 14
-            int fruitTileY = (int)((FruitY + 4) / GameConfig.TileSize); // Donnera ligne 20
+            int fruitTileX = Tiles.Of(FruitX);
+            int fruitTileY = Tiles.Of(FruitY);
 
             if (pacmanTileX == fruitTileX && pacmanTileY == fruitTileY)
             {
@@ -663,7 +651,7 @@ namespace PacmanWinForms
             foreach (var name in new[] { "Pinky", "Inky", "Clyde" })
             {
                 Ghost g = Ghosts.FirstOrDefault(x => x.GetType().Name == name);
-                if (g != null && g.CurrentState == GhostState.InHouse)
+                if (g != null && g.Phase == GhostPhase.InHouse)
                 {
                     return g;
                 }
@@ -674,11 +662,11 @@ namespace PacmanWinForms
         private void ReleaseGhostByCounter()
         {
             if (useGlobalDotCounter) return;
-            if (Ghosts.Any(g => g.CurrentState == GhostState.Exiting)) return; // un seul à la fois
+            if (Ghosts.Any(g => g.Phase == GhostPhase.Exiting)) return; // un seul à la fois
 
             Ghost preferred = GetPreferredGhostInHouse();
             if (preferred != null && preferred.DotCounter >= preferred.DotLimit)
-                preferred.CurrentState = GhostState.Exiting;
+                preferred.Phase = GhostPhase.Exiting;
         }
 
         public void UpdateTimerVagues(double elapsedTimeMs)
@@ -701,11 +689,11 @@ namespace PacmanWinForms
                 waveTimerMs = 0;
 
                 // Index pair = Scatter, Index impair = Chase
-                GhostState newState = (currentWaveIndex % 2 == 0) ? GhostState.Scatter : GhostState.Chase;
+                GhostMode newMode = (currentWaveIndex % 2 == 0) ? GhostMode.Scatter : GhostMode.Chase;
 
-                if (newState != GlobalGhostState)
+                if (newMode != GlobalGhostMode)
                 {
-                    GlobalGhostState = newState;
+                    GlobalGhostMode = newMode;
                     ChangerVagueGlobale();
                 }
             }
@@ -717,10 +705,6 @@ namespace PacmanWinForms
             foreach (Ghost ghost in Ghosts)
             {
                 ghost.IsFrightened = false;
-                if (ghost.CurrentState == GhostState.Frightened)
-                {
-                    ghost.CurrentState = GlobalGhostState; // On les réaligne sur la vague globale !
-                }
             }
 
             audioManager.Stop("fright");
@@ -735,12 +719,11 @@ namespace PacmanWinForms
         {
             foreach (Ghost ghost in Ghosts)
             {
-                // Règle très importante : On ne change l'état et on ne force le demi-tour 
-                // QUE pour les fantômes actuellement actifs en mode Chase ou Scatter.
-                // Si un fantôme est InHouse, Exiting ou Eaten (yeux), on ne casse pas son état !
-                if (ghost.CurrentState == GhostState.Scatter || ghost.CurrentState == GhostState.Chase)
+                // Seuls les fantômes actifs changent de mode et font demi-tour.
+                // InHouse, Exiting et Eaten ne sont pas touchés.
+                if (ghost.Phase == GhostPhase.Active)
                 {
-                    ghost.CurrentState = GlobalGhostState;
+                    ghost.Mode = GlobalGhostMode;
                     ghost.ForceDemiTour();
                 }
             }
@@ -814,7 +797,7 @@ namespace PacmanWinForms
             bool status = false;
             foreach (Ghost ghost in Ghosts)
             {
-                if (ghost.CurrentState == GhostState.Frightened || ghost.CurrentState == GhostState.Eaten)
+                if ((ghost.Phase == GhostPhase.Active && ghost.IsFrightened) || ghost.Phase == GhostPhase.Eaten)
                 {
                     status = true; break;
                 }

@@ -1,103 +1,106 @@
 ﻿using System;
 using System.Drawing;
-using System.Windows.Forms;
 
 namespace PacmanWinForms
 {
-    
     public abstract class Ghost
     {
         public float X { get; protected set; }
         public float Y { get; protected set; }
         private float speedAccumulator = 0.0f; // Accumulateur pour la gestion physique fine
 
-        public Keys CurrentDirection { get; protected set; }
-        public GhostState CurrentState { get; set; } = GhostState.Scatter;
+        public Direction CurrentDirection { get; protected set; }
+
+        // Cycle de vie : dans le nid / en sortie / actif dans le labyrinthe / yeux
+        public GhostPhase Phase { get; set; } = GhostPhase.Active;
+
+        // Mode de vague (Scatter / Chase), significatif quand le fantôme est Active
+        public GhostMode Mode { get; set; } = GhostMode.Scatter;
+
+        // Vulnérable (après une super-gomme). Peut être vrai même dans le nid ou à la sortie.
+        public bool IsFrightened { get; set; } = false;
+
         protected float initialY;
         protected int bobDirection = 1;
         protected Point ScatterTargetTile { get; set; }
-        public bool IsFrightened { get; set; } = false;
         public int DotLimit { get; set; }
         public int DotCounter { get; set; } = 0;
-        private static readonly Random rand = new Random();
         private bool reverseRequested = false;
+        private static readonly Random rand = new Random();
+
+        // Tuile du CENTRE du fantôme
+        public int TileX { get { return Tiles.Of(X); } }
+        public int TileY { get { return Tiles.Of(Y); } }
 
         public Ghost(int startTileX, int startTileY, Point scatterTarget)
         {
-            // On repasse sur un calcul de grille brut et neutre
             this.X = startTileX * GameConfig.TileSize;
             this.Y = startTileY * GameConfig.TileSize;
             this.initialY = this.Y;
             this.ScatterTargetTile = scatterTarget;
-            this.CurrentDirection = Keys.Left;
+            this.CurrentDirection = Direction.Left;
         }
 
-        // --- MÉTHODE PRINCIPALE MISE À JOUR ---
-        public virtual void Move(LevelMap map, Pacman pacman, int currentLevel, GhostState globalGhostState)
+        public virtual void Move(LevelMap map, Pacman pacman, int currentLevel, GhostMode globalMode)
         {
-            int currentTileX = (int)(X / GameConfig.TileSize);
-            int currentTileY = (int)(Y / GameConfig.TileSize);
+            int currentTileX = TileX;
+            int currentTileY = TileY;
 
-            // ÉTAPE DE RÉSURRECTION : Si les yeux atteignent la porte du nid (Ligne 14, colonnes 13 ou 14)
-            if (CurrentState == GhostState.Eaten && currentTileY == 14 && (currentTileX == 13 || currentTileX == 14))
+            // Résurrection : les yeux atteignent la porte du nid
+            if (Phase == GhostPhase.Eaten
+                && currentTileY == MazeLayout.HouseEntranceRow
+                && (currentTileX == 13 || currentTileX == 14))
             {
-                // 1. On le passe en mode "Sortie du nid" (il reprend sa couleur normale)
-                this.CurrentState = GhostState.Exiting;
-
-                // 2. On le repositionne proprement à l'intérieur du nid (Ligne 17) pour une transition fluide
-                this.Y = 17 * GameConfig.TileSize;
-                this.X = 14 * GameConfig.TileSize - 4; // Centré au milieu de la porte
-
-                return; // On stoppe l'I.A des yeux pour ce tick afin d'éviter les conflits
+                this.Phase = GhostPhase.Exiting;
+                this.Y = MazeLayout.HouseInsideY;
+                this.X = MazeLayout.HouseExitX;
+                return;
             }
 
-            // 1. Récupération des spécifications de vitesse du niveau
             var specs = GameConfig.GetSpecsForLevel(currentLevel);
             float currentSpeed = GetNormalSpeed(specs);
 
-            // 2. Ajustement de la vitesse selon l'état du fantôme
-            if (CurrentState == GhostState.InHouse)
+            if (Phase == GhostPhase.InHouse)
             {
                 currentSpeed = specs.GhostNormal * 0.5f; // Danse ralentie dans le nid
             }
-            else if (CurrentState == GhostState.Exiting)
+            else if (Phase == GhostPhase.Exiting)
             {
                 currentSpeed = specs.GhostNormal * 0.4f; // Vitesse de transition pour sortir
             }
-            else if (CurrentState == GhostState.Frightened)
+            else if (Phase == GhostPhase.Eaten)
             {
-                currentSpeed = specs.FrightenedGhost;   // Ralentissement mode panique
+                currentSpeed = 2.0f; // Les yeux foncent au nid à 200 % de vitesse
             }
-            else if (CurrentState == GhostState.Eaten)
+            else if (IsFrightened)
             {
-                currentSpeed = 2.0f; // Les yeux morts foncent au nid à 200% de vitesse (2px/frame)
+                currentSpeed = specs.FrightenedGhost; // Ralentissement mode panique
             }
             else
             {
-                // Vérification du tunnel de l'arcade (Ligne 17, colonnes extérieures)
-                if (currentTileY == 17 && (currentTileX < 6 || currentTileX > 21))
+                // Tunnel de l'arcade (ligne 17, colonnes extérieures)
+                if (currentTileY == MazeLayout.TunnelRow
+                    && (currentTileX <= MazeLayout.TunnelSlowLeftMaxColumn || currentTileX >= MazeLayout.TunnelSlowRightMinColumn))
                 {
                     currentSpeed = specs.GhostTunnel;
                 }
             }
 
-            // 3. Accumulation de la vitesse fractionnaire
             speedAccumulator += currentSpeed;
             int pixelsToMove = (int)speedAccumulator;
             speedAccumulator -= pixelsToMove;
 
-            // 4. Déplacement physique d'exactement 1 pixel par itération
             for (int i = 0; i < pixelsToMove; i++)
             {
-                MoveOnePixel(map, pacman, globalGhostState);
+                MoveOnePixel(map, pacman, globalMode);
             }
         }
 
         // --- DÉPLACEMENT UNITAIRE (1 PIXEL) ---
-        private void MoveOnePixel(LevelMap map, Pacman pacman, GhostState globalGhostState)
+        private void MoveOnePixel(LevelMap map, Pacman pacman, GhostMode globalMode)
         {
             // --- ROUTINE DU NID ---
-            if (CurrentState == GhostState.InHouse)
+            if (Phase == GhostPhase.InHouse)
             {
                 Y += bobDirection;
                 int bobRange = 4;
@@ -106,119 +109,98 @@ namespace PacmanWinForms
                 {
                     Y = initialY + bobRange;
                     bobDirection = -1;
-                    CurrentDirection = Keys.Up;
+                    CurrentDirection = Direction.Up;
                 }
                 else if (Y <= initialY - bobRange)
                 {
                     Y = initialY - bobRange;
                     bobDirection = 1;
-                    CurrentDirection = Keys.Down;
+                    CurrentDirection = Direction.Down;
                 }
                 return;
             }
 
             // --- CINÉMATIQUE DE SORTIE ---
-            if (CurrentState == GhostState.Exiting)
+            if (Phase == GhostPhase.Exiting)
             {
-                float targetX = 14 * GameConfig.TileSize - 4;
-                float targetY = 14 * GameConfig.TileSize;
+                float targetX = MazeLayout.HouseExitX;
+                float targetY = MazeLayout.HouseExitY;
 
                 if (X != targetX)
                 {
-                    if (X < targetX) { X += 1; CurrentDirection = Keys.Right; }
-                    else { X -= 1; CurrentDirection = Keys.Left; }
+                    if (X < targetX) { X += 1; CurrentDirection = Direction.Right; }
+                    else { X -= 1; CurrentDirection = Direction.Left; }
                 }
                 else if (Y > targetY)
                 {
                     Y -= 1;
-                    CurrentDirection = Keys.Up;
+                    CurrentDirection = Direction.Up;
                 }
                 else
                 {
-                    // Le fantôme vient de franchir le seuil de la maison !
-                    if (IsFrightened)
-                    {
-                        // S'il a été terrifié pendant qu'il était dedans ou qu'il sortait,
-                        // il bascule immédiatement dans le comportement de fuite du labyrinthe
-                        CurrentState = GhostState.Frightened;
-                    }
-                    else
-                    {
-                        // Sinon, il reprend sa routine normale
-                        CurrentState = globalGhostState;
-                    }
-
-                    CurrentDirection = Keys.Left;
+                    // Le fantôme franchit le seuil : il devient actif, avec le mode de vague courant.
+                    // S'il a été effrayé entre-temps, IsFrightened reste vrai.
+                    Phase = GhostPhase.Active;
+                    Mode = globalMode;
+                    CurrentDirection = Direction.Left;
                 }
                 return;
             }
 
-            // 1. Sommes-nous alignés au pixel près sur le centre d'une tuile ?
-            if ((X % GameConfig.TileSize == 0) && (Y % GameConfig.TileSize == 0))
+            // Sommes-nous alignés au pixel près sur le centre d'une tuile ?
+            if (Tiles.IsAligned(X, Y))
             {
-                int currentTileX = (int)(X / GameConfig.TileSize);
-                int currentTileY = (int)(Y / GameConfig.TileSize);
+                int currentTileX = TileX;
+                int currentTileY = TileY;
 
                 HandleTunnelTeleport(currentTileX);
-                bool isActive = CurrentState == GhostState.Chase
-                                || CurrentState == GhostState.Scatter
-                                || CurrentState == GhostState.Frightened;
+
+                bool isActive = Phase == GhostPhase.Active;
 
                 if (reverseRequested && isActive)
                 {
-                    CurrentDirection = GetOppositeDirection(CurrentDirection);
+                    CurrentDirection = CurrentDirection.Opposite();
                     reverseRequested = false;
                 }
                 else
                 {
                     reverseRequested = false;
 
-                    if (CurrentState == GhostState.Frightened)
+                    if (isActive && IsFrightened)
                         CurrentDirection = ChooseFrightenedDirection(map);
                     else
                         CurrentDirection = ChooseNextDirection(map, pacman, currentTileX, currentTileY);
                 }
             }
 
-            // 2. Déplacement physique d'un pixel strict
-            switch (CurrentDirection)
-            {
-                case Keys.Up: Y -= 1; break;
-                case Keys.Down: Y += 1; break;
-                case Keys.Left: X -= 1; break;
-                case Keys.Right: X += 1; break;
-            }
+            // Déplacement physique d'un pixel strict
+            X += CurrentDirection.Dx();
+            Y += CurrentDirection.Dy();
         }
 
-        private Keys ChooseNextDirection(LevelMap map, Pacman pacman, int currentTileX, int currentTileY)
+        private Direction ChooseNextDirection(LevelMap map, Pacman pacman, int currentTileX, int currentTileY)
         {
             Point targetTile = GetCurrentTargetTile(pacman);
-            Keys[] directionsToTest = { Keys.Up, Keys.Left, Keys.Down, Keys.Right };
 
-            Keys bestDirection = CurrentDirection;
+            // L'ordre est important : il départage les égalités (priorité arcade : Haut, Gauche, Bas, Droite)
+            Direction[] directionsToTest = { Direction.Up, Direction.Left, Direction.Down, Direction.Right };
+
+            Direction bestDirection = CurrentDirection;
             double shortestDistance = double.MaxValue;
 
-            foreach (Keys dir in directionsToTest)
+            foreach (Direction dir in directionsToTest)
             {
-                if (dir == GetOppositeDirection(CurrentDirection))
+                if (dir == CurrentDirection.Opposite())
                     continue;
 
-                int nextX = currentTileX;
-                int nextY = currentTileY;
-
-                switch (dir)
-                {
-                    case Keys.Up: nextY--; break;
-                    case Keys.Down: nextY++; break;
-                    case Keys.Left: nextX--; break;
-                    case Keys.Right: nextX++; break;
-                }
+                int nextX = currentTileX + dir.Dx();
+                int nextY = currentTileY + dir.Dy();
 
                 if (nextX >= 0 && nextX < GameConfig.MapWidth && nextY >= 0 && nextY < GameConfig.MapHeight)
                 {
-                    int tileType = map.Grid[nextY, nextX];
+                    TileType tileType = map.Grid[nextY, nextX];
 
-                    if (tileType != 1 && (tileType != 4 || CurrentState == GhostState.Eaten))
+                    if (tileType != TileType.Wall && (tileType != TileType.GhostDoor || Phase == GhostPhase.Eaten))
                     {
                         double distance = Math.Pow(nextX - targetTile.X, 2) + Math.Pow(nextY - targetTile.Y, 2);
 
@@ -242,30 +224,20 @@ namespace PacmanWinForms
 
         protected virtual Point GetCurrentTargetTile(Pacman pacman)
         {
-            if (CurrentState == GhostState.Scatter)
-                return ScatterTargetTile;
+            if (Phase == GhostPhase.Active)
+            {
+                return (Mode == GhostMode.Scatter) ? ScatterTargetTile : GetChaseTargetTile(pacman);
+            }
 
-            if (CurrentState == GhostState.Chase)
-                return GetChaseTargetTile(pacman);
-
-
-            return new Point(13, 14);
-        }
-
-        private Keys GetOppositeDirection(Keys dir)
-        {
-            if (dir == Keys.Up) return Keys.Down;
-            if (dir == Keys.Down) return Keys.Up;
-            if (dir == Keys.Left) return Keys.Right;
-            if (dir == Keys.Right) return Keys.Left;
-            return Keys.None;
+            // Yeux : retour vers l'entrée du nid
+            return MazeLayout.EyesTargetTile;
         }
 
         public void ForceDemiTour()
         {
-            // Seuls les fantômes actifs sur la carte sont concernés.
+            // Seuls les fantômes actifs dans le labyrinthe sont concernés.
             // Le demi-tour n'est effectif qu'au prochain centre de tuile.
-            if (CurrentState == GhostState.Chase || CurrentState == GhostState.Scatter || CurrentState == GhostState.Frightened)
+            if (Phase == GhostPhase.Active)
             {
                 reverseRequested = true;
             }
@@ -273,63 +245,50 @@ namespace PacmanWinForms
 
         private void HandleTunnelTeleport(int currentTileX)
         {
-            if (currentTileX < 0 && CurrentDirection == Keys.Left)
+            if (currentTileX < 0 && CurrentDirection == Direction.Left)
                 X = (GameConfig.MapWidth - 1) * GameConfig.TileSize;
-            else if (currentTileX >= GameConfig.MapWidth && CurrentDirection == Keys.Right)
+            else if (currentTileX >= GameConfig.MapWidth && CurrentDirection == Direction.Right)
                 X = 0;
         }
 
-        private Keys ChooseFrightenedDirection(LevelMap map)
+        private Direction ChooseFrightenedDirection(LevelMap map)
         {
-            // L'ordre horaire officiel de l'arcade : Nord (Up), Est (Right), Sud (Down), Ouest (Left)
-            Keys[] clockwiseOrder = { Keys.Up, Keys.Right, Keys.Down, Keys.Left };
+            // Ordre horaire officiel de l'arcade : Nord, Est, Sud, Ouest
+            Direction[] clockwiseOrder = { Direction.Up, Direction.Right, Direction.Down, Direction.Left };
 
-
-            // 1. Le PRNG choisit un index de direction de départ (0 à 3)
+            // Le PRNG choisit la direction de départ, puis on teste dans le sens horaire
             int startIndex = rand.Next(0, 4);
 
-            int currentTileX = (int)(X / GameConfig.TileSize);
-            int currentTileY = (int)(Y / GameConfig.TileSize);
+            int currentTileX = TileX;
+            int currentTileY = TileY;
 
-            // 2. On teste les directions l'une après l'autre dans le sens horaire
             for (int i = 0; i < 4; i++)
             {
-                Keys testDir = clockwiseOrder[(startIndex + i) % 4];
+                Direction testDir = clockwiseOrder[(startIndex + i) % 4];
 
-                // Règle A : Le demi-tour est strictement interdit à une intersection
-                if (testDir == GetOppositeDirection(CurrentDirection))
+                // Le demi-tour est interdit à une intersection
+                if (testDir == CurrentDirection.Opposite())
                     continue;
 
-                // Règle B : Vérification du mur
-                int targetX = currentTileX;
-                int targetY = currentTileY;
+                int targetX = currentTileX + testDir.Dx();
+                int targetY = currentTileY + testDir.Dy();
 
-                switch (testDir)
-                {
-                    case Keys.Up: targetY--; break;
-                    case Keys.Down: targetY++; break;
-                    case Keys.Left: targetX--; break;
-                    case Keys.Right: targetX++; break;
-                }
-
-                // Hors limites (gestion du tunnel)
+                // Hors limites : seul le tunnel est valide
                 if (targetX < 0 || targetX >= GameConfig.MapWidth || targetY < 0 || targetY >= GameConfig.MapHeight)
                 {
-                    // Le tunnel est valide si on est sur la bonne ligne
-                    if (targetY == 17 && (testDir == Keys.Left || testDir == Keys.Right))
+                    if (targetY == MazeLayout.TunnelRow && (testDir == Direction.Left || testDir == Direction.Right))
                         return testDir;
                     continue;
                 }
 
-                // Si ce n'est ni un mur (1) ni la porte des fantômes (4) (sauf s'ils sont morts, mais ici ils sont effrayés)
-                if (map.Grid[targetY, targetX] != 1 && map.Grid[targetY, targetX] != 4)
+                TileType tile = map.Grid[targetY, targetX];
+                if (tile != TileType.Wall && tile != TileType.GhostDoor)
                 {
-                    // Dès qu'une direction est valide, l'arcade la valide immédiatement !
                     return testDir;
                 }
             }
 
-            // Sécurité au cas où le fantôme se retrouverait coincé (ne devrait jamais arriver)
+            // Sécurité : fantôme coincé (ne devrait jamais arriver)
             return CurrentDirection;
         }
 

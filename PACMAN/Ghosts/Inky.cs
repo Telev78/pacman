@@ -1,5 +1,4 @@
 ﻿using System.Drawing;
-using System.Windows.Forms;
 
 namespace PacmanWinForms
 {
@@ -7,47 +6,44 @@ namespace PacmanWinForms
     {
         private Ghost blinky;
 
-        // Départ : Gauche du nid (12, 13+3) | Patrouille : Coin inférieur droit (27, Max)
+        // Départ : gauche du nid | Patrouille : coin inférieur droit
         public Inky(Ghost blinkyRef) : base(12, 13 + 3, new Point(27, GameConfig.MapHeight - 1))
         {
             this.blinky = blinkyRef;
-            this.CurrentState = GhostState.InHouse;
-            this.CurrentDirection = Keys.Up;
+            this.Phase = GhostPhase.InHouse;
+            this.CurrentDirection = Direction.Up;
             this.bobDirection = -1;
 
-            // AJUSTEMENT ARCADE : Centrage parfait dans le nid
+            // Centrage dans le nid
             this.X -= 4;
             this.Y += 8;
-            this.initialY = this.Y; // On réaligne la base de son oscillation verticale
+            this.initialY = this.Y;
         }
 
         protected override Point GetChaseTargetTile(Pacman pacman)
         {
-            int pacmanX = (int)(pacman.X / GameConfig.TileSize);
-            int pacmanY = (int)(pacman.Y / GameConfig.TileSize);
+            int pacmanX = pacman.TileX;
+            int pacmanY = pacman.TileY;
 
-            // 1. Déterminer la case pivot (2 cases devant Pac-Man)
+            // 1. Case pivot : 2 cases devant Pac-Man
             switch (pacman.CurrentDirection)
             {
-                case Keys.Up:
+                case Direction.Up:
                     pacmanY -= 2;
-                    pacmanX -= 2; // Application du bug d'overflow officiel
+                    pacmanX -= 2; // Bug d'overflow de l'arcade
                     break;
-                case Keys.Down: pacmanY += 2; break;
-                case Keys.Left: pacmanX -= 2; break;
-                case Keys.Right: pacmanX += 2; break;
+                case Direction.Down: pacmanY += 2; break;
+                case Direction.Left: pacmanX -= 2; break;
+                case Direction.Right: pacmanX += 2; break;
             }
 
-            // 2. Obtenir les coordonnées de Blinky sur la grille
-            int blinkyX = (int)(blinky.X / GameConfig.TileSize);
-            int blinkyY = (int)(blinky.Y / GameConfig.TileSize);
+            // 2. Position de Blinky
+            int blinkyX = blinky.TileX;
+            int blinkyY = blinky.TileY;
 
-            // 3. Calculer le vecteur Blinky -> Pivot et le doubler
-            int vectorX = pacmanX - blinkyX;
-            int vectorY = pacmanY - blinkyY;
-
-            int targetX = blinkyX + (vectorX * 2);
-            int targetY = blinkyY + (vectorY * 2);
+            // 3. Vecteur Blinky -> pivot, doublé
+            int targetX = blinkyX + (pacmanX - blinkyX) * 2;
+            int targetY = blinkyY + (pacmanY - blinkyY) * 2;
 
             return new Point(targetX, targetY);
         }

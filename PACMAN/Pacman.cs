@@ -1,6 +1,4 @@
-﻿using System.Windows.Forms;
-
-namespace PacmanWinForms
+﻿namespace PacmanWinForms
 {
     public enum PacmanState { Alive, Dying }
 
@@ -8,10 +6,13 @@ namespace PacmanWinForms
     {
         public float X { get; set; }
         public float Y { get; set; }
+        // Tuile du CENTRE de Pac-Man
+        public int TileX { get { return Tiles.Of(X); } }
+        public int TileY { get { return Tiles.Of(Y); } }
         private float speedAccumulator = 0.0f; // Accumulateur physique
 
-        public Keys CurrentDirection { get; set; }
-        public Keys NextDirection { get; set; }
+        public Direction CurrentDirection { get; set; }
+        public Direction NextDirection { get; set; }
 
         public int AnimFrame { get; private set; } = 0;
         private int animTick = 0;
@@ -23,68 +24,58 @@ namespace PacmanWinForms
         {
             X = 104;
             Y = 208;
-            CurrentDirection = Keys.Left;
-            NextDirection = Keys.None;
+            CurrentDirection = Direction.Left;
+            NextDirection = Direction.None;
         }
 
-        // --- MÉTHODE PRINCIPALE MISE À JOUR ---
         public void Move(LevelMap map, int currentLevel, bool isFrightenedMode)
         {
             if (State == PacmanState.Dying) return;
 
-            // 1. Lire la table de vitesse
             var specs = GameConfig.GetSpecsForLevel(currentLevel);
 
-            // 2. Détecter si Pac-Man se trouve actuellement sur une gomme
-            int currentTileX = (int)(X / 8);
-            int currentTileY = (int)(Y / 8);
+            // Pac-Man est-il sur une gomme ?
+            int currentTileX = TileX;
+            int currentTileY = TileY;
             bool isOnDot = false;
 
             if (currentTileX >= 0 && currentTileX < GameConfig.MapWidth && currentTileY >= 0 && currentTileY < GameConfig.MapHeight)
             {
-                int tile = map.Grid[currentTileY, currentTileX];
-                isOnDot = (tile == 2 || tile == 3); // 2 = Gomme, 3 = Super-Gomme
+                TileType tile = map.Grid[currentTileY, currentTileX];
+                isOnDot = (tile == TileType.Dot || tile == TileType.Energizer);
             }
 
-            // 3. Choix de la vitesse exacte selon le tableau A.1
-            float currentSpeed = specs.PacmanNormal;
+            float currentSpeed;
             if (isFrightenedMode)
-            {
                 currentSpeed = isOnDot ? specs.FrightenedPacmanDots : specs.FrightenedPacman;
-            }
             else
-            {
                 currentSpeed = isOnDot ? specs.PacmanDots : specs.PacmanNormal;
-            }
 
-            // 4. Accumulation mécanique
             speedAccumulator += currentSpeed;
             int pixelsToMove = (int)speedAccumulator;
             speedAccumulator -= pixelsToMove;
 
-            // 5. Déplacement pixel par pixel
             for (int i = 0; i < pixelsToMove; i++)
             {
                 MoveOnePixel(map);
             }
         }
 
-        // --- DÉPLACEMENT UNITAIRE (1 PIXEL) ---
         private void MoveOnePixel(LevelMap map)
         {
-            bool isAlignedWithGrid = (X % 8 == 0) && (Y % 8 == 0);
+            bool isAlignedWithGrid = Tiles.IsAligned(X, Y);
 
             if (isAlignedWithGrid)
             {
-                int currentTileX = (int)(X / 8);
-                int currentTileY = (int)(Y / 8);
+                int currentTileX = TileX;
+                int currentTileY = TileY;
 
-                if (NextDirection != Keys.None)
+                if (NextDirection != Direction.None)
                 {
                     if (CanMoveInDirection(currentTileX, currentTileY, NextDirection, map))
                     {
                         CurrentDirection = NextDirection;
-                        NextDirection = Keys.None;
+                        NextDirection = Direction.None;
                     }
                 }
 
@@ -93,34 +84,30 @@ namespace PacmanWinForms
                     return; // Stoppé net contre un mur
                 }
 
-                if (this.X < -8)
+                // Tunnel
+                int wrapLimit = GameConfig.MapWidth * GameConfig.TileSize + GameConfig.TileSize;
+                if (this.X < -GameConfig.TileSize)
                 {
-                    this.X = 224 + 8;
+                    this.X = wrapLimit;
                 }
-                else if (this.X > 224 + 8)
+                else if (this.X > wrapLimit)
                 {
-                    this.X = -8;
+                    this.X = -GameConfig.TileSize;
                 }
             }
             else
             {
-                if (IsOppositeDirection(CurrentDirection, NextDirection))
+                // Demi-tour autorisé n'importe où entre deux tuiles
+                if (CurrentDirection != Direction.None && CurrentDirection.Opposite() == NextDirection)
                 {
                     CurrentDirection = NextDirection;
-                    NextDirection = Keys.None;
+                    NextDirection = Direction.None;
                 }
             }
 
-            // Déplacement physique de 1 pixel
-            switch (CurrentDirection)
-            {
-                case Keys.Up: Y -= 1; break;
-                case Keys.Down: Y += 1; break;
-                case Keys.Left: X -= 1; break;
-                case Keys.Right: X += 1; break;
-            }
+            X += CurrentDirection.Dx();
+            Y += CurrentDirection.Dy();
 
-            // Animation
             animTick++;
             if (animTick >= TicksPerFrame)
             {
@@ -129,35 +116,20 @@ namespace PacmanWinForms
             }
         }
 
-        private bool CanMoveInDirection(int tileX, int tileY, Keys dir, LevelMap map)
+        private bool CanMoveInDirection(int tileX, int tileY, Direction dir, LevelMap map)
         {
-            int targetX = tileX;
-            int targetY = tileY;
+            if (dir == Direction.None) return false;
 
-            switch (dir)
+            int targetX = tileX + dir.Dx();
+            int targetY = tileY + dir.Dy();
+
+            if (targetX < 0 || targetX >= GameConfig.MapWidth || targetY < 0 || targetY >= GameConfig.MapHeight)
             {
-                case Keys.Up: targetY--; break;
-                case Keys.Down: targetY++; break;
-                case Keys.Left: targetX--; break;
-                case Keys.Right: targetX++; break;
-                default: return false;
+                return (targetY == MazeLayout.TunnelRow && (dir == Direction.Left || dir == Direction.Right));
             }
 
-            if (targetX < 0 || targetX >= 28 || targetY < 0 || targetY >= 36)
-            {
-                return (targetY == 17 && (dir == Keys.Left || dir == Keys.Right));
-            }
-
-            return map.Grid[targetY, targetX] != 1 && map.Grid[targetY, targetX] != 4;
-        }
-
-        private bool IsOppositeDirection(Keys dir1, Keys dir2)
-        {
-            if (dir1 == Keys.Left && dir2 == Keys.Right) return true;
-            if (dir1 == Keys.Right && dir2 == Keys.Left) return true;
-            if (dir1 == Keys.Up && dir2 == Keys.Down) return true;
-            if (dir1 == Keys.Down && dir2 == Keys.Up) return true;
-            return false;
+            TileType tile = map.Grid[targetY, targetX];
+            return tile != TileType.Wall && tile != TileType.GhostDoor;
         }
     }
 }

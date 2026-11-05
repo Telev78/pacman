@@ -1,43 +1,40 @@
 ﻿using System;
 using System.Drawing;
-using System.Windows.Forms;
 
 namespace PacmanWinForms
 {
     public class Clyde : Ghost
     {
-        // Départ : Droite du nid (16, 13+3) | Patrouille : Coin inférieur gauche (0, Max)
+        // Départ : droite du nid | Patrouille : coin inférieur gauche
         public Clyde() : base(16, 13 + 3, new Point(0, GameConfig.MapHeight - 1))
         {
-            
-            this.CurrentState = GhostState.InHouse;
-            this.CurrentDirection = Keys.Up;
+            this.Phase = GhostPhase.InHouse;
+            this.CurrentDirection = Direction.Up;
             this.bobDirection = -1;
 
-            // AJUSTEMENT ARCADE : Centrage parfait dans le nid
+            // Centrage dans le nid
             this.X -= 4;
             this.Y += 8;
-            this.initialY = this.Y; // On réaligne la base de son oscillation verticale
+            this.initialY = this.Y;
         }
 
         protected override Point GetChaseTargetTile(Pacman pacman)
         {
-            int currentTileX = (int)(X / GameConfig.TileSize);
-            int currentTileY = (int)(Y / GameConfig.TileSize);
-            int pacmanTileX = (int)(pacman.X / GameConfig.TileSize);
-            int pacmanTileY = (int)(pacman.Y / GameConfig.TileSize);
+            int currentTileX = TileX;
+            int currentTileY = TileY;
+            int pacmanTileX = pacman.TileX;
+            int pacmanTileY = pacman.TileY;
 
-            // Calcul de la distance à vol d'oiseau (Pythagore)
             double distance = Math.Sqrt(Math.Pow(currentTileX - pacmanTileX, 2) + Math.Pow(currentTileY - pacmanTileY, 2));
 
             if (distance >= 8)
             {
-                // Mode Blinky : Attaque directe
+                // Loin de Pac-Man : attaque directe
                 return new Point(pacmanTileX, pacmanTileY);
             }
             else
             {
-                // Mode panique : Fuite vers sa zone Scatter
+                // Trop près : fuite vers son coin
                 return ScatterTargetTile;
             }
         }

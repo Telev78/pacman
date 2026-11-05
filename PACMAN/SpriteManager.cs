@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
 using System.Reflection;
-using System.Windows.Forms;
 
 namespace PacmanWinForms
 {
@@ -14,10 +13,10 @@ namespace PacmanWinForms
         private Bitmap textSheet;
         private Bitmap ghostDoorSprite;
         private Bitmap[] pacmanDeathSprites;
-        private Dictionary<string, Dictionary<Keys, Bitmap[]>> ghostSprites;
+        private Dictionary<string, Dictionary<Direction, Bitmap[]>> ghostSprites;
+        private Dictionary<Direction, Bitmap> eyesSprites;
         private Bitmap[] frightenedBlueSprites;
         private Bitmap[] frightenedWhiteSprites; // Utile pour la fin du mode panic !
-        private Dictionary<Keys, Bitmap> eyesSprites;
 
         public enum ArcadeColor
         {
@@ -75,13 +74,13 @@ namespace PacmanWinForms
             ghostDoorSprite = CropGeneral(332, 96, 16, 8);
 
             // Fantômes : 4 directions x 2 frames, une ligne de 16 px par fantôme
-            ghostSprites = new Dictionary<string, Dictionary<Keys, Bitmap[]>>();
+            ghostSprites = new Dictionary<string, Dictionary<Direction, Bitmap[]>>();
             string[] ghostNames = { "Blinky", "Pinky", "Inky", "Clyde" };
-            Keys[] dirOrder = { Keys.Right, Keys.Left, Keys.Up, Keys.Down };
+            Direction[] dirOrder = { Direction.Right, Direction.Left, Direction.Up, Direction.Down };
 
             for (int i = 0; i < ghostNames.Length; i++)
             {
-                var currentGhostDict = new Dictionary<Keys, Bitmap[]>();
+                var currentGhostDict = new Dictionary<Direction, Bitmap[]>();
                 int y = 64 + (i * SpriteSize);
 
                 for (int d = 0; d < dirOrder.Length; d++)
@@ -107,8 +106,8 @@ namespace PacmanWinForms
             }
 
             // Yeux (Droite, Gauche, Haut, Bas) : ligne en dessous
-            eyesSprites = new Dictionary<Keys, Bitmap>();
-            Keys[] eyeDirs = { Keys.Right, Keys.Left, Keys.Up, Keys.Down };
+            eyesSprites = new Dictionary<Direction, Bitmap>();
+            Direction[] eyeDirs = { Direction.Right, Direction.Left, Direction.Up, Direction.Down };
             for (int d = 0; d < eyeDirs.Length; d++)
             {
                 eyesSprites.Add(eyeDirs[d], CropGeneral(SpritesX + (8 + d) * SpriteSize, 80));
@@ -122,13 +121,13 @@ namespace PacmanWinForms
             }
         }
 
-        public Bitmap GetGhostSprite(string ghostName, Keys direction, int frame)
+        public Bitmap GetGhostSprite(string ghostName, Direction direction, int frame)
         {
             if (ghostSprites.ContainsKey(ghostName) && ghostSprites[ghostName].ContainsKey(direction))
             {
                 return ghostSprites[ghostName][direction][frame % 2];
             }
-            return ghostSprites["Blinky"][Keys.Left][0]; // Repli de secours
+            return ghostSprites["Blinky"][Direction.Left][0]; // Repli de secours
         }
 
         public Bitmap GetGhostDoorSprite()
@@ -139,7 +138,7 @@ namespace PacmanWinForms
         /// <summary>
         /// Récupère le bon sprite de Pac-Man selon sa direction et sa frame d'animation
         /// </summary>
-        public Bitmap GetPacmanSprite(int animFrame, Keys direction)
+        public Bitmap GetPacmanSprite(int animFrame, Direction direction)
         {
             int size = 16;
             int startX = 456;
@@ -156,10 +155,10 @@ namespace PacmanWinForms
                 // Choix de la ligne (Y) selon la direction
                 switch (direction)
                 {
-                    case Keys.Right: startY = 0; break;
-                    case Keys.Left: startY = 16; break;
-                    case Keys.Up: startY = 32; break;
-                    case Keys.Down: startY = 48; break;
+                    case Direction.Right: startY = 0; break;
+                    case Direction.Left: startY = 16; break;
+                    case Direction.Up: startY = 32; break;
+                    case Direction.Down: startY = 48; break;
                     default: startY = 16; break; // Gauche par défaut au spawn
                 }
 
@@ -201,7 +200,7 @@ namespace PacmanWinForms
             return frightenedBlueSprites[frame % 2];
         }
 
-        public Bitmap GetGhostEyesSprite(Keys direction)
+        public Bitmap GetGhostEyesSprite(Direction direction)
         {
             if (eyesSprites.ContainsKey(direction))
                 return eyesSprites[direction];

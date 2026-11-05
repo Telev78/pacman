@@ -5,15 +5,15 @@ namespace PacmanWinForms
 {
     public class LevelMap
     {
-        // 0 = Vide, 1 = Mur, 2 = Gomme, 3 = Super-Gomme, 4 = Porte du nid
-        public int[,] Grid { get; private set; }
+        // Physique du labyrinthe
+        public TileType[,] Grid { get; private set; }
 
         // Index de la tuile visuelle dans maze.png, ou -1 si vide
         public int[,] VisualGrid { get; private set; }
 
         public LevelMap()
         {
-            Grid = new int[GameConfig.MapHeight, GameConfig.MapWidth];
+            Grid = new TileType[GameConfig.MapHeight, GameConfig.MapWidth];
             VisualGrid = new int[GameConfig.MapHeight, GameConfig.MapWidth];
 
             for (int r = 0; r < GameConfig.MapHeight; r++)
@@ -45,7 +45,7 @@ namespace PacmanWinForms
 
                     for (int c = 0; c < GameConfig.MapWidth; c++)
                     {
-                        Grid[r, c] = int.Parse(physics[c]);
+                        Grid[r, c] = (TileType)int.Parse(physics[c]);
                         VisualGrid[r, c] = int.Parse(visuals[c]);
                     }
                 }
