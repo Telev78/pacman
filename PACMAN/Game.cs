@@ -13,19 +13,17 @@ namespace PacmanWinForms
         public Pacman Pacman { get; private set; }
         public List<Ghost> Ghosts { get; private set; }
 
-        public int Score { get; private set; }
         public int DotsRemaining { get; private set; }
         public int Lives { get; private set; }
         public int CurrentLevel { get; private set; }
 
         public bool IsFrightenedMode { get; private set; }
-        public int FrightenedMsRemaining { get; private set; }
+        public int FrightenedFramesRemaining { get; private set; }
         public LevelSpecs CurrentSpecs { get; private set; }
 
         public int GhostAnimationFrame { get; private set; }
         public GameState State { get; private set; }
         public bool ShowCharacters { get; private set; } = true;
-        public int HighScore { get; private set; } = 0;
         public bool IsNextLevelTransition { get; private set; } = false;
         public int EatenGhostScoreX { get; private set; }
         public int EatenGhostScoreY { get; private set; }
@@ -38,47 +36,33 @@ namespace PacmanWinForms
         private int gameOverTimer = 0;
         private int ghostsEatenInCurrentFrightenedMode = 0;
         private int ghostEatenFreezeTimer = 0;
-        private bool isBonusLifeAwarded = false;
-        private bool useGlobalDotCounter = false;
-        private int globalDotCounter = 0;
-        private int inactivityTimerMs = 0;
-        // --- ÉTAT ET LOGIQUE DES FRUITS ---
-        public bool IsFruitActive { get; private set; } = false;
-        public int FruitX { get; private set; }
-        public int FruitY { get; private set; }
-        public int FruitTimer { get; private set; } = 0;
 
-        public bool IsFruitScoreActive { get; private set; } = false;
-        public int FruitScoreTimer { get; private set; } = 0;
-        public int CurrentFruitValue { get; private set; } = 100;
-
-        private int initialDotsCount = 0;
-        private bool fruit70Spawned = false;
-        private bool fruit170Spawned = false;
-
-        // Suivi des vagues Scatter/Chase
-        private int currentWaveIndex = 0;       // Index de la vague actuelle (0 à 7)
-        private double waveTimerMs = 0;         // Temps accumulé dans la vague actuelle
-
-        private AudioManager audioManager;
-        private bool wakaToggle = false;
-        private int currentSirenIndex = -1; // -1 pour forcer le premier chargement au démarrage
+        private GhostHouse ghostHouse;
+        private WaveScheduler waves = new WaveScheduler();
         private bool elroySuspended = false;
+
+        public FruitManager Fruit { get; private set; }
+
+        private SoundDirector sound;
+
+        private ScoreKeeper scoreKeeper = new ScoreKeeper();
+        public int Score { get { return scoreKeeper.Score; } }
+        public int HighScore { get { return scoreKeeper.HighScore; } }
 
         /// <summary>
         /// Le mode de comportement global imposé par le timer des vagues (Scatter ou Chase).
         /// </summary>
-        public GhostMode GlobalGhostMode { get; private set; } = GhostMode.Scatter;
+        public GhostMode GlobalGhostMode { get { return waves.CurrentMode; } }
 
         public Game()
         {
             Map = new LevelMap();
+            Fruit = new FruitManager();
             Pacman = new Pacman();
             Ghosts = new List<Ghost>();
+            ghostHouse = new GhostHouse(Ghosts);
+            sound = new SoundDirector();
 
-            audioManager = new AudioManager();
-            
-            Score = 0;
             Lives = 3;
             CurrentLevel = 1;
             State = GameState.Playing;
@@ -88,8 +72,8 @@ namespace PacmanWinForms
 
         private void InitializeGameValue()
         {
-            audioManager.StopAll();
-            
+            sound.StopAll();
+
             Assembly assembly = Assembly.GetExecutingAssembly();
             // Note la conversion des dossiers en points : asset.maps.original_maze.txt
             string resourceName = "PacmanWinForms.asset.maps.original_maze.txt";
@@ -109,8 +93,8 @@ namespace PacmanWinForms
                     throw new FileNotFoundException("Fichier de carte embarqué introuvable : " + resourceName);
                 }
             }
-            if(!IsNextLevelTransition)
-                audioManager.Play("start");
+            if (!IsNextLevelTransition)
+                sound.PlayStartJingle();
         }
 
         private void CountInitialPellets()
@@ -128,23 +112,14 @@ namespace PacmanWinForms
                 }
             }
 
-            // Initialisation pour le suivi des fruits (ne se réinitialise pas à la mort)
-            initialDotsCount = DotsRemaining;
-            fruit70Spawned = false;
-            fruit170Spawned = false;
+            Fruit.StartLevel(DotsRemaining);
         }
 
         public void ResetPositions(bool afterDeath = false)
         {
-            currentSirenIndex = -1;
-            this.CurrentSpecs = GameConfig.GetSpecsForLevel(this.CurrentLevel);
+            sound.ResetSiren();
 
-            // Les compteurs individuels survivent à une mort (les fantômes sont recréés)
-            var savedCounters = new Dictionary<string, int>();
-            if (afterDeath)
-            {
-                foreach (Ghost g in Ghosts) savedCounters[g.GetType().Name] = g.DotCounter;
-            }
+            this.CurrentSpecs = GameConfig.GetSpecsForLevel(this.CurrentLevel);
 
             Ghosts.Clear();
 
@@ -160,25 +135,13 @@ namespace PacmanWinForms
 
             SpawnPacman();
 
-            IsFruitActive = false;
-            IsFruitScoreActive = false;
-            inactivityTimerMs = 0;
+            Fruit.ResetForNewLife();
 
-            ConfigureGhostDotLimits();
-            foreach (Ghost g in Ghosts)
-            {
-                if (savedCounters.TryGetValue(g.GetType().Name, out int saved))
-                    g.DotCounter = saved;
-            }
+            ghostHouse.Reset(CurrentLevel, afterDeath);
 
-            // Compteur global : uniquement après une mort (pas au début d'un niveau)
-            useGlobalDotCounter = afterDeath;
-            globalDotCounter = 0;
             elroySuspended = afterDeath;
 
-            currentWaveIndex = 0;
-            waveTimerMs = 0;
-            GlobalGhostMode = GhostMode.Scatter;
+            waves.Reset();
 
             State = GameState.Ready;
             readyTimer = 240;
@@ -214,7 +177,7 @@ namespace PacmanWinForms
                 {
                     State = GameState.Playing;
                     IsNextLevelTransition = false;
-                    ReleaseGhostByCounter();
+                    ghostHouse.ReleaseByCounter();
                 }
                 return;
             }
@@ -244,80 +207,34 @@ namespace PacmanWinForms
 
             if (State != GameState.Playing) return;
 
-            UpdateTimerVagues(16.67);
-
-            // --- GESTION DU FRUIT (TIMERS ET COLLISION) ---
-            if (IsFruitActive)
+            if (waves.Update(CurrentLevel, IsFrightenedMode))
             {
-                FruitTimer--;
-                if (FruitTimer <= 0)
-                {
-                    IsFruitActive = false; // Le fruit disparait après ~10 secondes
-                }
-                else
-                {
-                    CheckFruitCollision();
-                }
+                ChangerVagueGlobale();
             }
 
-            if (IsFruitScoreActive)
+            // --- FRUIT BONUS ---
+            int fruitPoints = Fruit.Update(CurrentLevel, DotsRemaining, Pacman);
+            if (fruitPoints > 0)
             {
-                FruitScoreTimer--;
-                if (FruitScoreTimer <= 0)
-                {
-                    IsFruitScoreActive = false;
-                }
-            }
-
-            // --- VÉRIFICATION DES SEUILS DE SPAWN (70 et 170 gommes mangées) ---
-            int dotsEaten = initialDotsCount - DotsRemaining;
-
-            if (!fruit70Spawned && dotsEaten >= 70)
-            {
-                fruit70Spawned = true;
-                SpawnFruit();
-            }
-            if (!fruit170Spawned && dotsEaten >= 170)
-            {
-                fruit170Spawned = true;
-                SpawnFruit();
+                sound.PlayFruitEaten();
+                AddScore(fruitPoints);
             }
 
             // TIMING DU MODE FRIGHTENED
             if (IsFrightenedMode)
             {
-                FrightenedMsRemaining -= 16;
-                if (FrightenedMsRemaining <= 0)
+                FrightenedFramesRemaining--;
+                if (FrightenedFramesRemaining <= 0)
                 {
-                    FrightenedMsRemaining = 0;
+                    FrightenedFramesRemaining = 0;
                     EndFrightenedMode();
                 }
             }
 
-            CheckSirenUpdate();
-            
-            ReleaseGhostByCounter();
-            
-            // Le chrono de sortie ne tourne QUE si le joueur est en train de jouer activement
-            Ghost ghostToRelease = GetPreferredGhostInHouse();
+            bool ghostsSpooked = Ghosts.Any(g => (g.Phase == GhostPhase.Active && g.IsFrightened) || g.Phase == GhostPhase.Eaten);
+            sound.UpdateSiren(CurrentLevel, DotsRemaining, ghostsSpooked);
 
-            if (ghostToRelease != null)
-            {
-                inactivityTimerMs += 16; // ~16.67ms par frame sous 60Hz
-
-                // Règle d'inactivité en fonction du niveau
-                int inactivityLimitMs = (CurrentLevel < 5) ? 4000 : 3000;
-                if (inactivityTimerMs >= inactivityLimitMs)
-                {
-                    inactivityTimerMs = 0;
-                    ghostToRelease.Phase = GhostPhase.Exiting; // Sortie forcée !
-                }
-            }
-            else
-            {
-                inactivityTimerMs = 0; // Personne dans le nid, on reset le timer
-            }
-            
+            ghostHouse.Update(CurrentLevel);
 
             // VITESSE ET MOUVEMENT DE PAC-MAN
             Pacman.Move(Map, CurrentLevel, IsFrightenedMode);
@@ -341,9 +258,7 @@ namespace PacmanWinForms
                 ghost.Move(Map, Pacman, CurrentLevel, GlobalGhostMode);
             }
 
-            if (!Ghosts.Any(g => g.Phase == GhostPhase.Eaten))
-                audioManager.Stop("eyes");
-
+            sound.UpdateEyes(Ghosts.Any(g => g.Phase == GhostPhase.Eaten));
 
 
             // ANIMATIONS ET COLLISIONS
@@ -359,35 +274,6 @@ namespace PacmanWinForms
 
         }
 
-        private void PelletEated()
-        {
-            inactivityTimerMs = 0;
-
-            if (useGlobalDotCounter)
-            {
-                globalDotCounter++;
-
-                Ghost pinky = Ghosts.FirstOrDefault(g => g is Pinky && g.Phase == GhostPhase.InHouse);
-                Ghost inky = Ghosts.FirstOrDefault(g => g is Inky && g.Phase == GhostPhase.InHouse);
-                Ghost clyde = Ghosts.FirstOrDefault(g => g is Clyde && g.Phase == GhostPhase.InHouse);
-
-                if (globalDotCounter == 7 && pinky != null) pinky.Phase = GhostPhase.Exiting;
-                if (globalDotCounter == 17 && inky != null) inky.Phase = GhostPhase.Exiting;
-
-                if (globalDotCounter == 32 && clyde != null)
-                {
-                    clyde.Phase = GhostPhase.Exiting;
-                    useGlobalDotCounter = false;
-                    globalDotCounter = 0;
-                }
-            }
-            else
-            {
-                Ghost preferred = GetPreferredGhostInHouse();
-                if (preferred != null) preferred.DotCounter++;
-            }
-        }
-
         private void CheckPelletCollision()
         {
             int tileX = Pacman.TileX;
@@ -399,30 +285,29 @@ namespace PacmanWinForms
 
                 if (currentTile == TileType.Dot) // Normal
                 {
-                    wakaToggle = !wakaToggle;
-                    audioManager.Play(wakaToggle ? "eat_dot_0" : "eat_dot_1");
+                    sound.PlayDot();
 
                     Map.Grid[tileY, tileX] = TileType.Empty;
                     AddScore(10);
                     DotsRemaining--;
-                    PelletEated();
+                    ghostHouse.OnDotEaten();
                     CheckLevelClear();
                 }
                 else if (currentTile == TileType.Energizer) // Super gomme
                 {
-                    audioManager.Stop($"siren{currentSirenIndex}"); // Coupe la sirène en cours
-                    audioManager.PlaySequence("fright_firstloop", "fright", loopNext: true);
-
                     Map.Grid[tileY, tileX] = TileType.Empty;
                     AddScore(50);
                     DotsRemaining--;
-                    PelletEated();
+                    ghostHouse.OnDotEaten();
                     ghostsEatenInCurrentFrightenedMode = 0;
 
                     if (CurrentSpecs.FrightenedTimeSec > 0)
                     {
+                        // Musique de panique : uniquement si les fantômes deviennent vulnérables
+                        sound.StartFrightened();
+
                         IsFrightenedMode = true;
-                        FrightenedMsRemaining = CurrentSpecs.FrightenedTimeSec * 1000;
+                        FrightenedFramesRemaining = CurrentSpecs.FrightenedTimeSec * GameConfig.FramesPerSecond;
 
                         foreach (Ghost ghost in Ghosts)
                         {
@@ -460,7 +345,7 @@ namespace PacmanWinForms
                 {
                     if (ghost.IsFrightened)
                     {
-                        audioManager.Play("eat_ghost");
+                        sound.PlayGhostEaten();
 
                         // Passage immédiat en mode yeux (il commencera à courir APRÈS le freeze)
                         ghost.Phase = GhostPhase.Eaten;
@@ -483,19 +368,17 @@ namespace PacmanWinForms
                         ghostEatenFreezeTimer = 60;
                         ghost.IsFrightened = false;
 
-                        audioManager.PlaySequence("eyes_firstloop", "eyes", loopNext: true);
+                        sound.StartEyes();
 
                         break; // On sort immédiatement de la boucle de détection
                     }
                     else if (ghost.Phase == GhostPhase.Active)
                     {
-                        audioManager.StopAll();
+                        sound.PlayDeath();
                         // On change l'état interne pour signaler la mort au MainForm
                         State = GameState.Dying;
                         Pacman.State = PacmanState.Dying;
                         Pacman.DeathAnimationFrame = 0;
-                        // Choisis le son de mort selon ce que tu as (souvent death_0 est le bruit de dissolution)
-                        audioManager.PlaySequence("death_0", "death_1",false);
                         break; // Inutile de vérifier les autres fantômes si Pac-Man est mort
                     }
                 }
@@ -548,12 +431,10 @@ namespace PacmanWinForms
         /// </summary>
         public void RestartGame()
         {
-            Score = 0;
             Lives = 3;
             CurrentLevel = 1;
             IsNextLevelTransition = false;
-            isBonusLifeAwarded = false;
-            
+            scoreKeeper.NewGame();
 
             // Recharge la carte initiale, compte les pellets et déclenche le ResetPositions en mode Ready
             InitializeGameValue();
@@ -564,138 +445,10 @@ namespace PacmanWinForms
         /// </summary>
         private void AddScore(int points)
         {
-            Score += points;
-
-            // Mise à jour en temps réel du High Score si le joueur le bat
-            if (Score > HighScore)
-            {
-                HighScore = Score;
-            }
-
-            // Règle Arcade : Si on franchit le seuil et qu'on ne l'a pas encore eu dans cette partie
-            if (!isBonusLifeAwarded && Score >= GameConfig.BonusLifeThreshold)
+            if (scoreKeeper.Add(points))
             {
                 Lives++;
-                isBonusLifeAwarded = true;
-
-                audioManager.Play("extend");
-            }
-        }
-
-        private void SpawnFruit()
-        {
-            IsFruitActive = true;
-            FruitTimer = 600; // 600 frames = 10 secondes exactes à 60 Hz
-
-            // Alignement parfait sous le nid (Même X que le spawn de Pac-man, ligne 20)
-            FruitX = (13 * GameConfig.TileSize);
-            FruitY = (20 * GameConfig.TileSize) - 4;
-
-            CurrentFruitValue = GetFruitValueForLevel(CurrentLevel);
-        }
-
-        private int GetFruitValueForLevel(int level)
-        {
-            if (level == 1) return 100;
-            if (level == 2) return 300;
-            if (level == 3 || level == 4) return 500;
-            if (level == 5 || level == 6) return 700;
-            if (level == 7 || level == 8) return 1000;
-            if (level == 9 || level == 10) return 2000;
-            if (level == 11 || level == 12) return 3000;
-            return 5000; // Niveau 13+ (Clé)
-        }
-
-        private void CheckFruitCollision()
-        {
-            // Collision basée sur les cases centrales (Règle arcade)
-            int pacmanTileX = Pacman.TileX;
-            int pacmanTileY = Pacman.TileY;
-
-            int fruitTileX = Tiles.Of(FruitX);
-            int fruitTileY = Tiles.Of(FruitY);
-
-            if (pacmanTileX == fruitTileX && pacmanTileY == fruitTileY)
-            {
-                audioManager.Play("eat_fruit");
-
-                IsFruitActive = false;
-                AddScore(CurrentFruitValue);
-
-                // Déclenche l'affichage du score flottant
-                IsFruitScoreActive = true;
-                FruitScoreTimer = 120; // Affiché pendant 2 secondes (120 frames), sans figer le jeu
-            }
-        }
-        private void ConfigureGhostDotLimits()
-        {
-            int inkyLimit, clydeLimit;
-            if (CurrentLevel == 1) { inkyLimit = 30; clydeLimit = 60; }
-            else if (CurrentLevel == 2) { inkyLimit = 0; clydeLimit = 50; }
-            else { inkyLimit = 0; clydeLimit = 0; }
-
-            foreach (Ghost ghost in Ghosts)
-            {
-                ghost.DotCounter = 0;
-                string name = ghost.GetType().Name;
-
-                if (name == "Pinky") ghost.DotLimit = 0;
-                else if (name == "Inky") ghost.DotLimit = inkyLimit;
-                else if (name == "Clyde") ghost.DotLimit = clydeLimit;
-            }
-        }
-
-        private Ghost GetPreferredGhostInHouse()
-        {
-            // Ordre de priorité immuable de l'arcade
-            foreach (var name in new[] { "Pinky", "Inky", "Clyde" })
-            {
-                Ghost g = Ghosts.FirstOrDefault(x => x.GetType().Name == name);
-                if (g != null && g.Phase == GhostPhase.InHouse)
-                {
-                    return g;
-                }
-            }
-            return null;
-        }
-
-        private void ReleaseGhostByCounter()
-        {
-            if (useGlobalDotCounter) return;
-            if (Ghosts.Any(g => g.Phase == GhostPhase.Exiting)) return; // un seul à la fois
-
-            Ghost preferred = GetPreferredGhostInHouse();
-            if (preferred != null && preferred.DotCounter >= preferred.DotLimit)
-                preferred.Phase = GhostPhase.Exiting;
-        }
-
-        public void UpdateTimerVagues(double elapsedTimeMs)
-        {
-            // Règle Arcade : Le timer global des vagues est figé si le jeu est en mode Frightened
-            if (IsFrightenedMode)
-                return;
-
-            // Si on est sur la dernière vague (Chase infini), inutile d'incrémenter
-            if (currentWaveIndex >= 7)
-                return;
-
-            waveTimerMs += elapsedTimeMs;
-            double currentDuration = GameConfig.GetWaveDurationMs(CurrentLevel, currentWaveIndex);
-
-            if (waveTimerMs >= currentDuration)
-            {
-                // Passage à la vague suivante
-                currentWaveIndex++;
-                waveTimerMs = 0;
-
-                // Index pair = Scatter, Index impair = Chase
-                GhostMode newMode = (currentWaveIndex % 2 == 0) ? GhostMode.Scatter : GhostMode.Chase;
-
-                if (newMode != GlobalGhostMode)
-                {
-                    GlobalGhostMode = newMode;
-                    ChangerVagueGlobale();
-                }
+                sound.PlayExtraLife();
             }
         }
 
@@ -707,12 +460,7 @@ namespace PacmanWinForms
                 ghost.IsFrightened = false;
             }
 
-            audioManager.Stop("fright");
-            audioManager.Stop("eyes");
-            audioManager.PlaySequence(
-                    $"siren{currentSirenIndex}_firstloop",
-                    $"siren{currentSirenIndex}",
-                    loopNext: true);
+            sound.EndFrightened();
         }
 
         private void ChangerVagueGlobale()
@@ -729,105 +477,9 @@ namespace PacmanWinForms
             }
         }
 
-        private void CheckSirenUpdate()
+        public void Shutdown()
         {
-            // 1. Définition des seuils de l'arcade (Gommes restantes)
-            int thresholdSiren1 = 164;
-            int thresholdSiren2 = 144;
-            int thresholdSiren3 = 124;
-            int thresholdSiren4 = 104;
-
-            // Ajustement des seuils selon le niveau actuel
-            if (CurrentLevel == 2)
-            {
-                thresholdSiren1 = 174;
-                thresholdSiren2 = 154;
-                thresholdSiren3 = 134;
-                thresholdSiren4 = 114;
-            }
-            else if (CurrentLevel >= 3 && CurrentLevel <= 5)
-            {
-                thresholdSiren1 = 184;
-                thresholdSiren2 = 164;
-                thresholdSiren3 = 144;
-                thresholdSiren4 = 124;
-            }
-            else if (CurrentLevel >= 6 && CurrentLevel <= 20)
-            {
-                thresholdSiren1 = 194;
-                thresholdSiren2 = 174;
-                thresholdSiren3 = 154;
-                thresholdSiren4 = 134;
-            }
-            else if (CurrentLevel >= 21)
-            {
-                thresholdSiren1 = 204;
-                thresholdSiren2 = 184;
-                thresholdSiren3 = 164;
-                thresholdSiren4 = 144;
-            }
-
-            // 2. Détermination de la sirène cible en fonction du nombre de gommes restantes
-            int targetSiren = 0;
-
-            if (DotsRemaining <= thresholdSiren4)
-            {
-                targetSiren = 4;
-            }
-            else if (DotsRemaining <= thresholdSiren3)
-            {
-                targetSiren = 3;
-            }
-            else if (DotsRemaining <= thresholdSiren2)
-            {
-                targetSiren = 2;
-            }
-            else if (DotsRemaining <= thresholdSiren1)
-            {
-                targetSiren = 1;
-            }
-            else
-            {
-                targetSiren = 0;
-            }
-
-            // 3. Si l'état des fantômes est "Frightened" ou "Eyes Only", on met à jour l'index en mémoire
-            // mais on ne déclenche pas le son pour ne pas écraser les bruitages prioritaires
-            // (La sirène reprendra au bon index lors du retour à l'état normal)
-            bool status = false;
-            foreach (Ghost ghost in Ghosts)
-            {
-                if ((ghost.Phase == GhostPhase.Active && ghost.IsFrightened) || ghost.Phase == GhostPhase.Eaten)
-                {
-                    status = true; break;
-                }
-            }
-
-            if (status)
-            {
-                currentSirenIndex = targetSiren;
-                return;
-            }
-
-            // 4. Si la sirène calculée est différente de celle qui joue actuellement, on change !
-            if (targetSiren != currentSirenIndex)
-            {
-                // On coupe l'ancienne sirène s'il y en avait une
-                if (currentSirenIndex >= 0)
-                {
-                    audioManager.Stop($"siren{currentSirenIndex}");
-                }
-
-                currentSirenIndex = targetSiren;
-
-                // On lance la nouvelle séquence : Intro (firstloop) -> Boucle infinie
-                audioManager.PlaySequence(
-                    $"siren{currentSirenIndex}_firstloop",
-                    $"siren{currentSirenIndex}",
-                    loopNext: true
-                );
-            }
+            sound.CleanUp();
         }
-
     }
 }

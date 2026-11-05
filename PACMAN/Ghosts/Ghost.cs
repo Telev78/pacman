@@ -23,8 +23,6 @@ namespace PacmanWinForms
         protected float initialY;
         protected int bobDirection = 1;
         protected Point ScatterTargetTile { get; set; }
-        public int DotLimit { get; set; }
-        public int DotCounter { get; set; } = 0;
         private bool reverseRequested = false;
         private static readonly Random rand = new Random();
 

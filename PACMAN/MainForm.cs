@@ -283,7 +283,7 @@ namespace PacmanWinForms
                         }
                         else if (ghost.IsFrightened)
                         {
-                            int virtualTicksRemaining = (int)(game.FrightenedMsRemaining / 16.67f);
+                            int virtualTicksRemaining = game.FrightenedFramesRemaining;
                             const int TicksPerFlashCycle = 16;
                             int totalFlashTicks = game.CurrentSpecs.FlashesCount * TicksPerFlashCycle;
 
@@ -342,12 +342,12 @@ namespace PacmanWinForms
             }
 
             // 6. DESSIN DU FRUIT BONUS
-            if (game.IsFruitActive)
+            if (game.Fruit.IsActive)
             {
                 using (Bitmap fruitSprite = spriteManager.GetFruitSprite(game.CurrentLevel))
                 {
-                    int posX = game.FruitX * GameConfig.Zoom;
-                    int posY = game.FruitY * GameConfig.Zoom;
+                    int posX = game.Fruit.X * GameConfig.Zoom;
+                    int posY = game.Fruit.Y * GameConfig.Zoom;
 
                     // Dessin du fruit (Taille 16x16 zoomé, hérite de la transparence noire automatiquement !)
                     g.DrawImage(fruitSprite, posX, posY, GameConfig.ScaledTileSize * 2, GameConfig.ScaledTileSize * 2);
@@ -355,17 +355,17 @@ namespace PacmanWinForms
             }
 
             // 7. DESSIN DES POINTS DU FRUIT MANGÉ ---
-            if (game.IsFruitScoreActive)
+            if (game.Fruit.IsScoreVisible)
             {
-                using (Bitmap pointsSprite = spriteManager.GetFruitPointsSprite(game.CurrentFruitValue))
+                using (Bitmap pointsSprite = spriteManager.GetFruitPointsSprite(game.Fruit.Value))
                 {
-                    int posX = game.FruitX * GameConfig.Zoom;
-                    int posY = game.FruitY * GameConfig.Zoom;
+                    int posX = game.Fruit.X * GameConfig.Zoom;
+                    int posY = game.Fruit.Y * GameConfig.Zoom;
 
                     // Si le score est de 2000 ou plus, le sprite extrait commence 3 pixels plus à gauche.
                     // On décale le dessin de -3 pixels (au niveau du zoom) pour que la bordure droite
                     // reste parfaitement alignée avec celle du score 1000 !
-                    if (game.CurrentFruitValue >= 2000)
+                    if (game.Fruit.Value >= 2000)
                     {
                         posX -= 3 * GameConfig.Zoom;
                     }
@@ -463,6 +463,14 @@ namespace PacmanWinForms
                     g.DrawImage(fruitIndicatorSprite, posX, posY, GameConfig.ScaledTileSize * 2, GameConfig.ScaledTileSize * 2);
                 }
             }
+        }
+
+        protected override void OnFormClosed(FormClosedEventArgs e)
+        {
+            if (gameTimer != null) gameTimer.Stop();
+            if (game != null) game.Shutdown();
+
+            base.OnFormClosed(e);
         }
     }
 }

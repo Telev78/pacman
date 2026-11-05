@@ -38,7 +38,7 @@
         public const int ScaledTileSize = TileSize * Zoom; // 24 pixels
         public const int ScreenWidth = MapWidth * ScaledTileSize;  // 672 pixels
         public const int ScreenHeight = MapHeight * ScaledTileSize; // 864 pixels
-
+        public const int FramesPerSecond = 60;
         public static LevelSpecs GetSpecsForLevel(int level)
         {
             LevelSpecs specs = new LevelSpecs();
@@ -140,56 +140,28 @@
             return specs;
         }
 
+        // Durées des vagues en secondes. Index pairs = Scatter, index impairs = Chase.
+        // 0 = une seule frame (Scatter 4 des niveaux 2+ ne dure qu'une frame à l'arcade).
+        // La vague 7 (Chase 4) est infinie et n'apparaît pas dans les tables.
+        private static readonly int[] WaveSecondsLevel1 = { 7, 20, 7, 20, 5, 20, 5 };
+        private static readonly int[] WaveSecondsLevel2To4 = { 7, 20, 7, 20, 5, 1033, 0 };
+        private static readonly int[] WaveSecondsLevel5Plus = { 5, 20, 5, 20, 5, 1037, 0 };
+
         /// <summary>
-        /// Renvoie la durée d'une vague spécifique (0 à 7) pour un niveau donné, en millisecondes.
-        /// Index pairs (0, 2, 4, 6) = Scatter | Index impairs (1, 3, 5, 7) = Chase
+        /// Renvoie la durée d'une vague (0 à 7) pour un niveau donné, en frames à 60 Hz.
         /// </summary>
-        public static double GetWaveDurationMs(int level, int waveIndex)
+        public static int GetWaveDurationFrames(int level, int waveIndex)
         {
-            // Vague 7 (Chase 4) : Infinie
-            if (waveIndex >= 7) return double.PositiveInfinity;
+            // Vague 7 (Chase 4) : infinie
+            if (waveIndex >= 7) return int.MaxValue;
 
-            if (level == 1)
-            {
-                switch (waveIndex)
-                {
-                    case 0: return 7000;  // Scatter 1
-                    case 1: return 20000; // Chase 1
-                    case 2: return 7000;  // Scatter 2
-                    case 3: return 20000; // Chase 2
-                    case 4: return 5000;  // Scatter 3
-                    case 5: return 20000; // Chase 3
-                    case 6: return 5000;  // Scatter 4
-                }
-            }
-            else if (level >= 2 && level <= 4)
-            {
-                switch (waveIndex)
-                {
-                    case 0: return 7000;
-                    case 1: return 20000;
-                    case 2: return 7000;
-                    case 3: return 20000;
-                    case 4: return 5000;
-                    case 5: return 1033000; // Chase 3 très long (~17 min)
-                    case 6: return 1;       // Scatter 4 dure 1 seule frame à l'arcade !
-                }
-            }
-            else // Niveau 5+
-            {
-                switch (waveIndex)
-                {
-                    case 0: return 5000;
-                    case 1: return 20000;
-                    case 2: return 5000;
-                    case 3: return 20000;
-                    case 4: return 5000;
-                    case 5: return 1037000;
-                    case 6: return 1;
-                }
-            }
+            int[] seconds;
+            if (level == 1) seconds = WaveSecondsLevel1;
+            else if (level <= 4) seconds = WaveSecondsLevel2To4;
+            else seconds = WaveSecondsLevel5Plus;
 
-            return 0;
+            int s = seconds[waveIndex];
+            return (s == 0) ? 1 : s * FramesPerSecond;
         }
     }
 
