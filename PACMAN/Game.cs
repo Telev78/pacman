@@ -49,6 +49,20 @@ namespace PacmanWinForms
         public int Score { get { return scoreKeeper.Score; } }
         public int HighScore { get { return scoreKeeper.HighScore; } }
 
+        // Séquences de mort et de fin de niveau (en frames à 60 Hz)
+        private const int DeathFreezeFrames = 60;       // 1 s de gel avant l'animation
+        private const int DeathFramesPerSprite = 12;    // 200 ms par sprite
+        private const int DeathSpriteCount = 12;
+        private const int DeathEndPauseFrames = 30;     // 0,5 s après l'animation
+        private const int VictoryFreezeFrames = 60;     // 1 s de gel avant le clignotement
+        private const int VictoryFlashFrames = 14;      // Durée d'une couleur (blanc ou bleu)
+        private const int VictoryFlashCount = 4;        // Nombre de clignotements
+        private int dyingTimer = 0;
+        private int victoryTimer = 0;
+
+        public bool ShowGhosts { get; private set; } = true;
+        public bool IsMazeFlashWhite { get; private set; } = false;
+
         /// <summary>
         /// Le mode de comportement global imposé par le timer des vagues (Scatter ou Chase).
         /// </summary>
@@ -146,6 +160,14 @@ namespace PacmanWinForms
             State = GameState.Ready;
             readyTimer = 240;
             ShowCharacters = false;
+
+            ShowGhosts = true;
+            IsMazeFlashWhite = false;
+
+            // Le mode effrayé ne doit pas survivre à une mort ni à un changement de niveau
+            IsFrightenedMode = false;
+            FrightenedFramesRemaining = 0;
+            ghostsEatenInCurrentFrightenedMode = 0;
         }
 
         private void SpawnPacman()
@@ -203,6 +225,20 @@ namespace PacmanWinForms
                     RestartGame();
                 }
                 return; // On fige toute la physique du labyrinthe pendant le Game Over
+            }
+
+            // SÉQUENCE DE MORT
+            if (State == GameState.Dying)
+            {
+                UpdateDying();
+                return;
+            }
+
+            // SÉQUENCE DE FIN DE NIVEAU
+            if (State == GameState.Victory)
+            {
+                UpdateVictory();
+                return;
             }
 
             if (State != GameState.Playing) return;
@@ -269,6 +305,10 @@ namespace PacmanWinForms
             }
 
             CheckPelletCollision();
+
+            // Si la dernière gomme vient d'être mangée, le niveau est gagné, même si un fantôme touche Pac-Man dans la même frame
+            if (State == GameState.Victory) return;
+
             CheckGhostCollisions();
 
 
@@ -374,12 +414,10 @@ namespace PacmanWinForms
                     }
                     else if (ghost.Phase == GhostPhase.Active)
                     {
-                        sound.PlayDeath();
-                        // On change l'état interne pour signaler la mort au MainForm
+                        sound.StopAll(); // On coupe les sirènes de fond
                         State = GameState.Dying;
-                        Pacman.State = PacmanState.Dying;
-                        Pacman.DeathAnimationFrame = 0;
-                        break; // Inutile de vérifier les autres fantômes si Pac-Man est mort
+                        dyingTimer = 0;
+                        break; // Inutile de vérifier les autres fantômes
                     }
                 }
             }
@@ -390,15 +428,12 @@ namespace PacmanWinForms
             if (DotsRemaining <= 0)
             {
                 State = GameState.Victory;
+                victoryTimer = 0;
+                sound.StopAll(); // Silence à la fin du niveau, comme à l'arcade
             }
         }
 
-        public void SetPacmanState(PacmanState state)
-        {
-            Pacman.State = state;
-        }
-
-        public void PrepareNextLifeOrGameOver()
+        private void PrepareNextLifeOrGameOver()
         {
             Lives--;
             if (Lives <= 0)
@@ -417,7 +452,7 @@ namespace PacmanWinForms
         /// <summary>
         /// Passe au niveau suivant en incrémentant le niveau et en réinitialisant la carte.
         /// </summary>
-        public void StartNextLevel()
+        private void StartNextLevel()
         {
             CurrentLevel++;
             IsNextLevelTransition = true;
@@ -480,6 +515,52 @@ namespace PacmanWinForms
         public void Shutdown()
         {
             sound.CleanUp();
+        }
+
+        private void UpdateDying()
+        {
+            dyingTimer++;
+
+            // 1. Gel : tout est figé et les fantômes restent visibles
+            if (dyingTimer <= DeathFreezeFrames) return;
+
+            // 2. Animation de mort (les fantômes disparaissent car Pac-Man n'est plus "Alive")
+            int t = dyingTimer - DeathFreezeFrames - 1;
+            if (t == 0)
+            {
+                Pacman.State = PacmanState.Dying;
+                sound.PlayDeath();
+            }
+
+            int animationFrames = DeathSpriteCount * DeathFramesPerSprite;
+            Pacman.DeathAnimationFrame = Math.Min(t / DeathFramesPerSprite, DeathSpriteCount - 1);
+
+            // 3. Pause finale, puis vie suivante ou game over
+            if (t >= animationFrames + DeathEndPauseFrames)
+            {
+                PrepareNextLifeOrGameOver();
+                Pacman.State = PacmanState.Alive;
+            }
+        }
+        
+        private void UpdateVictory()
+        {
+            victoryTimer++;
+
+            // 1. Gel : tout est figé, fantômes visibles
+            if (victoryTimer <= VictoryFreezeFrames) return;
+
+            // 2. Les fantômes disparaissent et le labyrinthe clignote
+            ShowGhosts = false;
+
+            int t = victoryTimer - VictoryFreezeFrames - 1;
+            IsMazeFlashWhite = (t / VictoryFlashFrames) % 2 == 0;
+
+            // 3. Fin des clignotements : niveau suivant
+            if (t >= VictoryFlashFrames * 2 * VictoryFlashCount)
+            {
+                StartNextLevel();
+            }
         }
     }
 }

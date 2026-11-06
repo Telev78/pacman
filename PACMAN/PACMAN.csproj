@@ -103,7 +103,33 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="asset\**\*" />
+    <EmbeddedResource Include="asset\asset.png" />
+    <None Include="asset\icon.png" />
+    <EmbeddedResource Include="asset\maps\original_maze.txt" />
+    <EmbeddedResource Include="asset\sounds\credit.wav" />
+    <EmbeddedResource Include="asset\sounds\death_0.wav" />
+    <EmbeddedResource Include="asset\sounds\death_1.wav" />
+    <EmbeddedResource Include="asset\sounds\eat_dot_0.wav" />
+    <EmbeddedResource Include="asset\sounds\eat_dot_1.wav" />
+    <EmbeddedResource Include="asset\sounds\eat_fruit.wav" />
+    <EmbeddedResource Include="asset\sounds\eat_ghost.wav" />
+    <EmbeddedResource Include="asset\sounds\extend.wav" />
+    <EmbeddedResource Include="asset\sounds\eyes.wav" />
+    <EmbeddedResource Include="asset\sounds\eyes_firstloop.wav" />
+    <EmbeddedResource Include="asset\sounds\fright.wav" />
+    <EmbeddedResource Include="asset\sounds\fright_firstloop.wav" />
+    <EmbeddedResource Include="asset\sounds\intermission.wav" />
+    <EmbeddedResource Include="asset\sounds\siren0.wav" />
+    <EmbeddedResource Include="asset\sounds\siren0_firstloop.wav" />
+    <EmbeddedResource Include="asset\sounds\siren1.wav" />
+    <EmbeddedResource Include="asset\sounds\siren1_firstloop.wav" />
+    <EmbeddedResource Include="asset\sounds\siren2.wav" />
+    <EmbeddedResource Include="asset\sounds\siren2_firstloop.wav" />
+    <EmbeddedResource Include="asset\sounds\siren3.wav" />
+    <EmbeddedResource Include="asset\sounds\siren3_firstloop.wav" />
+    <EmbeddedResource Include="asset\sounds\siren4.wav" />
+    <EmbeddedResource Include="asset\sounds\siren4_firstloop.wav" />
+    <EmbeddedResource Include="asset\sounds\start.wav" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="Icon.ico" />

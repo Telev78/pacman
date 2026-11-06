@@ -11,9 +11,9 @@ namespace PacmanWinForms
     {
         private SpriteManager spriteManager;
         private Timer gameTimer;
-        private Timer deathAnimationTimer;
         private Stopwatch gameStopwatch = new Stopwatch();
         private double accumulatedTimeMs = 0;
+        private Bitmap backBuffer; // Image native 224x288, agrandie une seule fois à l'écran
 
         // NOTRE MOTEUR DE JEU UNIQUE
         private Game game;
@@ -36,6 +36,7 @@ namespace PacmanWinForms
             this.KeyDown += new KeyEventHandler(OnKeyDown);
 
             spriteManager = new SpriteManager();
+            backBuffer = new Bitmap(GameConfig.MapWidth * GameConfig.TileSize, GameConfig.MapHeight * GameConfig.TileSize);
 
             try
             {
@@ -49,10 +50,6 @@ namespace PacmanWinForms
                 Application.Exit();
                 return;
             }
-
-            deathAnimationTimer = new Timer();
-            deathAnimationTimer.Interval = 200;
-            deathAnimationTimer.Tick += DeathAnimationTimer_Tick;
 
             gameTimer = new Timer();
             gameTimer.Interval = 16;
@@ -97,75 +94,22 @@ namespace PacmanWinForms
             {
                 game.Update();
                 accumulatedTimeMs -= TargetFrameTime;
-
-                // INTERCEPTION DES CHANGEMENTS D'ÉTAT DU MOTEUR
-                if (game.State == GameState.Dying)
-                {
-                    HandleDeathTransition();
-                    return; // On sort immédiatement de la boucle
-                }
-                else if (game.State == GameState.Victory)
-                {
-                    // On force le rafraîchissement pour voir le labyrinthe vide
-                    this.Refresh();
-
-                    // Pause de satisfaction d'arcade (2 secondes) avant le niveau suivant
-                    System.Threading.Thread.Sleep(2000);
-
-                    // On appelle notre nouvelle méthode au lieu de quitter !
-                    game.StartNextLevel();
-                    UpdateGameTitleScore();
-                    return;
-                }
             }
 
             UpdateGameTitleScore();
-            this.Invalidate();
-        }
-
-        private void HandleDeathTransition()
-        {
-            gameTimer.Stop();
-            UpdateGameTitleScore();
-            this.Invalidate();
-
-            // Pause historique : On fige le thread graphique 1 seconde avant l'animation
-            System.Threading.Thread.Sleep(1000);
-            deathAnimationTimer.Start();
-        }
-
-        private void DeathAnimationTimer_Tick(object sender, EventArgs e)
-        {
-            game.Pacman.DeathAnimationFrame++;
-            this.Invalidate();
-
-            // L'animation de mort (12 frames) est terminée
-            if (game.Pacman.DeathAnimationFrame >= 12)
-            {
-                deathAnimationTimer.Stop();
-
-                System.Threading.Thread.Sleep(500); // Pause historique après la disparition de Pac-Man
-
-                // Le moteur vérifie les vies :
-                // - S'il reste des vies -> passe en GameState.Ready et réinitialise les positions
-                // - S'il n'y a plus de vies -> passe en GameState.GameOver et active le timer de 3s (180 frames)
-                game.PrepareNextLifeOrGameOver();
-
-                // Dans les deux cas, on remet l'état de Pac-Man à Vivant pour la suite
-                game.SetPacmanState(PacmanState.Alive);
-
-                // On rafraîchit la barre de titre (pour voir instantanément la perte d'une vie)
-                UpdateGameTitleScore();
-
-                // CRITIQUE : On relance TOUJOURS la boucle de jeu principale (60 Hz).
-                // C'est elle qui va faire défiler soit le "READY!" (si vivant), soit le "GAME OVER" (si mort).
-                gameTimer.Start();
-            }
+            Invalidate();
         }
 
         private void UpdateGameTitleScore()
         {
             this.Text = $"Pac-Man Arcade (C#) - SCORE: {game.Score} - VIES: {game.Lives} - Gommes: {game.DotsRemaining}";
+        }
+
+        // Dessine un sprite à l'échelle 1:1 (évite toute mise à l'échelle liée à la résolution de l'image)
+        private static void DrawSprite(Graphics g, Bitmap sprite, int x, int y)
+        {
+            g.DrawImage(sprite, new Rectangle(x, y, sprite.Width, sprite.Height),
+                0, 0, sprite.Width, sprite.Height, GraphicsUnit.Pixel);
         }
 
         private void DrawArcadeString(Graphics g, string text, int startTileX, int tileY, ArcadeColor colorSet)
@@ -175,101 +119,84 @@ namespace PacmanWinForms
                 char c = text[i];
                 if (c == ' ') continue; // On ne dessine rien pour un espace
 
-                using (Bitmap charSprite = spriteManager.GetArcadeCharacter(c, colorSet))
-                {
-                    int posX = (startTileX + i) * GameConfig.ScaledTileSize;
-                    int posY = tileY * GameConfig.ScaledTileSize;
-                    int size = GameConfig.ScaledTileSize;
-                    g.DrawImage(charSprite, posX, posY, size, size);
-                }
+                Bitmap charSprite = spriteManager.GetArcadeCharacter(c, colorSet);
+                DrawSprite(g, charSprite, (startTileX + i) * GameConfig.TileSize, tileY * GameConfig.TileSize);
             }
         }
 
         protected override void OnPaint(PaintEventArgs e)
         {
-            Graphics g = e.Graphics;
-            g.InterpolationMode = InterpolationMode.NearestNeighbor;
-            g.PixelOffsetMode = PixelOffsetMode.HighQuality;
+            // 1. On dessine tout le jeu à la résolution de l'arcade
+            using (Graphics g = Graphics.FromImage(backBuffer))
+            {
+                g.Clear(Color.Black);
+                g.InterpolationMode = InterpolationMode.NearestNeighbor;
+                g.PixelOffsetMode = PixelOffsetMode.Half;
 
-            // 1. DESSIN DU LABYRINTHE (via game.Map)
+                RenderGame(g);
+            }
+
+            // 2. Puis on agrandit l'image d'un seul coup à l'écran
+            Graphics screen = e.Graphics;
+            screen.InterpolationMode = InterpolationMode.NearestNeighbor;
+            screen.PixelOffsetMode = PixelOffsetMode.Half;
+            screen.DrawImage(backBuffer, 0, 0, GameConfig.ScreenWidth, GameConfig.ScreenHeight);
+        }
+
+        private void RenderGame(Graphics g)
+        {
+            int tile = GameConfig.TileSize;
+
+            // 1. LABYRINTHE (image pré-dessinée) + GOMMES
+            MazeColor mazeColor = game.IsMazeFlashWhite ? MazeColor.White : MazeColor.Blue;
+            DrawSprite(g, spriteManager.GetMazeLayer(game.Map, mazeColor), 0, 0);
+
+            Bitmap dotSprite = spriteManager.GetDotSprite();
+            Bitmap energizerSprite = spriteManager.GetEnergizerSprite();
+            bool energizerVisible = (Environment.TickCount / 200) % 2 == 0;
+
             for (int r = 0; r < GameConfig.MapHeight; r++)
             {
                 for (int c = 0; c < GameConfig.MapWidth; c++)
                 {
-                    int screenX = c * GameConfig.ScaledTileSize;
-                    int screenY = r * GameConfig.ScaledTileSize;
-                    int size = GameConfig.ScaledTileSize;
+                    TileType cell = game.Map.Grid[r, c];
 
-                    if (game.Map.VisualGrid[r, c] != -1)
+                    if (cell == TileType.Dot)
                     {
-                        int tileID = game.Map.VisualGrid[r, c];
-                        int sheetCol = tileID % 16;
-                        int sheetRow = (tileID / 16) ;
-
-                        using (Bitmap tileSprite = spriteManager.GetMazeTile(sheetCol, sheetRow))
-                        {
-                            g.DrawImage(tileSprite, screenX, screenY, size, size);
-                        }
+                        DrawSprite(g, dotSprite, c * tile, r * tile);
                     }
-
-                    TileType cellPhysic = game.Map.Grid[r, c];
-                    if (cellPhysic == TileType.Dot)
+                    else if (cell == TileType.Energizer && energizerVisible)
                     {
-                        using (Bitmap dotSprite = spriteManager.GetMazeTile(13, 2 ))
-                        {
-                            g.DrawImage(dotSprite, screenX, screenY, size, size);
-                        }
-                    }
-                    else if (cellPhysic == TileType.Energizer)
-                    {
-                        if ((Environment.TickCount / 200) % 2 == 0)
-                        {
-                            using (Bitmap energizerSprite = spriteManager.GetMazeTile(15, 2 ))
-                            {
-                                g.DrawImage(energizerSprite, screenX, screenY, size, size);
-                            }
-                        }
-                    }
-
-                    if (game.Map.Grid[r, c] == TileType.GhostDoor && c == 13)
-                    {
-                        Bitmap door = spriteManager.GetGhostDoorSprite();
-                        g.DrawImage(door, screenX, screenY, 16 * GameConfig.Zoom, 8 * GameConfig.Zoom);
+                        DrawSprite(g, energizerSprite, c * tile, r * tile);
                     }
                 }
             }
 
-            // 2. Dessiner Pac-Man et les Fantômes uniquement s'ils doivent être visibles
+            // 2. PAC-MAN ET FANTÔMES (uniquement s'ils doivent être visibles)
             if (game.ShowCharacters && game.State != GameState.GameOver)
             {
-                // --- BLOC DESSIN DE PAC-MAN ---
-                // REGLE ARCADE : Pac-Man disparaît complètement pendant le freeze de point !
+                // Pac-Man disparaît pendant le freeze du point de fantôme mangé
                 if (game.Pacman != null && game.State != GameState.GhostEaten)
                 {
-                    int screenX = (int)((game.Pacman.X - 4) * GameConfig.Zoom);
-                    int screenY = (int)((game.Pacman.Y - 4) * GameConfig.Zoom);
-                    int spriteSize = 16 * GameConfig.Zoom;
+                    int pacX = (int)(game.Pacman.X - 4);
+                    int pacY = (int)(game.Pacman.Y - 4);
 
                     if (game.Pacman.State == PacmanState.Alive)
                     {
                         int framePourDessin = (game.State == GameState.Ready) ? 3 : game.Pacman.AnimFrame;
-
-                        Bitmap pacmanSprite = spriteManager.GetPacmanSprite(framePourDessin, game.Pacman.CurrentDirection);
-                        g.DrawImage(pacmanSprite, screenX, screenY, spriteSize, spriteSize);
+                        DrawSprite(g, spriteManager.GetPacmanSprite(framePourDessin, game.Pacman.CurrentDirection), pacX, pacY);
                     }
                     else if (game.Pacman.State == PacmanState.Dying)
                     {
-                        Bitmap deathSprite = spriteManager.GetPacmanDeathSprite(game.Pacman.DeathAnimationFrame);
-                        g.DrawImage(deathSprite, screenX, screenY, spriteSize, spriteSize);
+                        DrawSprite(g, spriteManager.GetPacmanDeathSprite(game.Pacman.DeathAnimationFrame), pacX, pacY);
                     }
                 }
 
-                // --- BLOC DESSIN DES FANTÔMES ---
-                if (game.Pacman.State == PacmanState.Alive)
+                if (game.Pacman.State == PacmanState.Alive && game.ShowGhosts)
                 {
                     foreach (Ghost ghost in game.Ghosts)
                     {
-                        // REGLE ARCADE : On ne dessine pas le fantôme qui vient d'être mangé (le score prend sa place)
+                        // Le fantôme qui vient d'être mangé n'est pas dessiné (son score prend sa place)
                         if (game.State == GameState.GhostEaten && ghost == game.JustEatenGhost)
                         {
                             continue;
@@ -299,95 +226,61 @@ namespace PacmanWinForms
                             ghostSprite = spriteManager.GetGhostSprite(ghostName, ghost.CurrentDirection, game.GhostAnimationFrame);
                         }
 
-                        int bx = (int)((ghost.X - 4) * GameConfig.Zoom);
-                        int by = (int)((ghost.Y - 4) * GameConfig.Zoom);
-
-                        if (ghost.Phase == GhostPhase.InHouse) by += 1;
-                        int spriteScaledSize = 16 * GameConfig.Zoom;
-
-                        g.DrawImage(ghostSprite, bx, by, spriteScaledSize, spriteScaledSize);
+                        DrawSprite(g, ghostSprite, (int)(ghost.X - 4), (int)(ghost.Y - 4));
                     }
                 }
             }
 
-            // 3. TEXTE "READY!" RETRO (Dessiné lettre par lettre via text.png)
+            // 3. TEXTE "READY!"
             if (game.State == GameState.Ready)
             {
                 DrawArcadeString(g, "READY!", 11, 20, ArcadeColor.Yellow);
             }
 
-            // 4. TEXTE "GAME OVER" RETRO (Dessiné lettre par lettre en Rouge via text.png)
+            // 4. TEXTE "GAME OVER"
             if (game.State == GameState.GameOver)
             {
                 DrawArcadeString(g, "GAME  OVER", 9, 20, ArcadeColor.Red);
             }
 
-            // 5. TEXTE DU SCORE DU FANTÔME MANGÉ 
+            // 5. SCORE DU FANTÔME MANGÉ
             if (game.State == GameState.GhostEaten)
             {
-                int pointsGagnes = game.EatenGhostScoreValue; // (200, 400, 800 ou 1600)
-
-                using (Bitmap pointsSprite = spriteManager.GetGhostPointsSprite(pointsGagnes))
-                {
-                    // On centre le sprite de 16x16 à la position où le fantôme a été capturé
-                    int posX = game.EatenGhostScoreX * GameConfig.Zoom;
-                    int posY = game.EatenGhostScoreY * GameConfig.Zoom;
-
-                    // Grâce à notre refactoring précédent, ce sprite en provenance de generalSheet
-                    // profite AUTOMATIQUEMENT de la transparence sur le fond noir !
-                    g.DrawImage(pointsSprite, posX, posY, GameConfig.ScaledTileSize * 2, GameConfig.ScaledTileSize * 2);
-                }
-
-                
+                Bitmap pointsSprite = spriteManager.GetGhostPointsSprite(game.EatenGhostScoreValue);
+                DrawSprite(g, pointsSprite, game.EatenGhostScoreX, game.EatenGhostScoreY);
             }
 
-            // 6. DESSIN DU FRUIT BONUS
+            // 6. FRUIT BONUS
             if (game.Fruit.IsActive)
             {
-                using (Bitmap fruitSprite = spriteManager.GetFruitSprite(game.CurrentLevel))
-                {
-                    int posX = game.Fruit.X * GameConfig.Zoom;
-                    int posY = game.Fruit.Y * GameConfig.Zoom;
-
-                    // Dessin du fruit (Taille 16x16 zoomé, hérite de la transparence noire automatiquement !)
-                    g.DrawImage(fruitSprite, posX, posY, GameConfig.ScaledTileSize * 2, GameConfig.ScaledTileSize * 2);
-                }
+                DrawSprite(g, spriteManager.GetFruitSprite(game.CurrentLevel), game.Fruit.X, game.Fruit.Y);
             }
 
-            // 7. DESSIN DES POINTS DU FRUIT MANGÉ ---
+            // 7. SCORE DU FRUIT MANGÉ
             if (game.Fruit.IsScoreVisible)
             {
-                using (Bitmap pointsSprite = spriteManager.GetFruitPointsSprite(game.Fruit.Value))
+                Bitmap pointsSprite = spriteManager.GetFruitPointsSprite(game.Fruit.Value);
+                int posX = game.Fruit.X;
+
+                // À partir de 2000, le sprite commence 3 pixels plus à gauche :
+                // on décale pour garder la bordure droite alignée avec celle de 1000
+                if (game.Fruit.Value >= 2000)
                 {
-                    int posX = game.Fruit.X * GameConfig.Zoom;
-                    int posY = game.Fruit.Y * GameConfig.Zoom;
-
-                    // Si le score est de 2000 ou plus, le sprite extrait commence 3 pixels plus à gauche.
-                    // On décale le dessin de -3 pixels (au niveau du zoom) pour que la bordure droite
-                    // reste parfaitement alignée avec celle du score 1000 !
-                    if (game.Fruit.Value >= 2000)
-                    {
-                        posX -= 3 * GameConfig.Zoom;
-                    }
-
-                    // Dessin en utilisant la largeur RÉELLE (pointsSprite.Width) pour éviter tout écrasement
-                    g.DrawImage(pointsSprite, posX, posY, pointsSprite.Width * GameConfig.Zoom, pointsSprite.Height * GameConfig.Zoom);
+                    posX -= 3;
                 }
+
+                DrawSprite(g, pointsSprite, posX, game.Fruit.Y);
             }
 
-            // =========================================================================
-            // DESSIN DU HUD RETRO (BANDEAUX SUPÉRIEUR ET INFÉRIEUR)
-            // =========================================================================
+            // =====================================================================
+            // HUD RÉTRO
+            // =====================================================================
 
-
-
-            // --- LIGNE 0 : BANDEAU SUPÉRIEUR (Textes fixes et clignotement) ---
-
-            // Gestion du clignotement réglementaire du "1UP" (uniquement en cours de partie)
+            // --- LIGNE 0 : textes fixes et clignotement du "1UP" ---
             bool show1Up = true;
             if (game.State == GameState.Playing)
             {
-                show1Up = (Environment.TickCount / 220) % 2 == 0; // Clignote toutes les ~220ms
+                show1Up = (Environment.TickCount / 220) % 2 == 0;
             }
 
             if (show1Up)
@@ -395,19 +288,14 @@ namespace PacmanWinForms
                 DrawArcadeString(g, "1UP", 3, 0, ArcadeColor.White);
             }
 
-            // Inscription centrale HIGH SCORE
             DrawArcadeString(g, "HIGH SCORE", 9, 0, ArcadeColor.White);
 
-
-            // --- LIGNE 1 : SCORES ALIGNÉS À DROITE ---
-
-            // Score Joueur 1 : S'affiche "00" si à zéro, sinon recule vers la gauche
+            // --- LIGNE 1 : scores alignés à droite ---
             string scoreStr = (game.Score == 0) ? "00" : game.Score.ToString();
             int scoreStartX = 6 - scoreStr.Length + 1; // Aligné à droite sur la colonne 6
             DrawArcadeString(g, scoreStr, scoreStartX, 1, ArcadeColor.White);
 
-            // CORRECTION HIGH SCORE : Si la borne vient d'être allumée (HighScore == 0),
-            // la zone reste vide. Elle s'affichera dès que le joueur marque ses premiers points.
+            // Le high score reste vide tant que personne n'a marqué de points
             if (game.HighScore > 0)
             {
                 string highScoreStr = game.HighScore.ToString();
@@ -415,53 +303,29 @@ namespace PacmanWinForms
                 DrawArcadeString(g, highScoreStr, highScoreStartX, 1, ArcadeColor.White);
             }
 
-
-            // --- LIGNE 34 : RÉSERVE DE VIES (En bas à gauche) ---
-
-            // LOGIQUE DE TRANSITION :
-            // - Au début du jeu ou après une mort : Tant que Pac-Man est caché, on montre tout le stock (ex: 3),
-            //   puis dès qu'il apparaît, le stock en bas diminue de 1 (ex: 2).
-            // - Lors d'un changement de niveau (IsNextLevelTransition == true) : Pac-Man n'est pas mort,
-            //   on force donc le maintien du compteur à sa valeur normale pour éviter l'effet de fluctuation (+1 / -1).
+            // --- LIGNE 34 : RÉSERVE DE VIES (en bas à gauche) ---
+            // Tant que Pac-Man est caché on montre tout le stock, puis le stock diminue de 1 quand il apparaît.
+            // Lors d'un changement de niveau, Pac-Man n'est pas mort : on maintient le compteur pour éviter un +1 / -1.
             bool subtractLifeIcon = game.ShowCharacters || game.IsNextLevelTransition;
             int livesToDraw = subtractLifeIcon ? game.Lives - 1 : game.Lives;
             int maxVisibleLives = Math.Min(livesToDraw, 5);
 
+            Bitmap lifeSprite = spriteManager.GetPacmanSprite(1, Direction.Left);
             for (int i = 0; i < maxVisibleLives; i++)
             {
-                using (Bitmap lifeSprite = spriteManager.GetPacmanSprite(1, Direction.Left))
-                {
-                    int posX = (2 + (i * 2)) * GameConfig.ScaledTileSize;
-                    int posY = 34 * GameConfig.ScaledTileSize;
-                    int spriteSize = 16 * GameConfig.Zoom;
-
-                    g.DrawImage(lifeSprite, posX, posY, spriteSize, spriteSize);
-                }
+                DrawSprite(g, lifeSprite, (2 + (i * 2)) * tile, 34 * tile);
             }
 
-            // --- LIGNE 34 : INDICATEUR DE NIVEAU (Fruits en bas à droite) ---
-
-            // On affiche au maximum les 7 derniers niveaux joués
+            // --- LIGNE 34 : INDICATEUR DE NIVEAU (fruits en bas à droite, 7 derniers niveaux) ---
             int fruitsToDraw = Math.Min(game.CurrentLevel, 7);
 
             for (int i = 0; i < fruitsToDraw; i++)
             {
-                // i = 0 correspond au niveau actuel (tout à droite)
-                // i = 1 correspond au niveau précédent, etc.
+                // i = 0 : niveau actuel (tout à droite), puis on recule de 2 cases par niveau précédent
                 int targetLevel = game.CurrentLevel - i;
+                int tileX = 26 - (i * 2);
 
-                using (Bitmap fruitIndicatorSprite = spriteManager.GetFruitSprite(targetLevel))
-                {
-                    // Colonne de départ tout à droite : 26 (la grille fait 28 colonnes, de 0 à 27).
-                    // On recule de 2 cases (16 pixels) pour chaque fruit précédent (i).
-                    int tileX = 26 - (i * 2);
-
-                    int posX = tileX * GameConfig.ScaledTileSize;
-                    int posY = 34 * GameConfig.ScaledTileSize; // Même ligne que les icônes de vie
-
-                    // Dessin du fruit de l'indicateur (Taille 16x16 pixels à l'échelle)
-                    g.DrawImage(fruitIndicatorSprite, posX, posY, GameConfig.ScaledTileSize * 2, GameConfig.ScaledTileSize * 2);
-                }
+                DrawSprite(g, spriteManager.GetFruitSprite(targetLevel), tileX * tile, 34 * tile);
             }
         }
 
@@ -469,6 +333,7 @@ namespace PacmanWinForms
         {
             if (gameTimer != null) gameTimer.Stop();
             if (game != null) game.Shutdown();
+            if (backBuffer != null) backBuffer.Dispose();
 
             base.OnFormClosed(e);
         }
