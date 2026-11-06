@@ -414,7 +414,7 @@ namespace PacmanWinForms
                     }
                     else if (ghost.Phase == GhostPhase.Active)
                     {
-                        sound.StopAll(); // On coupe les sirènes de fond
+                        sound.PlayDeath(); // Coupe les sirènes et lance le son de mort dès le contact
                         State = GameState.Dying;
                         dyingTimer = 0;
                         break; // Inutile de vérifier les autres fantômes
@@ -529,7 +529,6 @@ namespace PacmanWinForms
             if (t == 0)
             {
                 Pacman.State = PacmanState.Dying;
-                sound.PlayDeath();
             }
 
             int animationFrames = DeathSpriteCount * DeathFramesPerSprite;

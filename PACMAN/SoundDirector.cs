@@ -6,7 +6,18 @@
     /// </summary>
     public class SoundDirector
     {
-        private readonly AudioManager audio = new AudioManager();
+        private static readonly SoundId[] SirenIntros =
+        {
+            SoundId.Siren0FirstLoop, SoundId.Siren1FirstLoop, SoundId.Siren2FirstLoop,
+            SoundId.Siren3FirstLoop, SoundId.Siren4FirstLoop
+        };
+
+        private static readonly SoundId[] SirenLoops =
+        {
+            SoundId.Siren0, SoundId.Siren1, SoundId.Siren2, SoundId.Siren3, SoundId.Siren4
+        };
+
+        private readonly AudioEngine audio = new AudioEngine();
 
         private bool wakaToggle = false;
         private int currentSirenIndex = -1; // -1 : aucune sirène lancée (forcera le premier chargement)
@@ -18,7 +29,7 @@
 
         public void CleanUp()
         {
-            audio.CleanUp();
+            audio.Dispose();
         }
 
         // Début de niveau ou nouvelle vie : la sirène devra être relancée
@@ -31,48 +42,48 @@
 
         public void PlayStartJingle()
         {
-            audio.Play("start");
+            audio.Play(SoundId.Start);
         }
 
         public void PlayDot()
         {
             wakaToggle = !wakaToggle;
-            audio.Play(wakaToggle ? "eat_dot_0" : "eat_dot_1");
+            audio.Play(wakaToggle ? SoundId.EatDot0 : SoundId.EatDot1);
         }
 
         public void PlayFruitEaten()
         {
-            audio.Play("eat_fruit");
+            audio.Play(SoundId.EatFruit);
         }
 
         public void PlayExtraLife()
         {
-            audio.Play("extend");
+            audio.Play(SoundId.Extend);
         }
 
         public void PlayGhostEaten()
         {
-            audio.Play("eat_ghost");
+            audio.Play(SoundId.EatGhost);
         }
 
         public void PlayDeath()
         {
             audio.StopAll(); // On coupe impérativement les sirènes de fond
-            audio.PlaySequence("death_0", "death_1", false);
+            audio.PlaySequence(SoundId.Death0, SoundId.Death1, loopNext: false);
         }
 
         // --- Mode effrayé et yeux ---
 
         public void StartFrightened()
         {
-            audio.Stop($"siren{currentSirenIndex}");
-            audio.PlaySequence("fright_firstloop", "fright", loopNext: true);
+            StopCurrentSiren();
+            audio.PlaySequence(SoundId.FrightFirstLoop, SoundId.Fright, loopNext: true);
         }
 
         public void EndFrightened()
         {
-            audio.Stop("fright");
-            audio.Stop("eyes");
+            audio.Stop(SoundId.Fright);
+            audio.Stop(SoundId.Eyes);
 
             if (currentSirenIndex >= 0)
             {
@@ -82,7 +93,7 @@
 
         public void StartEyes()
         {
-            audio.PlaySequence("eyes_firstloop", "eyes", loopNext: true);
+            audio.PlaySequence(SoundId.EyesFirstLoop, SoundId.Eyes, loopNext: true);
         }
 
         // À appeler à chaque frame : coupe le son des yeux quand plus aucun fantôme n'est en retour au nid
@@ -90,7 +101,7 @@
         {
             if (!anyEyesRunning)
             {
-                audio.Stop("eyes");
+                audio.Stop(SoundId.Eyes);
             }
         }
 
@@ -125,23 +136,24 @@
 
             if (targetSiren != currentSirenIndex)
             {
-                if (currentSirenIndex >= 0)
-                {
-                    audio.Stop($"siren{currentSirenIndex}");
-                }
-
+                StopCurrentSiren();
                 currentSirenIndex = targetSiren;
                 PlaySirenLoop();
+            }
+        }
+
+        private void StopCurrentSiren()
+        {
+            if (currentSirenIndex >= 0)
+            {
+                audio.Stop(SirenLoops[currentSirenIndex]);
             }
         }
 
         // Intro de la sirène (firstloop), puis boucle infinie
         private void PlaySirenLoop()
         {
-            audio.PlaySequence(
-                $"siren{currentSirenIndex}_firstloop",
-                $"siren{currentSirenIndex}",
-                loopNext: true);
+            audio.PlaySequence(SirenIntros[currentSirenIndex], SirenLoops[currentSirenIndex], loopNext: true);
         }
     }
 }
