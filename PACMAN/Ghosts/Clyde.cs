@@ -1,12 +1,13 @@
-﻿using System;
-using System.Drawing;
+﻿using System.Drawing;
 
 namespace PacmanWinForms
 {
     public class Clyde : Ghost
     {
-        // Départ : droite du nid | Patrouille : coin inférieur gauche
-        public Clyde() : base(16, 13 + 3, new Point(0, GameConfig.MapHeight - 1))
+        public override GhostType Type { get { return GhostType.Clyde; } }
+
+        // Départ : droite du nid
+        public Clyde() : base(16, 13 + 3, MazeLayout.ClydeScatterTarget)
         {
             this.Phase = GhostPhase.InHouse;
             this.CurrentDirection = Direction.Up;
@@ -20,23 +21,18 @@ namespace PacmanWinForms
 
         protected override Point GetChaseTargetTile(Pacman pacman)
         {
-            int currentTileX = TileX;
-            int currentTileY = TileY;
-            int pacmanTileX = pacman.TileX;
-            int pacmanTileY = pacman.TileY;
+            int dx = TileX - pacman.TileX;
+            int dy = TileY - pacman.TileY;
 
-            double distance = Math.Sqrt(Math.Pow(currentTileX - pacmanTileX, 2) + Math.Pow(currentTileY - pacmanTileY, 2));
-
-            if (distance >= 8)
+            // Distance >= 8 cases (comparée au carré : 8 x 8 = 64)
+            if (dx * dx + dy * dy >= 64)
             {
                 // Loin de Pac-Man : attaque directe
-                return new Point(pacmanTileX, pacmanTileY);
+                return new Point(pacman.TileX, pacman.TileY);
             }
-            else
-            {
-                // Trop près : fuite vers son coin
-                return ScatterTargetTile;
-            }
+
+            // Trop près : fuite vers son coin
+            return ScatterTargetTile;
         }
     }
 }

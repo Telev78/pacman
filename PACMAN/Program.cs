@@ -13,7 +13,19 @@ namespace PacmanWinForms
         {
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
-            Application.Run(new MainForm());
+
+            MainForm form;
+            try
+            {
+                form = new MainForm();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, "Erreur critique", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            Application.Run(form);
         }
     }
 }

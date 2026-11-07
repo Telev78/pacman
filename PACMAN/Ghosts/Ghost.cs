@@ -9,6 +9,9 @@ namespace PacmanWinForms
         public float Y { get; protected set; }
         private float speedAccumulator = 0.0f; // Accumulateur pour la gestion physique fine
 
+        // Identité du fantôme (sprites, ordre de sortie du nid)
+        public abstract GhostType Type { get; }
+
         public Direction CurrentDirection { get; protected set; }
 
         // Cycle de vie : dans le nid / en sortie / actif dans le labyrinthe / yeux
@@ -39,7 +42,7 @@ namespace PacmanWinForms
             this.CurrentDirection = Direction.Left;
         }
 
-        public virtual void Move(LevelMap map, Pacman pacman, int currentLevel, GhostMode globalMode)
+        public virtual void Move(LevelMap map, Pacman pacman, LevelSpecs specs, GhostMode globalMode)
         {
             int currentTileX = TileX;
             int currentTileY = TileY;
@@ -55,7 +58,6 @@ namespace PacmanWinForms
                 return;
             }
 
-            var specs = GameConfig.GetSpecsForLevel(currentLevel);
             float currentSpeed = GetNormalSpeed(specs);
 
             if (Phase == GhostPhase.InHouse)
@@ -70,15 +72,15 @@ namespace PacmanWinForms
             {
                 currentSpeed = 2.0f; // Les yeux foncent au nid à 200 % de vitesse
             }
-            else if (IsFrightened)
-            {
-                currentSpeed = specs.FrightenedGhost; // Ralentissement mode panique
-            }
             else
             {
-                // Tunnel de l'arcade (ligne 17, colonnes extérieures)
-                if (currentTileY == MazeLayout.TunnelRow
-                    && (currentTileX <= MazeLayout.TunnelSlowLeftMaxColumn || currentTileX >= MazeLayout.TunnelSlowRightMinColumn))
+                if (IsFrightened)
+                {
+                    currentSpeed = specs.FrightenedGhost; // Ralentissement mode panique
+                }
+
+                // Le tunnel ralentit tous les fantômes, y compris les fantômes effrayés
+                if (MazeLayout.IsInTunnelSlowZone(currentTileX, currentTileY))
                 {
                     currentSpeed = specs.GhostTunnel;
                 }
@@ -148,10 +150,11 @@ namespace PacmanWinForms
             // Sommes-nous alignés au pixel près sur le centre d'une tuile ?
             if (Tiles.IsAligned(X, Y))
             {
+                // Passage du tunnel : réapparition de l'autre côté
+                X = MazeLayout.WrapTunnelX(X);
+
                 int currentTileX = TileX;
                 int currentTileY = TileY;
-
-                HandleTunnelTeleport(currentTileX);
 
                 bool isActive = Phase == GhostPhase.Active;
 
@@ -184,7 +187,7 @@ namespace PacmanWinForms
             Direction[] directionsToTest = { Direction.Up, Direction.Left, Direction.Down, Direction.Right };
 
             Direction bestDirection = CurrentDirection;
-            double shortestDistance = double.MaxValue;
+            int shortestDistance = int.MaxValue;
 
             foreach (Direction dir in directionsToTest)
             {
@@ -200,7 +203,10 @@ namespace PacmanWinForms
 
                     if (tileType != TileType.Wall && (tileType != TileType.GhostDoor || Phase == GhostPhase.Eaten))
                     {
-                        double distance = Math.Pow(nextX - targetTile.X, 2) + Math.Pow(nextY - targetTile.Y, 2);
+                        // Distance au carré (inutile de calculer la racine pour comparer)
+                        int dx = nextX - targetTile.X;
+                        int dy = nextY - targetTile.Y;
+                        int distance = dx * dx + dy * dy;
 
                         if (distance < shortestDistance)
                         {
@@ -231,22 +237,14 @@ namespace PacmanWinForms
             return MazeLayout.EyesTargetTile;
         }
 
-        public void ForceDemiTour()
+        // Demande un demi-tour. Seuls les fantômes actifs dans le labyrinthe sont concernés,
+        // et le demi-tour n'est effectif qu'au prochain centre de tuile.
+        public void RequestReverse()
         {
-            // Seuls les fantômes actifs dans le labyrinthe sont concernés.
-            // Le demi-tour n'est effectif qu'au prochain centre de tuile.
             if (Phase == GhostPhase.Active)
             {
                 reverseRequested = true;
             }
-        }
-
-        private void HandleTunnelTeleport(int currentTileX)
-        {
-            if (currentTileX < 0 && CurrentDirection == Direction.Left)
-                X = (GameConfig.MapWidth - 1) * GameConfig.TileSize;
-            else if (currentTileX >= GameConfig.MapWidth && CurrentDirection == Direction.Right)
-                X = 0;
         }
 
         private Direction ChooseFrightenedDirection(LevelMap map)

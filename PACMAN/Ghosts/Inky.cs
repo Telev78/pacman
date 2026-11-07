@@ -6,8 +6,10 @@ namespace PacmanWinForms
     {
         private Ghost blinky;
 
-        // Départ : gauche du nid | Patrouille : coin inférieur droit
-        public Inky(Ghost blinkyRef) : base(12, 13 + 3, new Point(27, GameConfig.MapHeight - 1))
+        public override GhostType Type { get { return GhostType.Inky; } }
+
+        // Départ : gauche du nid
+        public Inky(Ghost blinkyRef) : base(12, 13 + 3, MazeLayout.InkyScatterTarget)
         {
             this.blinky = blinkyRef;
             this.Phase = GhostPhase.InHouse;

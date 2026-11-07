@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 
 namespace PacmanWinForms
@@ -11,21 +10,21 @@ namespace PacmanWinForms
     public class GhostHouse
     {
         // Ordre de priorité immuable de l'arcade
-        private static readonly Type[] ReleaseOrder = { typeof(Pinky), typeof(Inky), typeof(Clyde) };
+        private static readonly GhostType[] ReleaseOrder = { GhostType.Pinky, GhostType.Inky, GhostType.Clyde };
 
-        private readonly List<Ghost> ghosts;
-        private readonly Dictionary<Type, int> dotLimits = new Dictionary<Type, int>();
-        private readonly Dictionary<Type, int> dotCounters = new Dictionary<Type, int>();
+        private readonly IReadOnlyList<Ghost> ghosts;
+        private readonly Dictionary<GhostType, int> dotLimits = new Dictionary<GhostType, int>();
+        private readonly Dictionary<GhostType, int> dotCounters = new Dictionary<GhostType, int>();
 
         private bool useGlobalCounter = false;
         private int globalCounter = 0;
         private int inactivityFrames = 0;
 
-        public GhostHouse(List<Ghost> ghosts)
+        public GhostHouse(IReadOnlyList<Ghost> ghosts)
         {
             this.ghosts = ghosts;
 
-            foreach (Type t in ReleaseOrder)
+            foreach (GhostType t in ReleaseOrder)
             {
                 dotLimits[t] = 0;
                 dotCounters[t] = 0;
@@ -41,13 +40,13 @@ namespace PacmanWinForms
             else if (level == 2) { inkyLimit = 0; clydeLimit = 50; }
             else { inkyLimit = 0; clydeLimit = 0; }
 
-            dotLimits[typeof(Pinky)] = 0;
-            dotLimits[typeof(Inky)] = inkyLimit;
-            dotLimits[typeof(Clyde)] = clydeLimit;
+            dotLimits[GhostType.Pinky] = 0;
+            dotLimits[GhostType.Inky] = inkyLimit;
+            dotLimits[GhostType.Clyde] = clydeLimit;
 
             if (!afterDeath)
             {
-                foreach (Type t in ReleaseOrder)
+                foreach (GhostType t in ReleaseOrder)
                 {
                     dotCounters[t] = 0;
                 }
@@ -67,9 +66,9 @@ namespace PacmanWinForms
             {
                 globalCounter++;
 
-                Ghost pinky = FindInHouse(typeof(Pinky));
-                Ghost inky = FindInHouse(typeof(Inky));
-                Ghost clyde = FindInHouse(typeof(Clyde));
+                Ghost pinky = FindInHouse(GhostType.Pinky);
+                Ghost inky = FindInHouse(GhostType.Inky);
+                Ghost clyde = FindInHouse(GhostType.Clyde);
 
                 // Règle post-mort : Pinky sort à 7, Inky à 17, Clyde à 32
                 if (globalCounter == 7 && pinky != null) pinky.Phase = GhostPhase.Exiting;
@@ -88,7 +87,7 @@ namespace PacmanWinForms
                 Ghost preferred = GetPreferredGhostInHouse();
                 if (preferred != null)
                 {
-                    dotCounters[preferred.GetType()]++;
+                    dotCounters[preferred.Type]++;
                 }
             }
         }
@@ -103,7 +102,7 @@ namespace PacmanWinForms
             Ghost preferred = GetPreferredGhostInHouse();
             if (preferred != null)
             {
-                Type t = preferred.GetType();
+                GhostType t = preferred.Type;
                 if (dotCounters[t] >= dotLimits[t])
                 {
                     preferred.Phase = GhostPhase.Exiting;
@@ -136,9 +135,9 @@ namespace PacmanWinForms
 
         private Ghost GetPreferredGhostInHouse()
         {
-            foreach (Type t in ReleaseOrder)
+            foreach (GhostType t in ReleaseOrder)
             {
-                Ghost g = ghosts.FirstOrDefault(x => x.GetType() == t);
+                Ghost g = ghosts.FirstOrDefault(x => x.Type == t);
                 if (g != null && g.Phase == GhostPhase.InHouse)
                 {
                     return g;
@@ -147,9 +146,9 @@ namespace PacmanWinForms
             return null;
         }
 
-        private Ghost FindInHouse(Type type)
+        private Ghost FindInHouse(GhostType type)
         {
-            return ghosts.FirstOrDefault(g => g.GetType() == type && g.Phase == GhostPhase.InHouse);
+            return ghosts.FirstOrDefault(g => g.Type == type && g.Phase == GhostPhase.InHouse);
         }
     }
 }

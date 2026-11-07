@@ -1,45 +1,38 @@
-﻿namespace PacmanWinForms
+﻿using System;
+
+namespace PacmanWinForms
 {
-    public class LevelSpecs
-    {
-        // Vitesses de Pac-Man
-        public float PacmanNormal { get; set; }
-        public float PacmanDots { get; set; }          // En mangeant des gommes
-
-        // Vitesses des fantômes
-        public float GhostNormal { get; set; }
-        public float GhostTunnel { get; set; }          // Dans les tunnels latéraux
-
-        // Vitesses en mode Frightened (Super-Gomme)
-        public float FrightenedPacman { get; set; }
-        public float FrightenedPacmanDots { get; set; }
-        public float FrightenedGhost{ get; set; }
-
-        // Paramètres de configuration du mode Frightened
-        public int FrightenedTimeSec { get; set; }     // Durée de la vulnérabilité en secondes
-        public int FlashesCount { get; set; }          // Nombre de clignotements bleus/blancs avant la fin
-        
-        // Cruise Elroy (Blinky)
-        public int Elroy1Dots { get; set; }       // Gommes restantes pour Elroy 1
-        public int Elroy2Dots { get; set; }       // Gommes restantes pour Elroy 2
-        public float Elroy1Speed { get; set; }
-        public float Elroy2Speed { get; set; }
-    }
-
     public static class GameConfig
     {
         public const int TileSize = 8;                  // Taille d'une case d'origine (8x8 pixels)
         public const int MapWidth = 28;                 // 28 colonnes
         public const int MapHeight = 36;                // 36 lignes
         public const int BonusLifeThreshold = 10000;    // Vie bonus décernée à 10 000 points
-        public const int Zoom = 3;                      // Multiplicateur pour écran moderne
-
-        // Tailles calculées pour l'affichage de la fenêtre
-        public const int ScaledTileSize = TileSize * Zoom; // 24 pixels
-        public const int ScreenWidth = MapWidth * ScaledTileSize;  // 672 pixels
-        public const int ScreenHeight = MapHeight * ScaledTileSize; // 864 pixels
         public const int FramesPerSecond = 60;
+
+        // Les niveaux 21 et plus partagent les mêmes paramètres
+        private const int MaxSpecsLevel = 21;
+        private static readonly LevelSpecs[] SpecsByLevel = BuildAllSpecs();
+
+        /// <summary>
+        /// Paramètres d'un niveau. L'objet renvoyé est partagé : ne pas le modifier.
+        /// </summary>
         public static LevelSpecs GetSpecsForLevel(int level)
+        {
+            return SpecsByLevel[Math.Max(1, Math.Min(level, MaxSpecsLevel))];
+        }
+
+        private static LevelSpecs[] BuildAllSpecs()
+        {
+            LevelSpecs[] all = new LevelSpecs[MaxSpecsLevel + 1];
+            for (int level = 1; level <= MaxSpecsLevel; level++)
+            {
+                all[level] = BuildSpecs(level);
+            }
+            return all;
+        }
+
+        private static LevelSpecs BuildSpecs(int level)
         {
             LevelSpecs specs = new LevelSpecs();
 
@@ -114,11 +107,11 @@
                 case 16: specs.FrightenedTimeSec = 1; specs.FlashesCount = 3; break;
                 case 18: specs.FrightenedTimeSec = 1; specs.FlashesCount = 3; break;
 
-                // Niveaux 17, 19, 20 et 21+ : Les fantômes ne deviennent PAS vulnérables. 
+                // Niveaux 17, 19, 20 et 21+ : Les fantômes ne deviennent PAS vulnérables.
                 // Ils changent simplement instantanément de direction (demi-tour réglementaire).
                 default: specs.FrightenedTimeSec = 0; specs.FlashesCount = 0; break;
             }
-            
+
             // --- PARTIE 3 : CRUISE ELROY ---
             if (level == 1) { specs.Elroy1Speed = 0.80f * BaseMultiplier; specs.Elroy2Speed = 0.85f * BaseMultiplier; }
             else if (level <= 4) { specs.Elroy1Speed = 0.90f * BaseMultiplier; specs.Elroy2Speed = 0.95f * BaseMultiplier; }
@@ -164,6 +157,4 @@
             return (s == 0) ? 1 : s * FramesPerSecond;
         }
     }
-
-
 }

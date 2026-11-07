@@ -6,10 +6,11 @@
     {
         public float X { get; set; }
         public float Y { get; set; }
+        private float speedAccumulator = 0.0f; // Accumulateur physique
+
         // Tuile du CENTRE de Pac-Man
         public int TileX { get { return Tiles.Of(X); } }
         public int TileY { get { return Tiles.Of(Y); } }
-        private float speedAccumulator = 0.0f; // Accumulateur physique
 
         public Direction CurrentDirection { get; set; }
         public Direction NextDirection { get; set; }
@@ -22,17 +23,15 @@
 
         public Pacman()
         {
-            X = 104;
-            Y = 208;
+            X = MazeLayout.PacmanStartX;
+            Y = MazeLayout.PacmanStartY;
             CurrentDirection = Direction.Left;
             NextDirection = Direction.None;
         }
 
-        public void Move(LevelMap map, int currentLevel, bool isFrightenedMode)
+        public void Move(LevelMap map, LevelSpecs specs, bool isFrightenedMode)
         {
             if (State == PacmanState.Dying) return;
-
-            var specs = GameConfig.GetSpecsForLevel(currentLevel);
 
             // Pac-Man est-il sur une gomme ?
             int currentTileX = TileX;
@@ -84,16 +83,8 @@
                     return; // Stoppé net contre un mur
                 }
 
-                // Tunnel
-                int wrapLimit = GameConfig.MapWidth * GameConfig.TileSize + GameConfig.TileSize;
-                if (this.X < -GameConfig.TileSize)
-                {
-                    this.X = wrapLimit;
-                }
-                else if (this.X > wrapLimit)
-                {
-                    this.X = -GameConfig.TileSize;
-                }
+                // Passage du tunnel : réapparition de l'autre côté
+                X = MazeLayout.WrapTunnelX(X);
             }
             else
             {

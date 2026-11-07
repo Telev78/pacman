@@ -4,12 +4,13 @@ namespace PacmanWinForms
 {
     public class Blinky : Ghost
     {
+        public override GhostType Type { get { return GhostType.Blinky; } }
         private int elroyLevel = 0; // 0 = normal, 1 = Elroy 1, 2 = Elroy 2
         public bool IsCruiseElroy1 { get { return elroyLevel == 1; } }
         public bool IsCruiseElroy2 { get { return elroyLevel == 2; } }
 
-        // Départ : juste au-dessus du nid | Patrouille : coin supérieur droit
-        public Blinky() : base(14, 11 + 3, new Point(27, 0))
+        // Départ : juste au-dessus du nid
+        public Blinky() : base(14, 11 + 3, MazeLayout.BlinkyScatterTarget)
         {
             this.X -= 4;
             this.Phase = GhostPhase.Active; // Blinky est déjà dehors !

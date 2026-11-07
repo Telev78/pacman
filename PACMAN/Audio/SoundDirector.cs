@@ -1,11 +1,13 @@
 ﻿namespace PacmanWinForms
 {
     /// <summary>
-    /// Pilote tous les sons du jeu : jingles, bruitages et sirènes de fond.
-    /// Le reste du code décrit des événements ("une gomme est mangée"), pas des fichiers audio.
+    /// Pilote tous les sons du jeu : jingles, bruitages et son de fond.
+    /// Un seul son de fond joue à la fois, par ordre de priorité : yeux > panique > sirène.
     /// </summary>
     public class SoundDirector
     {
+        private enum Background { None, Siren, Frightened, Eyes }
+
         private static readonly SoundId[] SirenIntros =
         {
             SoundId.Siren0FirstLoop, SoundId.Siren1FirstLoop, SoundId.Siren2FirstLoop,
@@ -20,11 +22,14 @@
         private readonly AudioEngine audio = new AudioEngine();
 
         private bool wakaToggle = false;
-        private int currentSirenIndex = -1; // -1 : aucune sirène lancée (forcera le premier chargement)
+        private Background background = Background.None;
+        private int currentSirenIndex = -1; // Sirène en cours de lecture (quand background == Siren)
 
         public void StopAll()
         {
             audio.StopAll();
+            background = Background.None;
+            currentSirenIndex = -1;
         }
 
         public void CleanUp()
@@ -32,9 +37,11 @@
             audio.Dispose();
         }
 
-        // Début de niveau ou nouvelle vie : la sirène devra être relancée
-        public void ResetSiren()
+        // Début de niveau ou nouvelle vie : le son de fond sera relancé à la prochaine frame de jeu
+        public void ResetBackground()
         {
+            StopBackground();
+            background = Background.None;
             currentSirenIndex = -1;
         }
 
@@ -68,48 +75,74 @@
 
         public void PlayDeath()
         {
-            audio.StopAll(); // On coupe impérativement les sirènes de fond
+            StopAll(); // On coupe impérativement le son de fond
             audio.PlaySequence(SoundId.Death0, SoundId.Death1, loopNext: false);
         }
 
-        // --- Mode effrayé et yeux ---
-
-        public void StartFrightened()
-        {
-            StopCurrentSiren();
-            audio.PlaySequence(SoundId.FrightFirstLoop, SoundId.Fright, loopNext: true);
-        }
-
-        public void EndFrightened()
-        {
-            audio.Stop(SoundId.Fright);
-            audio.Stop(SoundId.Eyes);
-
-            if (currentSirenIndex >= 0)
-            {
-                PlaySirenLoop();
-            }
-        }
-
-        public void StartEyes()
-        {
-            audio.PlaySequence(SoundId.EyesFirstLoop, SoundId.Eyes, loopNext: true);
-        }
-
-        // À appeler à chaque frame : coupe le son des yeux quand plus aucun fantôme n'est en retour au nid
-        public void UpdateEyes(bool anyEyesRunning)
-        {
-            if (!anyEyesRunning)
-            {
-                audio.Stop(SoundId.Eyes);
-            }
-        }
-
-        // --- Sirènes de fond ---
+        // --- Son de fond ---
 
         // À appeler à chaque frame de jeu.
-        // ghostsSpooked : au moins un fantôme est effrayé (dans le labyrinthe) ou en yeux.
-        public void UpdateSiren(int level, int dotsRemaining, bool ghostsSpooked)
+        // eyesRunning : au moins un fantôme est en yeux, en route vers le nid.
+        // frightenedGhosts : au moins un fantôme est encore effrayé (bleu).
+        public void UpdateBackground(int level, int dotsRemaining, bool eyesRunning, bool frightenedGhosts)
+        {
+            int targetSiren = ComputeSirenIndex(level, dotsRemaining);
+
+            Background wanted;
+            if (eyesRunning) wanted = Background.Eyes;
+            else if (frightenedGhosts) wanted = Background.Frightened;
+            else wanted = Background.Siren;
+
+            // Déjà le bon son ? (pour la sirène, il faut aussi que ce soit le bon index)
+            if (wanted == background && (wanted != Background.Siren || targetSiren == currentSirenIndex))
+            {
+                return;
+            }
+
+            StopBackground();
+
+            switch (wanted)
+            {
+                case Background.Eyes:
+                    audio.PlaySequence(SoundId.EyesFirstLoop, SoundId.Eyes, loopNext: true);
+                    break;
+
+                case Background.Frightened:
+                    audio.PlaySequence(SoundId.FrightFirstLoop, SoundId.Fright, loopNext: true);
+                    break;
+
+                case Background.Siren:
+                    currentSirenIndex = targetSiren;
+                    audio.PlaySequence(SirenIntros[currentSirenIndex], SirenLoops[currentSirenIndex], loopNext: true);
+                    break;
+            }
+
+            background = wanted;
+        }
+
+        private void StopBackground()
+        {
+            switch (background)
+            {
+                case Background.Eyes:
+                    audio.Stop(SoundId.Eyes);
+                    break;
+
+                case Background.Frightened:
+                    audio.Stop(SoundId.Fright);
+                    break;
+
+                case Background.Siren:
+                    if (currentSirenIndex >= 0)
+                    {
+                        audio.Stop(SirenLoops[currentSirenIndex]);
+                    }
+                    break;
+            }
+        }
+
+        // Sirène selon le nombre de gommes restantes
+        private static int ComputeSirenIndex(int level, int dotsRemaining)
         {
             // Seuils (gommes restantes) : 164 / 144 / 124 / 104, décalés de 0, 10, 20, 30 ou 40 selon le niveau
             int offset;
@@ -119,41 +152,11 @@
             else if (level <= 20) offset = 30;
             else offset = 40;
 
-            int targetSiren;
-            if (dotsRemaining <= 104 + offset) targetSiren = 4;
-            else if (dotsRemaining <= 124 + offset) targetSiren = 3;
-            else if (dotsRemaining <= 144 + offset) targetSiren = 2;
-            else if (dotsRemaining <= 164 + offset) targetSiren = 1;
-            else targetSiren = 0;
-
-            // Pendant la panique ou le retour des yeux, on met l'index à jour sans lancer le son,
-            // pour ne pas écraser les bruitages prioritaires (la sirène reprendra au bon index ensuite)
-            if (ghostsSpooked)
-            {
-                currentSirenIndex = targetSiren;
-                return;
-            }
-
-            if (targetSiren != currentSirenIndex)
-            {
-                StopCurrentSiren();
-                currentSirenIndex = targetSiren;
-                PlaySirenLoop();
-            }
-        }
-
-        private void StopCurrentSiren()
-        {
-            if (currentSirenIndex >= 0)
-            {
-                audio.Stop(SirenLoops[currentSirenIndex]);
-            }
-        }
-
-        // Intro de la sirène (firstloop), puis boucle infinie
-        private void PlaySirenLoop()
-        {
-            audio.PlaySequence(SirenIntros[currentSirenIndex], SirenLoops[currentSirenIndex], loopNext: true);
+            if (dotsRemaining <= 104 + offset) return 4;
+            if (dotsRemaining <= 124 + offset) return 3;
+            if (dotsRemaining <= 144 + offset) return 2;
+            if (dotsRemaining <= 164 + offset) return 1;
+            return 0;
         }
     }
 }

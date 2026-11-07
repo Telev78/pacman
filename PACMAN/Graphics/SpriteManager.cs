@@ -10,7 +10,7 @@ namespace PacmanWinForms
     /// Découpe les sprites de la feuille unique (asset.png) et les met en cache.
     /// IMPORTANT : les Bitmap renvoyés sont partagés. Ne jamais les Dispose ni les modifier.
     /// </summary>
-    public class SpriteManager
+    public class SpriteManager : IDisposable
     {
         private const int SpriteSize = 16;
         private const int SpritesX = 0;    // Début des sprites de personnages dans la feuille
@@ -22,7 +22,7 @@ namespace PacmanWinForms
         private Bitmap emptySprite16;
         private Bitmap emptyChar;
         private Bitmap[] pacmanDeathSprites;
-        private Dictionary<string, Dictionary<Direction, Bitmap[]>> ghostSprites;
+        private Dictionary<GhostType, Dictionary<Direction, Bitmap[]>> ghostSprites;
         private Dictionary<Direction, Bitmap> eyesSprites;
         private Bitmap[] frightenedBlueSprites;
         private Bitmap[] frightenedWhiteSprites;
@@ -97,15 +97,14 @@ namespace PacmanWinForms
             // Porte du nid (8x8, étirée en 16x8 au dessin)
             ghostDoorSprite = CropAsset(144, 72, 8, 8);
 
-            // Fantômes : 4 directions x 2 frames, une ligne de 16 px par fantôme
-            ghostSprites = new Dictionary<string, Dictionary<Direction, Bitmap[]>>();
-            string[] ghostNames = { "Blinky", "Pinky", "Inky", "Clyde" };
+            // Fantômes : 4 directions x 2 frames, une ligne de 16 px par fantôme (dans l'ordre de GhostType)
+            ghostSprites = new Dictionary<GhostType, Dictionary<Direction, Bitmap[]>>();
             Direction[] dirOrder = { Direction.Right, Direction.Left, Direction.Up, Direction.Down };
 
-            for (int i = 0; i < ghostNames.Length; i++)
+            foreach (GhostType type in Enum.GetValues(typeof(GhostType)))
             {
                 var currentGhostDict = new Dictionary<Direction, Bitmap[]>();
-                int y = SpritesY + 64 + (i * SpriteSize);
+                int y = SpritesY + 64 + ((int)type * SpriteSize);
 
                 for (int d = 0; d < dirOrder.Length; d++)
                 {
@@ -116,7 +115,7 @@ namespace PacmanWinForms
                     }
                     currentGhostDict.Add(dirOrder[d], frames);
                 }
-                ghostSprites.Add(ghostNames[i], currentGhostDict);
+                ghostSprites.Add(type, currentGhostDict);
             }
 
             // Fantômes effrayés : à droite des 8 sprites de Blinky (2 bleus puis 2 blancs)
@@ -149,13 +148,13 @@ namespace PacmanWinForms
         // Personnages
         // ------------------------------------------------------------------
 
-        public Bitmap GetGhostSprite(string ghostName, Direction direction, int frame)
+        public Bitmap GetGhostSprite(GhostType type, Direction direction, int frame)
         {
-            if (ghostSprites.ContainsKey(ghostName) && ghostSprites[ghostName].ContainsKey(direction))
+            if (ghostSprites.ContainsKey(type) && ghostSprites[type].ContainsKey(direction))
             {
-                return ghostSprites[ghostName][direction][frame % 2];
+                return ghostSprites[type][direction][frame % 2];
             }
-            return ghostSprites["Blinky"][Direction.Left][0]; // Repli de secours
+            return ghostSprites[GhostType.Blinky][Direction.Left][0]; // Repli de secours
         }
 
         public Bitmap GetGhostFrightenedSprite(int frame, bool flashWhite = false)
@@ -483,6 +482,38 @@ namespace PacmanWinForms
             sprite = CropAsset(pixelX, pixelY, width, 16);
             fruitPointsSprites[points] = sprite;
             return sprite;
+        }
+
+        public void Dispose()
+        {
+            List<Bitmap> bitmaps = new List<Bitmap> { assetSheet, ghostDoorSprite, emptySprite16, emptyChar };
+            bitmaps.AddRange(pacmanDeathSprites);
+            bitmaps.AddRange(frightenedBlueSprites);
+            bitmaps.AddRange(frightenedWhiteSprites);
+            bitmaps.AddRange(eyesSprites.Values);
+
+            foreach (var perDirection in ghostSprites.Values)
+            {
+                foreach (Bitmap[] frames in perDirection.Values)
+                {
+                    bitmaps.AddRange(frames);
+                }
+            }
+
+            bitmaps.AddRange(pacmanSprites.Values);
+            bitmaps.AddRange(mazeTiles.Values);
+            bitmaps.AddRange(mazeLayers.Values);
+            bitmaps.AddRange(charSprites.Values);
+            bitmaps.AddRange(ptsSprites.Values);
+            bitmaps.AddRange(namcoLogos.Values);
+            bitmaps.AddRange(ghostPointsSprites.Values);
+            bitmaps.AddRange(fruitSprites.Values);
+            bitmaps.AddRange(fruitPointsSprites.Values);
+
+            foreach (Bitmap bmp in bitmaps)
+            {
+                if (bmp != null) bmp.Dispose();
+            }
         }
     }
 }

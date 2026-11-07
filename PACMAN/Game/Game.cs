@@ -11,7 +11,8 @@ namespace PacmanWinForms
         // Propriétés accessibles en lecture seule par le MainForm pour le rendu
         public LevelMap Map { get; private set; }
         public Pacman Pacman { get; private set; }
-        public List<Ghost> Ghosts { get; private set; }
+        private readonly List<Ghost> ghostList = new List<Ghost>();
+        public IReadOnlyList<Ghost> Ghosts { get { return ghostList; } }
 
         public int DotsRemaining { get; private set; }
         public int Lives { get; private set; }
@@ -73,13 +74,11 @@ namespace PacmanWinForms
             Map = new LevelMap();
             Fruit = new FruitManager();
             Pacman = new Pacman();
-            Ghosts = new List<Ghost>();
-            ghostHouse = new GhostHouse(Ghosts);
+            ghostHouse = new GhostHouse(ghostList);
             sound = new SoundDirector();
 
             Lives = 3;
             CurrentLevel = 1;
-            State = GameState.Playing;
 
             InitializeGameValue();
         }
@@ -129,23 +128,23 @@ namespace PacmanWinForms
             Fruit.StartLevel(DotsRemaining);
         }
 
-        public void ResetPositions(bool afterDeath = false)
+        private void ResetPositions(bool afterDeath = false)
         {
-            sound.ResetSiren();
+            sound.ResetBackground();
 
             this.CurrentSpecs = GameConfig.GetSpecsForLevel(this.CurrentLevel);
 
-            Ghosts.Clear();
+            ghostList.Clear();
 
             Blinky blinky = new Blinky();
             Pinky pinky = new Pinky();
             Inky inky = new Inky(blinky);
             Clyde clyde = new Clyde();
 
-            Ghosts.Add(blinky);
-            Ghosts.Add(pinky);
-            Ghosts.Add(inky);
-            Ghosts.Add(clyde);
+            ghostList.Add(blinky);
+            ghostList.Add(pinky);
+            ghostList.Add(inky);
+            ghostList.Add(clyde);
 
             SpawnPacman();
 
@@ -245,7 +244,7 @@ namespace PacmanWinForms
 
             if (waves.Update(CurrentLevel, IsFrightenedMode))
             {
-                ChangerVagueGlobale();
+                OnWaveChanged();
             }
 
             // --- FRUIT BONUS ---
@@ -267,13 +266,14 @@ namespace PacmanWinForms
                 }
             }
 
-            bool ghostsSpooked = Ghosts.Any(g => (g.Phase == GhostPhase.Active && g.IsFrightened) || g.Phase == GhostPhase.Eaten);
-            sound.UpdateSiren(CurrentLevel, DotsRemaining, ghostsSpooked);
+            sound.UpdateBackground(CurrentLevel, DotsRemaining,
+                eyesRunning: Ghosts.Any(g => g.Phase == GhostPhase.Eaten),
+                frightenedGhosts: Ghosts.Any(g => g.IsFrightened));
 
             ghostHouse.Update(CurrentLevel);
 
             // VITESSE ET MOUVEMENT DE PAC-MAN
-            Pacman.Move(Map, CurrentLevel, IsFrightenedMode);
+            Pacman.Move(Map, CurrentSpecs, IsFrightenedMode);
 
 
             // VITESSE ET MOUVEMENT DES FANTÔMES
@@ -291,11 +291,8 @@ namespace PacmanWinForms
                 if (ghost is Blinky blinky)
                     blinky.UpdateElroyStatus(DotsRemaining, CurrentSpecs, !elroySuspended);
 
-                ghost.Move(Map, Pacman, CurrentLevel, GlobalGhostMode);
+                ghost.Move(Map, Pacman, CurrentSpecs, GlobalGhostMode);
             }
-
-            sound.UpdateEyes(Ghosts.Any(g => g.Phase == GhostPhase.Eaten));
-
 
             // ANIMATIONS ET COLLISIONS
             frameCounter++;
@@ -343,9 +340,6 @@ namespace PacmanWinForms
 
                     if (CurrentSpecs.FrightenedTimeSec > 0)
                     {
-                        // Musique de panique : uniquement si les fantômes deviennent vulnérables
-                        sound.StartFrightened();
-
                         IsFrightenedMode = true;
                         FrightenedFramesRemaining = CurrentSpecs.FrightenedTimeSec * GameConfig.FramesPerSecond;
 
@@ -355,12 +349,12 @@ namespace PacmanWinForms
                                 continue;
 
                             ghost.IsFrightened = true;
-                            ghost.ForceDemiTour(); // Sans effet si le fantôme n'est pas Active
+                            ghost.RequestReverse(); // Sans effet si le fantôme n'est pas Active
                         }
                     }
                     else
                     {
-                        foreach (Ghost ghost in Ghosts) { ghost.ForceDemiTour(); }
+                        foreach (Ghost ghost in Ghosts) { ghost.RequestReverse(); }
                     }
 
                     CheckLevelClear();
@@ -407,8 +401,6 @@ namespace PacmanWinForms
                         State = GameState.GhostEaten;
                         ghostEatenFreezeTimer = 60;
                         ghost.IsFrightened = false;
-
-                        sound.StartEyes();
 
                         break; // On sort immédiatement de la boucle de détection
                     }
@@ -464,7 +456,7 @@ namespace PacmanWinForms
         /// <summary>
         /// Réinitialise complètement le jeu à zéro pour démarrer une nouvelle partie (futur retour écran titre).
         /// </summary>
-        public void RestartGame()
+        private void RestartGame()
         {
             Lives = 3;
             CurrentLevel = 1;
@@ -494,11 +486,9 @@ namespace PacmanWinForms
             {
                 ghost.IsFrightened = false;
             }
-
-            sound.EndFrightened();
         }
 
-        private void ChangerVagueGlobale()
+        private void OnWaveChanged()
         {
             foreach (Ghost ghost in Ghosts)
             {
@@ -507,7 +497,7 @@ namespace PacmanWinForms
                 if (ghost.Phase == GhostPhase.Active)
                 {
                     ghost.Mode = GlobalGhostMode;
-                    ghost.ForceDemiTour();
+                    ghost.RequestReverse();
                 }
             }
         }

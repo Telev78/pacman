@@ -7,7 +7,7 @@ using static PacmanWinForms.SpriteManager;
 
 namespace PacmanWinForms
 {
-    public partial class MainForm : Form
+    public class MainForm : Form
     {
         private SpriteManager spriteManager;
         private Timer gameTimer;
@@ -27,29 +27,20 @@ namespace PacmanWinForms
             }
             catch { /* Sécurité */ }
             this.Text = "Pac-Man Arcade (C#)";
-            this.Size = new Size(GameConfig.ScreenWidth + 16, GameConfig.ScreenHeight + 39);
             this.FormBorderStyle = FormBorderStyle.FixedSingle;
             this.MaximizeBox = false;
+            this.ClientSize = new Size(DisplayConfig.ScreenWidth, DisplayConfig.ScreenHeight);
             this.BackColor = Color.Black;
             this.DoubleBuffered = true;
             this.StartPosition = FormStartPosition.CenterScreen;
             this.KeyDown += new KeyEventHandler(OnKeyDown);
 
             spriteManager = new SpriteManager();
-            backBuffer = new Bitmap(GameConfig.MapWidth * GameConfig.TileSize, GameConfig.MapHeight * GameConfig.TileSize);
+            backBuffer = new Bitmap(DisplayConfig.NativeWidth, DisplayConfig.NativeHeight);
 
-            try
-            {
-                // Instanciation de la logique pure
-                game = new Game();
-                UpdateGameTitleScore();
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show(ex.Message, "Erreur Critique", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                Application.Exit();
-                return;
-            }
+            // Instanciation de la logique pure
+            game = new Game();
+            UpdateGameTitleScore();
 
             gameTimer = new Timer();
             gameTimer.Interval = 16;
@@ -140,7 +131,7 @@ namespace PacmanWinForms
             Graphics screen = e.Graphics;
             screen.InterpolationMode = InterpolationMode.NearestNeighbor;
             screen.PixelOffsetMode = PixelOffsetMode.Half;
-            screen.DrawImage(backBuffer, 0, 0, GameConfig.ScreenWidth, GameConfig.ScreenHeight);
+            screen.DrawImage(backBuffer, 0, 0, DisplayConfig.ScreenWidth, DisplayConfig.ScreenHeight);
         }
 
         private void RenderGame(Graphics g)
@@ -222,8 +213,7 @@ namespace PacmanWinForms
                         }
                         else
                         {
-                            string ghostName = ghost.GetType().Name;
-                            ghostSprite = spriteManager.GetGhostSprite(ghostName, ghost.CurrentDirection, game.GhostAnimationFrame);
+                            ghostSprite = spriteManager.GetGhostSprite(ghost.Type, ghost.CurrentDirection, game.GhostAnimationFrame);
                         }
 
                         DrawSprite(g, ghostSprite, (int)(ghost.X - 4), (int)(ghost.Y - 4));
@@ -334,6 +324,7 @@ namespace PacmanWinForms
             if (gameTimer != null) gameTimer.Stop();
             if (game != null) game.Shutdown();
             if (backBuffer != null) backBuffer.Dispose();
+            if (spriteManager != null) spriteManager.Dispose();
 
             base.OnFormClosed(e);
         }

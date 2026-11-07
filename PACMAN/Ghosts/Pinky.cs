@@ -4,8 +4,10 @@ namespace PacmanWinForms
 {
     public class Pinky : Ghost
     {
-        // Départ : milieu du nid | Patrouille : coin supérieur gauche
-        public Pinky() : base(14, 13 + 3, new Point(0, 0))
+        public override GhostType Type { get { return GhostType.Pinky; } }
+
+        // Départ : milieu du nid
+        public Pinky() : base(14, 13 + 3, MazeLayout.PinkyScatterTarget)
         {
             this.Phase = GhostPhase.InHouse;
             this.CurrentDirection = Direction.Down;
