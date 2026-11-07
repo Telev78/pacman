@@ -8,7 +8,6 @@
     {
         // Vitesses de Pac-Man
         public float PacmanNormal { get; set; }
-        public float PacmanDots { get; set; }          // En mangeant des gommes
 
         // Vitesses des fantômes
         public float GhostNormal { get; set; }
@@ -16,7 +15,6 @@
 
         // Vitesses en mode Frightened (Super-Gomme)
         public float FrightenedPacman { get; set; }
-        public float FrightenedPacmanDots { get; set; }
         public float FrightenedGhost { get; set; }
 
         // Paramètres de configuration du mode Frightened

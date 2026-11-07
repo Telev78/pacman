@@ -44,44 +44,36 @@ namespace PacmanWinForms
             if (level == 1)
             {
                 specs.PacmanNormal = 0.80f * BaseMultiplier; // Donne pile 1.00 pixel/frame
-                specs.PacmanDots = 0.71f * BaseMultiplier;
                 specs.GhostNormal = 0.75f * BaseMultiplier;
                 specs.GhostTunnel = 0.40f * BaseMultiplier;
                 specs.FrightenedPacman = 0.90f * BaseMultiplier;
-                specs.FrightenedPacmanDots = 0.79f * BaseMultiplier;
                 specs.FrightenedGhost = 0.50f * BaseMultiplier;
             }
             else if (level >= 2 && level <= 4)
             {
                 specs.PacmanNormal = 0.90f * BaseMultiplier;
-                specs.PacmanDots = 0.79f * BaseMultiplier;
                 specs.GhostNormal = 0.85f * BaseMultiplier;
                 specs.GhostTunnel = 0.45f * BaseMultiplier;
                 specs.FrightenedPacman = 0.95f * BaseMultiplier;
-                specs.FrightenedPacmanDots = 0.83f * BaseMultiplier;
                 specs.FrightenedGhost = 0.55f * BaseMultiplier;
             }
             else if (level >= 5 && level <= 20)
             {
                 specs.PacmanNormal = 1.00f * BaseMultiplier; // Vitesse maximale théorique (1.25 px/frame)
-                specs.PacmanDots = 0.87f * BaseMultiplier;
                 specs.GhostNormal = 0.95f * BaseMultiplier;
                 specs.GhostTunnel = 0.50f * BaseMultiplier;
                 specs.FrightenedPacman = 1.00f * BaseMultiplier;
-                specs.FrightenedPacmanDots = 0.87f * BaseMultiplier;
                 specs.FrightenedGhost = 0.60f * BaseMultiplier;
             }
             else // Niveau 21+ (Le "Kill Screen" et les niveaux infinis)
             {
                 // Pac-Man fatigue légèrement et redescend à 90% (comme aux niveaux 2-4)
                 specs.PacmanNormal = 0.90f * BaseMultiplier;
-                specs.PacmanDots = 0.79f * BaseMultiplier;
                 // Les fantômes restent à leur agressivité maximale
                 specs.GhostNormal = 0.95f * BaseMultiplier;
                 specs.GhostTunnel = 0.50f * BaseMultiplier;
                 // Valeurs par défaut pour la sécurité (Le mode Frightened n'est plus actif à ce stade)
                 specs.FrightenedPacman = 0.90f * BaseMultiplier;
-                specs.FrightenedPacmanDots = 0.79f * BaseMultiplier;
                 specs.FrightenedGhost = 0.60f * BaseMultiplier;
             }
 

@@ -177,6 +177,7 @@ namespace PacmanWinForms
             Pacman.CurrentDirection = Direction.Left;
             Pacman.NextDirection = Direction.None;
             Pacman.State = PacmanState.Alive;
+            Pacman.Stall(0);
         }
 
         public void HandleInput(Direction direction)
@@ -324,9 +325,9 @@ namespace PacmanWinForms
                 if (currentTile == TileType.Dot) // Normal
                 {
                     sound.PlayDot();
-
                     Map.Grid[tileY, tileX] = TileType.Empty;
                     AddScore(10);
+                    Pacman.Stall(Pacman.DotStallFrames);
                     DotsRemaining--;
                     ghostHouse.OnDotEaten();
                     CheckLevelClear();
@@ -335,6 +336,7 @@ namespace PacmanWinForms
                 {
                     Map.Grid[tileY, tileX] = TileType.Empty;
                     AddScore(50);
+                    Pacman.Stall(Pacman.EnergizerStallFrames);
                     DotsRemaining--;
                     ghostHouse.OnDotEaten();
                     ghostsEatenInCurrentFrightenedMode = 0;
