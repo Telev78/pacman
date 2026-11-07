@@ -1,11 +1,15 @@
-﻿namespace PacmanWinForms
+﻿using System;
+
+namespace PacmanWinForms
 {
     /// <summary>
     /// Fruit bonus : apparition (70 et 170 gommes mangées), durée, collision et affichage du score.
     /// </summary>
     public class FruitManager
     {
-        private const int FruitDurationFrames = 600;  // 10 secondes à 60 Hz
+        private const int FruitMinFrames = 540;   // 9 secondes à 60 Hz
+        private const int FruitMaxFrames = 600;   // 10 secondes
+        private readonly Random random = new Random();
         private const int ScoreDisplayFrames = 120;   // 2 secondes
 
         public bool IsActive { get; private set; }
@@ -84,7 +88,8 @@
         private void Spawn(int level)
         {
             IsActive = true;
-            fruitTimer = FruitDurationFrames;
+            // Le fruit reste entre 9 et 10 secondes, durée variable et non reproductible
+            fruitTimer = random.Next(FruitMinFrames, FruitMaxFrames + 1);
 
             // Alignement sous le nid (même colonne que le spawn de Pac-Man, ligne 20)
             X = 13 * GameConfig.TileSize;

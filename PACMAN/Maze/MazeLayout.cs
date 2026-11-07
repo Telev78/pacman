@@ -46,5 +46,23 @@ namespace PacmanWinForms
             return tileY == TunnelRow
                 && (tileX <= TunnelSlowLeftMaxColumn || tileX >= TunnelSlowRightMinColumn);
         }
+
+        // Intersections où les fantômes (Scatter et Chase) n'ont pas le droit de tourner vers le haut :
+        // deux au-dessus du nid et deux près du départ de Pac-Man (colonnes 12 et 15, lignes 14 et 26).
+        // Seul Pac-Man peut entrer dans ces couloirs par le bas ; les fantômes effrayés ignorent cette règle.
+        private static readonly Point[] NoUpTiles =
+        {
+            new Point(12, 14), new Point(15, 14),
+            new Point(12, 26), new Point(15, 26)
+        };
+
+        public static bool IsNoUpTile(int tileX, int tileY)
+        {
+            for (int i = 0; i < NoUpTiles.Length; i++)
+            {
+                if (NoUpTiles[i].X == tileX && NoUpTiles[i].Y == tileY) return true;
+            }
+            return false;
+        }
     }
 }

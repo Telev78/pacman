@@ -131,6 +131,7 @@ namespace PacmanWinForms
 
         private void ResetPositions(bool afterDeath = false)
         {
+            Ghost.ResetRandom();
             sound.ResetBackground();
 
             this.CurrentSpecs = GameConfig.GetSpecsForLevel(this.CurrentLevel);
@@ -495,13 +496,13 @@ namespace PacmanWinForms
         {
             foreach (Ghost ghost in Ghosts)
             {
-                // Seuls les fantômes actifs changent de mode et font demi-tour.
-                // InHouse, Exiting et Eaten ne sont pas touchés.
                 if (ghost.Phase == GhostPhase.Active)
                 {
                     ghost.Mode = GlobalGhostMode;
-                    ghost.RequestReverse();
                 }
+
+                // Demi-tour des fantômes actifs ; dans le nid, la demande est gardée pour la sortie
+                ghost.RequestReverse();
             }
         }
 

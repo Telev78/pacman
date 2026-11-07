@@ -27,7 +27,16 @@ namespace PacmanWinForms
         protected int bobDirection = 1;
         protected Point ScatterTargetTile { get; set; }
         private bool reverseRequested = false;
-        private static readonly Random rand = new Random();
+
+        // Graine fixe : les fantômes effrayés suivent les mêmes parcours à chaque niveau et à chaque vie
+        private const int FrightenedSeed = 1;
+        private static Random rand = new Random(FrightenedSeed);
+
+        // À appeler au début de chaque niveau et après chaque vie perdue
+        public static void ResetRandom()
+        {
+            rand = new Random(FrightenedSeed);
+        }
 
         // Tuile du CENTRE du fantôme
         public int TileX { get { return Tiles.Of(X); } }
@@ -142,7 +151,9 @@ namespace PacmanWinForms
                     // S'il a été effrayé entre-temps, IsFrightened reste vrai.
                     Phase = GhostPhase.Active;
                     Mode = globalMode;
-                    CurrentDirection = Direction.Left;
+                    // Direction de sortie : vers la gauche, ou vers la droite si le mode a changé pendant qu'il était dans le nid
+                    CurrentDirection = reverseRequested ? Direction.Right : Direction.Left;
+                    reverseRequested = false;
                 }
                 return;
             }
@@ -188,10 +199,16 @@ namespace PacmanWinForms
 
             Direction bestDirection = CurrentDirection;
             int shortestDistance = int.MaxValue;
+            
+            // Aux intersections interdites aux virages vers le haut, les fantômes en Scatter ou Chase ne peuvent pas monter
+            bool upForbidden = Phase == GhostPhase.Active && MazeLayout.IsNoUpTile(currentTileX, currentTileY);
 
             foreach (Direction dir in directionsToTest)
             {
                 if (dir == CurrentDirection.Opposite())
+                    continue;
+
+                if (dir == Direction.Up && upForbidden)
                     continue;
 
                 int nextX = currentTileX + dir.Dx();
@@ -237,11 +254,12 @@ namespace PacmanWinForms
             return MazeLayout.EyesTargetTile;
         }
 
-        // Demande un demi-tour. Seuls les fantômes actifs dans le labyrinthe sont concernés,
-        // et le demi-tour n'est effectif qu'au prochain centre de tuile.
+        // Demande un demi-tour (changement de mode ou super-gomme).
+        // Fantôme actif : demi-tour à la prochaine tuile.
+        // Dans le nid ou en sortie : la demande est gardée, et le fantôme sortira vers la droite au lieu de la gauche.
         public void RequestReverse()
         {
-            if (Phase == GhostPhase.Active)
+            if (Phase == GhostPhase.Active || Phase == GhostPhase.InHouse || Phase == GhostPhase.Exiting)
             {
                 reverseRequested = true;
             }
