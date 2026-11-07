@@ -63,6 +63,7 @@ namespace PacmanWinForms
 
         public bool ShowGhosts { get; private set; } = true;
         public bool IsMazeFlashWhite { get; private set; } = false;
+        public int FrameCounter { get { return frameCounter; } }
 
         /// <summary>
         /// Le mode de comportement global imposé par le timer des vagues (Scatter ou Chase).
