@@ -26,6 +26,7 @@ namespace PacmanWinForms
         private Dictionary<Direction, Bitmap> eyesSprites;
         private Bitmap[] frightenedBlueSprites;
         private Bitmap[] frightenedWhiteSprites;
+        private Bitmap lifeSprite;
 
         // Caches (remplis à la demande)
         private readonly Dictionary<(int, Direction), Bitmap> pacmanSprites = new Dictionary<(int, Direction), Bitmap>();
@@ -256,6 +257,17 @@ namespace PacmanWinForms
             return GetMazeTile(15, 2);
         }
 
+        /// <summary>
+        /// Icône de la réserve de vies (HUD du bas), située en (128, 97) dans la feuille de sprites.
+        /// </summary>
+        public Bitmap GetLifeSprite()
+        {
+            if (lifeSprite == null)
+            {
+                lifeSprite = CropAsset(128, 97);
+            }
+            return lifeSprite;
+        }
         public Bitmap GetGhostDoorSprite()
         {
             return ghostDoorSprite;
@@ -486,7 +498,7 @@ namespace PacmanWinForms
 
         public void Dispose()
         {
-            List<Bitmap> bitmaps = new List<Bitmap> { assetSheet, ghostDoorSprite, emptySprite16, emptyChar };
+            List<Bitmap> bitmaps = new List<Bitmap> { assetSheet, ghostDoorSprite, emptySprite16, emptyChar, lifeSprite };
             bitmaps.AddRange(pacmanDeathSprites);
             bitmaps.AddRange(frightenedBlueSprites);
             bitmaps.AddRange(frightenedWhiteSprites);

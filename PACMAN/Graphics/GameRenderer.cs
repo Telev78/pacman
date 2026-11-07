@@ -261,7 +261,7 @@ namespace PacmanWinForms
             int livesToDraw = subtractLifeIcon ? game.Lives - 1 : game.Lives;
             int visibleLives = Math.Min(livesToDraw, HudLayout.MaxVisibleLives);
 
-            Bitmap lifeSprite = sprites.GetPacmanSprite(1, Direction.Left);
+            Bitmap lifeSprite = sprites.GetLifeSprite();
             for (int i = 0; i < visibleLives; i++)
             {
                 int column = HudLayout.LivesFirstColumn + i * HudLayout.LivesSpacing;

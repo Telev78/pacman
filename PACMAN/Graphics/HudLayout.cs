@@ -26,7 +26,7 @@
         public const int LivesSpacing = 2;
         public const int MaxVisibleLives = 5;
 
-        public const int LevelIndicatorRightColumn = 26;   // Fruits des niveaux, en bas à droite
+        public const int LevelIndicatorRightColumn = 24;   // Fruits des niveaux, en bas à droite
         public const int LevelIndicatorSpacing = 2;
         public const int MaxLevelIndicators = 7;
     }
