@@ -436,6 +436,7 @@ namespace PacmanWinForms
             {
                 State = GameState.GameOver;
                 gameOverTimer = 180; // 180 frames = exactement 3 secondes à 60 Hz
+                Fruit.ResetForNewLife(); // Le fruit et son score disparaissent de l'écran
             }
             else
             {
@@ -545,6 +546,7 @@ namespace PacmanWinForms
 
             // 2. Les fantômes disparaissent et le labyrinthe clignote
             ShowGhosts = false;
+            Fruit.ResetForNewLife();
 
             int t = victoryTimer - VictoryFreezeFrames - 1;
             IsMazeFlashWhite = (t / VictoryFlashFrames) % 2 == 0;
