@@ -14,5 +14,15 @@
         public const string Year = "1980";
         public const string Credit = "CREDIT";
         public const string PlayerOne = "PLAYER ONE";
+
+        public const string CharacterNickname = "CHARACTER / NICKNAME";
+
+        // Un nom et un surnom par fantôme, dans l'ordre Blinky, Pinky, Inky, Clyde.
+        // Le surnom (entre guillemets) s'écrit directement derrière le nom.
+        public static readonly string[] GhostNames = { "OIKAKE----", "MACHIBUSE--", "KIMAGURE--", "OTOBOKE---" };
+        public static readonly string[] GhostNicknames = { "\"AKABEI\"", "\"PINKY\"", "\"AOSUKE\"", "\"GUZUTA\"" };
+
+        public const string Points10 = "10";
+        public const string Points50 = "50";
     }
 }

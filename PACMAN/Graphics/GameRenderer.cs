@@ -12,7 +12,6 @@ namespace PacmanWinForms
     public sealed class GameRenderer : IDisposable
     {
         // Durées de clignotement, en frames de jeu à 60 Hz
-        private const int EnergizerBlinkFrames = 12;   // ~200 ms par phase
         private const int OneUpBlinkFrames = 13;       // ~220 ms par phase
 
         // Clignotement bleu / blanc des fantômes effrayés
@@ -83,7 +82,7 @@ namespace PacmanWinForms
 
             // Les super-gommes clignotent pendant le jeu actif, et restent visibles le reste du temps
             bool energizerVisible = game.State != GameState.Playing
-                                    || (game.FrameCounter / EnergizerBlinkFrames) % 2 == 0;
+                        || IsEnergizerOn(game.FrameCounter);
 
             Bitmap dotSprite = sprites.GetDotSprite();
             Bitmap energizerSprite = sprites.GetEnergizerSprite();
@@ -345,6 +344,15 @@ namespace PacmanWinForms
                 Bitmap letter = sprites.GetArcadeCharacter(c, color);
                 DrawSprite(g, letter, (startTileX + i) * GameConfig.TileSize, tileY * GameConfig.TileSize);
             }
+        }
+
+        /// <summary>
+        /// Phase du clignotement des super-gommes (allumée / éteinte), mesurée sur l'arcade :
+        /// environ 10,7 frames par phase, soit une période de 21,3 frames.
+        /// </summary>
+        public static bool IsEnergizerOn(int frame)
+        {
+            return (frame * 3 / 32) % 2 == 0;
         }
     }
 }
