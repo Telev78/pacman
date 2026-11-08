@@ -9,7 +9,13 @@ namespace PacmanWinForms
     {
         private const int FruitMinFrames = 540;   // 9 secondes à 60 Hz
         private const int FruitMaxFrames = 600;   // 10 secondes
-        private readonly Random random = new Random();
+        private readonly Random random;
+
+        public FruitManager(int? seed = null)
+        {
+            random = seed.HasValue ? new Random(seed.Value) : new Random();
+        }
+
         private const int ScoreDisplayFrames = 120;   // 2 secondes
 
         public bool IsActive { get; private set; }

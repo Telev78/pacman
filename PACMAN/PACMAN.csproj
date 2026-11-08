@@ -19,6 +19,7 @@
     <EmbeddedResource Include="asset\asset.png" />
     <EmbeddedResource Include="asset\maps\original_maze.txt" />
     <EmbeddedResource Include="asset\sounds\*.wav" />
+	<EmbeddedResource Include="asset\demo.txt" Condition="Exists('asset\demo.txt')" />
   </ItemGroup>
 
   <ItemGroup>

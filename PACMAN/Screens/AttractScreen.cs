@@ -4,8 +4,8 @@ using static PacmanWinForms.SpriteManager;
 namespace PacmanWinForms
 {
     /// <summary>
-    /// Attract mode. Pour l'instant : la présentation des personnages
-    /// (la chasse puis la démo viendront aux étapes suivantes).
+    /// Attract mode : présentation des personnages, puis scène de chasse
+    /// (la démo viendra à l'étape D).
     /// </summary>
     public sealed class AttractScreen : IScreen
     {
@@ -16,16 +16,15 @@ namespace PacmanWinForms
         private const int NicknameDelay = 90;       // Le surnom apparaît 0,5 s après le nom
         private const int LegendFrame = 568;        // "10 PTS" et "50 PTS"
         private const int LogoFrame = 628;          // Logo namco et super-gomme de gauche
+        private const int ChaseStartFrame = 694;    // Pac-Man entre par la droite
         private const int BlinkStartFrame = 697;    // Les super-gommes se mettent à clignoter
-
-        // Provisoire : la chasse et la démo ne sont pas encore là, la présentation recommence en boucle
-        private const int CycleLength = 1212;
 
         private static readonly GhostType[] Ghosts = { GhostType.Blinky, GhostType.Pinky, GhostType.Inky, GhostType.Clyde };
         private static readonly ArcadeColor[] GhostColors = { ArcadeColor.Red, ArcadeColor.Pink, ArcadeColor.Cyan, ArcadeColor.Orange };
 
         private readonly ScreenManager manager;
         private int frame;
+        private ChaseScene chase;
 
         public AttractScreen(ScreenManager manager)
         {
@@ -35,14 +34,27 @@ namespace PacmanWinForms
         public void Enter()
         {
             frame = 0;
+            chase = null;
         }
 
         public void Update()
         {
             frame++;
-            if (frame >= CycleLength)
+
+            if (frame == ChaseStartFrame)
             {
-                frame = 0;
+                chase = new ChaseScene();
+            }
+
+            if (chase != null)
+            {
+                chase.Update();
+
+                // Provisoire : la démo viendra à l'étape D, en attendant tout recommence
+                if (chase.Finished)
+                {
+                    manager.ShowDemo();
+                }
             }
         }
 
@@ -86,12 +98,19 @@ namespace PacmanWinForms
 
             if (frame >= LogoFrame)
             {
-                // La super-gomme de la chasse (à gauche) et le logo
-                if (energizerOn)
+                // La super-gomme de la chasse (à gauche), tant que Pac-Man ne l'a pas mangée
+                bool energizerEaten = (chase != null && chase.EnergizerEaten);
+                if (energizerOn && !energizerEaten)
                 {
                     GameRenderer.DrawSprite(g, renderer.Sprites.GetEnergizerSprite(), 4 * tile, 20 * tile);
                 }
+
                 GameRenderer.DrawSprite(g, renderer.Sprites.GetNamcoLogo(ArcadeColor.Pink), 11 * tile, 31 * tile);
+            }
+
+            if (chase != null)
+            {
+                chase.Draw(renderer, g);
             }
         }
 

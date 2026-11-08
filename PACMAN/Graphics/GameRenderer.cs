@@ -56,6 +56,13 @@ namespace PacmanWinForms
         public void DrawGame(Graphics g, Game game)
         {
             DrawMaze(g, game);
+
+            // En démo, "GAME  OVER" est sous les personnages (ils passent par-dessus, comme à l'arcade)
+            if (game.IsDemo)
+            {
+                DrawGameOverLabel(g);
+            }
+
             DrawCharacters(g, game);
             DrawMessages(g, game);
             DrawBonuses(g, game);
@@ -189,14 +196,23 @@ namespace PacmanWinForms
             {
                 DrawText(g, ArcadeTexts.PlayerOne, HudLayout.PlayerLabelColumn, HudLayout.PlayerLabelRow, ArcadeColor.Cyan);
             }
-            if (game.State == GameState.Ready)
+            if (game.IsDemo)
+            {
+                // Déjà dessiné sous les personnages (voir DrawGame)
+            }
+            else if (game.State == GameState.Ready)
             {
                 DrawText(g, "READY!", HudLayout.ReadyColumn, HudLayout.MessageRow, ArcadeColor.Yellow);
             }
             else if (game.State == GameState.GameOver)
             {
-                DrawText(g, "GAME  OVER", HudLayout.GameOverColumn, HudLayout.MessageRow, ArcadeColor.Red);
+                DrawGameOverLabel(g);
             }
+        }
+
+        private void DrawGameOverLabel(Graphics g)
+        {
+            DrawText(g, "GAME  OVER", HudLayout.GameOverColumn, HudLayout.MessageRow, ArcadeColor.Red);
         }
 
         private void DrawBonuses(Graphics g, Game game)
@@ -236,6 +252,7 @@ namespace PacmanWinForms
         private void DrawHud(Graphics g, Game game)
         {
             DrawScores(g, game);
+            if (game.IsDemo) return;   // En démo : pas de vies ni de niveau (les crédits sont dessinés par DemoScreen)
             DrawLives(g, game);
             DrawLevelIndicator(g, game);
         }
@@ -243,10 +260,10 @@ namespace PacmanWinForms
         private void DrawScores(Graphics g, Game game)
         {
             // Le "1UP" clignote pendant le jeu actif, et reste fixe le reste du temps
-            bool show1Up = game.State != GameState.Playing
-                           || (game.FrameCounter / OneUpBlinkFrames) % 2 == 0;
+            bool show1Up = game.IsDemo || game.State != GameState.Playing
+               || (game.FrameCounter / OneUpBlinkFrames) % 2 == 0;
 
-            DrawTopHud(g, game.Score, game.HighScore, show1Up, show2Up: false);
+            DrawTopHud(g, game.Score, game.HighScore, show1Up, show2Up: game.IsDemo);
         }
 
         /// <summary>

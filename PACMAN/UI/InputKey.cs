@@ -8,7 +8,8 @@
         Up, Down, Left, Right,
         Coin,    // Insertion d'un crédit
         Start1,  // Bouton start 1 joueur
-        Start2   // Bouton start 2 joueurs
+        Start2,  // Bouton start 2 joueurs
+        Record   // Développement : enregistre la démo (F9)
     }
 
     public static class InputKeyExtensions

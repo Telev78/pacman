@@ -37,6 +37,14 @@ namespace PacmanWinForms
                 return;
             }
 
+            if (key == InputKey.Record)
+            {
+                // Réservé au développement : depuis l'attract mode ou l'écran start
+                if (current is AttractScreen || current is StartScreen)
+                    SwitchTo(new DemoScreen(this, recordMode: true));
+                return;
+            }
+
             current.OnInput(key);
         }
 
@@ -45,12 +53,17 @@ namespace PacmanWinForms
             if (Credits < MaxCredits) Credits++;
 
             // En attract mode, un crédit mène directement à l'écran start
-            if (current is AttractScreen)
+            if (current is AttractScreen || (current is DemoScreen demo && !demo.IsRecording))
             {
                 ShowStart();
             }
 
             sound.PlayCredit();
+        }
+
+        public void ShowDemo()
+        {
+            SwitchTo(new DemoScreen(this, recordMode: false));
         }
 
         public void ShowAttract()
@@ -84,6 +97,7 @@ namespace PacmanWinForms
         private void SwitchTo(IScreen screen)
         {
             sound.StopAll();
+            sound.Muted = false;
             current = screen;
             current.Enter();
         }

@@ -56,7 +56,7 @@ namespace PacmanWinForms
                 return;
 
             // Les touches de service (crédit, start) ne se répètent pas quand on les maintient
-            if (input == InputKey.Coin || input == InputKey.Start1 || input == InputKey.Start2)
+            if (input == InputKey.Coin || input == InputKey.Start1 || input == InputKey.Start2 || input == InputKey.Record)
             {
                 if (!heldServiceKeys.Add(e.KeyCode))
                     return;
@@ -87,6 +87,7 @@ namespace PacmanWinForms
 
                 case Keys.D2:
                 case Keys.NumPad2: input = InputKey.Start2; return true;
+                case Keys.F9: input = InputKey.Record; return true;
 
                 default: input = InputKey.Coin; return false;
             }
@@ -120,6 +121,10 @@ namespace PacmanWinForms
             {
                 Game game = play.Game;
                 this.Text = $"Pac-Man Arcade (C#) - SCORE: {game.Score} - VIES: {game.Lives} - Gommes: {game.DotsRemaining}";
+            }
+            else if (screens.Current is DemoScreen demo && demo.IsRecording)
+            {
+                this.Text = "Pac-Man Arcade (C#) - ENREGISTREMENT DE LA DÉMO";
             }
             else
             {

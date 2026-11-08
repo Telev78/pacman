@@ -71,18 +71,23 @@ namespace PacmanWinForms
         // Affiche "PLAYER ONE" au-dessus du nid au tout début d'une partie
         public bool ShowPlayerLabel { get; private set; } = false;
 
+        private const int DemoSeed = 1980;
+        private const int DemoEndPauseFrames = 60;   // 1 s après l'animation de mort
+        public bool IsDemo { get; private set; }
+
         /// <summary>
         /// Le mode de comportement global imposé par le timer des vagues (Scatter ou Chase).
         /// </summary>
         public GhostMode GlobalGhostMode { get { return waves.CurrentMode; } }
 
-        public Game(SoundDirector sound, int highScore)
+        public Game(SoundDirector sound, int highScore, bool isDemo = false)
         {
             this.sound = sound;
+            IsDemo = isDemo;
             scoreKeeper = new ScoreKeeper(highScore);
 
             Map = new LevelMap();
-            Fruit = new FruitManager();
+            Fruit = new FruitManager(isDemo ? DemoSeed : (int?)null);
             Pacman = new Pacman();
             ghostHouse = new GhostHouse(ghostList);
 
@@ -109,7 +114,7 @@ namespace PacmanWinForms
 
                     CountInitialPellets();
                     ResetPositions();
-                    ShowPlayerLabel = !IsNextLevelTransition;
+                    ShowPlayerLabel = !IsNextLevelTransition && !IsDemo;
                 }
                 else
                 {
@@ -476,6 +481,8 @@ namespace PacmanWinForms
         /// </summary>
         private void AddScore(int points)
         {
+            if (IsDemo) return;   // En démo, le score reste à 00 et le high score ne bouge pas
+
             if (scoreKeeper.Add(points))
             {
                 Lives++;
@@ -523,6 +530,12 @@ namespace PacmanWinForms
             int animationFrames = DeathSpriteCount * DeathFramesPerSprite;
             Pacman.DeathAnimationFrame = Math.Min(t / DeathFramesPerSprite, DeathSpriteCount - 1);
 
+            if (IsDemo)
+            {
+                if (t >= animationFrames + DemoEndPauseFrames) IsFinished = true;
+                return;
+            }
+
             // 3. Pause finale, puis vie suivante ou game over
             if (t >= animationFrames + DeathEndPauseFrames)
             {
@@ -533,6 +546,8 @@ namespace PacmanWinForms
         
         private void UpdateVictory()
         {
+            if (IsDemo) { IsFinished = true; return; }
+
             victoryTimer++;
 
             // 1. Gel : tout est figé, fantômes visibles

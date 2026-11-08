@@ -25,6 +25,8 @@
         private Background background = Background.None;
         private int currentSirenIndex = -1; // Sirène en cours de lecture (quand background == Siren)
 
+        public bool Muted { get; set; }
+
         public void StopAll()
         {
             audio.StopAll();
@@ -49,33 +51,39 @@
 
         public void PlayStartJingle()
         {
+            if (Muted) return;
             audio.Play(SoundId.Start);
         }
 
         public void PlayDot()
         {
+            if (Muted) return;
             wakaToggle = !wakaToggle;
             audio.Play(wakaToggle ? SoundId.EatDot0 : SoundId.EatDot1);
         }
 
         public void PlayFruitEaten()
         {
+            if (Muted) return;
             audio.Play(SoundId.EatFruit);
         }
 
         public void PlayExtraLife()
         {
+            if (Muted) return;
             audio.Play(SoundId.Extend);
         }
 
         public void PlayGhostEaten()
         {
+            if (Muted) return;
             audio.Play(SoundId.EatGhost);
         }
 
         public void PlayDeath()
         {
             StopAll(); // On coupe impérativement le son de fond
+            if (Muted) return;
             audio.PlaySequence(SoundId.Death0, SoundId.Death1, loopNext: false);
         }
 
@@ -91,6 +99,7 @@
         // frightenedGhosts : au moins un fantôme est encore effrayé (bleu).
         public void UpdateBackground(int level, int dotsRemaining, bool eyesRunning, bool frightenedGhosts)
         {
+            if (Muted) return;
             int targetSiren = ComputeSirenIndex(level, dotsRemaining);
 
             Background wanted;
