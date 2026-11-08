@@ -194,7 +194,8 @@ namespace PacmanWinForms
         {
             if (game.ShowPlayerLabel)
             {
-                DrawText(g, ArcadeTexts.PlayerOne, HudLayout.PlayerLabelColumn, HudLayout.PlayerLabelRow, ArcadeColor.Cyan);
+                string label = (game.ActivePlayer == 1) ? ArcadeTexts.PlayerOne : ArcadeTexts.PlayerTwo;
+                DrawText(g, label, HudLayout.PlayerLabelColumn, HudLayout.PlayerLabelRow, ArcadeColor.Cyan);
             }
             if (game.IsDemo)
             {
@@ -259,17 +260,31 @@ namespace PacmanWinForms
 
         private void DrawScores(Graphics g, Game game)
         {
-            // Le "1UP" clignote pendant le jeu actif, et reste fixe le reste du temps
-            bool show1Up = game.IsDemo || game.State != GameState.Playing
-               || (game.FrameCounter / OneUpBlinkFrames) % 2 == 0;
+            // Pendant le jeu actif, le "UP" du joueur dont c'est le tour clignote ; l'autre reste fixe
+            bool animate = !game.IsDemo && game.State == GameState.Playing;
+            bool blinkOn = (game.FrameCounter / OneUpBlinkFrames) % 2 == 0;
 
-            DrawTopHud(g, game.Score, game.HighScore, show1Up, show2Up: game.IsDemo);
+            bool show1Up = !animate || game.ActivePlayer != 1 || blinkOn;
+            bool show2Up = game.IsDemo
+                           || (game.PlayerCount == 2 && (!animate || game.ActivePlayer != 2 || blinkOn));
+
+            DrawTopHud(g, game.GetScore(1), game.GetScore(2), game.HighScore,
+                show1Up, show2Up, showScore2: game.PlayerCount == 2);
+        }
+
+        /// <summary>
+        /// Bandeau supérieur (attract mode et écran start) : seul le score du joueur 1 est affiché.
+        /// </summary>
+        public void DrawTopHud(Graphics g, int score, int highScore, bool show1Up, bool show2Up)
+        {
+            DrawTopHud(g, score, 0, highScore, show1Up, show2Up, showScore2: false);
         }
 
         /// <summary>
         /// Bandeau supérieur : 1UP, HIGH SCORE, 2UP et les scores.
         /// </summary>
-        public void DrawTopHud(Graphics g, int score, int highScore, bool show1Up, bool show2Up)
+        public void DrawTopHud(Graphics g, int score1, int score2, int highScore,
+            bool show1Up, bool show2Up, bool showScore2)
         {
             if (show1Up)
             {
@@ -283,9 +298,16 @@ namespace PacmanWinForms
                 DrawText(g, "2UP", HudLayout.TwoUpColumn, HudLayout.TopRow, ArcadeColor.White);
             }
 
-            // Score du joueur : "00" s'il est à zéro, aligné à droite
-            string scoreText = (score == 0) ? "00" : score.ToString();
-            DrawText(g, scoreText, HudLayout.ScoreRightColumn - scoreText.Length + 1, HudLayout.ScoreRow, ArcadeColor.White);
+            // Score du joueur 1 : "00" s'il est à zéro, aligné à droite
+            string score1Text = (score1 == 0) ? "00" : score1.ToString();
+            DrawText(g, score1Text, HudLayout.ScoreRightColumn - score1Text.Length + 1, HudLayout.ScoreRow, ArcadeColor.White);
+
+            // Score du joueur 2, seulement dans une partie à 2 joueurs
+            if (showScore2)
+            {
+                string score2Text = (score2 == 0) ? "00" : score2.ToString();
+                DrawText(g, score2Text, HudLayout.Score2RightColumn - score2Text.Length + 1, HudLayout.ScoreRow, ArcadeColor.White);
+            }
 
             // Le high score reste vide tant que personne n'a marqué de points
             if (highScore > 0)

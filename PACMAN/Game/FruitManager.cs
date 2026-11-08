@@ -115,5 +115,19 @@ namespace PacmanWinForms
             if (level == 11 || level == 12) return 3000;
             return 5000; // Niveau 13+ (Clé)
         }
+
+        public void SaveProgress(PlayerState player)
+        {
+            player.TotalDots = totalDots;
+            player.FruitSpawned70 = spawned70;
+            player.FruitSpawned170 = spawned170;
+        }
+
+        public void LoadProgress(PlayerState player)
+        {
+            totalDots = player.TotalDots;
+            spawned70 = player.FruitSpawned70;
+            spawned170 = player.FruitSpawned170;
+        }
     }
 }

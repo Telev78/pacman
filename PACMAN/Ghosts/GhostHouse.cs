@@ -150,5 +150,17 @@ namespace PacmanWinForms
         {
             return ghosts.FirstOrDefault(g => g.Type == type && g.Phase == GhostPhase.InHouse);
         }
+
+        public void SaveCounters(PlayerState player)
+        {
+            for (int i = 0; i < ReleaseOrder.Length; i++)
+                player.HouseDotCounters[i] = dotCounters[ReleaseOrder[i]];
+        }
+
+        public void LoadCounters(PlayerState player)
+        {
+            for (int i = 0; i < ReleaseOrder.Length; i++)
+                dotCounters[ReleaseOrder[i]] = player.HouseDotCounters[i];
+        }
     }
 }

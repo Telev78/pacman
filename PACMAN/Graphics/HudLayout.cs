@@ -12,6 +12,7 @@
 
         public const int ScoreRow = 1;
         public const int ScoreRightColumn = 6;        // Le score est aligné à droite sur cette colonne
+        public const int Score2RightColumn = 25;
         public const int HighScoreRightColumn = 16;   // Le high score aussi
 
         // --- Messages au centre ---

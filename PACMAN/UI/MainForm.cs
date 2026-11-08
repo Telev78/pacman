@@ -87,7 +87,7 @@ namespace PacmanWinForms
 
                 case Keys.D2:
                 case Keys.NumPad2: input = InputKey.Start2; return true;
-                case Keys.F9: input = InputKey.Record; return true;
+                //case Keys.F9: input = InputKey.Record; return true;
 
                 default: input = InputKey.Coin; return false;
             }
@@ -120,7 +120,7 @@ namespace PacmanWinForms
             if (play != null && play.Game != null)
             {
                 Game game = play.Game;
-                this.Text = $"Pac-Man Arcade (C#) - SCORE: {game.Score} - VIES: {game.Lives} - Gommes: {game.DotsRemaining}";
+                this.Text = $"Pac-Man Arcade (C#) - J{game.ActivePlayer} - SCORE: {game.Score} - VIES: {game.Lives} - Gommes: {game.DotsRemaining}";
             }
             else if (screens.Current is DemoScreen demo && demo.IsRecording)
             {

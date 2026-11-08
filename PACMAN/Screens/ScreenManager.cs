@@ -76,13 +76,13 @@ namespace PacmanWinForms
             SwitchTo(new StartScreen(this));
         }
 
-        // Lance une partie 1 joueur (coûte un crédit)
-        public void StartGame()
+        // Lance une partie (1 crédit par joueur)
+        public void StartGame(int players)
         {
-            if (Credits < 1) return;
+            if (Credits < players) return;
 
-            Credits--;
-            SwitchTo(new PlayScreen(this));
+            Credits -= players;
+            SwitchTo(new PlayScreen(this, players));
         }
 
         // Appelé par l'écran de jeu quand le GAME OVER est terminé

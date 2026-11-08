@@ -9,14 +9,17 @@ namespace PacmanWinForms
     public class Game
     {
         // Propriétés accessibles en lecture seule par le MainForm pour le rendu
-        public LevelMap Map { get; private set; }
+        
         public Pacman Pacman { get; private set; }
         private readonly List<Ghost> ghostList = new List<Ghost>();
         public IReadOnlyList<Ghost> Ghosts { get { return ghostList; } }
 
-        public int DotsRemaining { get; private set; }
-        public int Lives { get; private set; }
-        public int CurrentLevel { get; private set; }
+        private PlayerState player;   // Le joueur dont c'est le tour
+
+        public LevelMap Map { get { return player.Map; } }
+        public int DotsRemaining { get { return player.DotsRemaining; } private set { player.DotsRemaining = value; } }
+        public int Lives { get { return player.Lives; } private set { player.Lives = value; } }
+        public int CurrentLevel { get { return player.Level; } private set { player.Level = value; } }
 
         public bool IsFrightenedMode { get; private set; }
         public int FrightenedFramesRemaining { get; private set; }
@@ -47,7 +50,7 @@ namespace PacmanWinForms
         private SoundDirector sound;
 
         private readonly ScoreKeeper scoreKeeper;
-        public int Score { get { return scoreKeeper.Score; } }
+        public int Score { get { return player.Score; } }
         public int HighScore { get { return scoreKeeper.HighScore; } }
 
         // Séquences de mort et de fin de niveau (en frames à 60 Hz)
@@ -80,19 +83,39 @@ namespace PacmanWinForms
         /// </summary>
         public GhostMode GlobalGhostMode { get { return waves.CurrentMode; } }
 
-        public Game(SoundDirector sound, int highScore, bool isDemo = false)
+        private PlayerState[] players;
+
+        public int PlayerCount { get { return players.Length; } }
+        public int ActivePlayer { get { return player.Number; } }
+
+        // Score d'un joueur (1 ou 2) ; 0 si ce joueur n'existe pas dans cette partie
+        public int GetScore(int playerNumber)
+        {
+            return playerNumber <= players.Length ? players[playerNumber - 1].Score : 0;
+        }
+
+        public Game(SoundDirector sound, int highScore, bool isDemo = false, int playerCount = 1)
         {
             this.sound = sound;
             IsDemo = isDemo;
             scoreKeeper = new ScoreKeeper(highScore);
 
-            Map = new LevelMap();
+            players = new PlayerState[playerCount];
+            for (int i = 0; i < playerCount; i++)
+            {
+                players[i] = new PlayerState(i + 1);
+            }
+
+            // Le labyrinthe du joueur 2 est prêt dès le départ (celui du joueur 1 est chargé par InitializeGameValue)
+            for (int i = 1; i < playerCount; i++)
+            {
+                LoadMaze(players[i]);
+            }
+
+            player = players[0];
             Fruit = new FruitManager(isDemo ? DemoSeed : (int?)null);
             Pacman = new Pacman();
             ghostHouse = new GhostHouse(ghostList);
-
-            Lives = 3;
-            CurrentLevel = 1;
 
             InitializeGameValue();
         }
@@ -101,46 +124,43 @@ namespace PacmanWinForms
         {
             sound.StopAll();
 
+            LoadMaze(player);
+            Fruit.StartLevel(DotsRemaining);
+
+            ResetPositions();
+            ShowPlayerLabel = !IsNextLevelTransition && !IsDemo;
+
+            if (!IsNextLevelTransition)
+                sound.PlayStartJingle();
+        }
+
+        // Charge un labyrinthe neuf pour un joueur et compte ses gommes
+        private void LoadMaze(PlayerState p)
+        {
             Assembly assembly = Assembly.GetExecutingAssembly();
             // Note la conversion des dossiers en points : asset.maps.original_maze.txt
             string resourceName = "PacmanWinForms.asset.maps.original_maze.txt";
 
             using (Stream stream = assembly.GetManifestResourceStream(resourceName))
             {
-                if (stream != null)
-                {
-                    // On charge la carte directement depuis le flux de l'exécutable !
-                    Map.LoadMapFromStream(stream);
-
-                    CountInitialPellets();
-                    ResetPositions();
-                    ShowPlayerLabel = !IsNextLevelTransition && !IsDemo;
-                }
-                else
-                {
+                if (stream == null)
                     throw new FileNotFoundException("Fichier de carte embarqué introuvable : " + resourceName);
-                }
-            }
-            if (!IsNextLevelTransition)
-                sound.PlayStartJingle();
-        }
 
-        private void CountInitialPellets()
-        {
-            DotsRemaining = 0;
+                p.Map.LoadMapFromStream(stream);
+            }
+
+            int dots = 0;
             for (int r = 0; r < GameConfig.MapHeight; r++)
             {
                 for (int c = 0; c < GameConfig.MapWidth; c++)
                 {
-                    TileType tile = Map.Grid[r, c];
-                    if (tile == TileType.Dot || tile == TileType.Energizer)
-                    {
-                        DotsRemaining++;
-                    }
+                    TileType tile = p.Map.Grid[r, c];
+                    if (tile == TileType.Dot || tile == TileType.Energizer) dots++;
                 }
             }
 
-            Fruit.StartLevel(DotsRemaining);
+            p.DotsRemaining = dots;
+            p.TotalDots = dots;
         }
 
         private void ResetPositions(bool afterDeath = false)
@@ -242,7 +262,10 @@ namespace PacmanWinForms
                 gameOverTimer--;
                 if (gameOverTimer <= 0)
                 {
-                    IsFinished = true;
+                    // En 2 joueurs, l'autre joueur reprend la main s'il lui reste des vies
+                    PlayerState other = OtherPlayerWithLives();
+                    if (other != null) SwitchPlayer(other);
+                    else IsFinished = true;
                 }
                 return;
             }
@@ -450,18 +473,55 @@ namespace PacmanWinForms
         private void PrepareNextLifeOrGameOver()
         {
             Lives--;
+            player.HasLostALife = true;
+
+            // On garde l'avancement du joueur pour son prochain tour
+            Fruit.SaveProgress(player);
+            ghostHouse.SaveCounters(player);
+
             if (Lives <= 0)
             {
                 State = GameState.GameOver;
-                gameOverTimer = 180; // 180 frames = exactement 3 secondes à 60 Hz
+                gameOverTimer = 180; // 3 secondes à 60 Hz
                 Fruit.ResetForNewLife(); // Le fruit et son score disparaissent de l'écran
+                return;
+            }
+
+            PlayerState other = OtherPlayerWithLives();
+            if (other != null)
+            {
+                SwitchPlayer(other);
             }
             else
             {
-                // S'il reste des vies, on réinitialise directement les positions pour la vie suivante (Ready)
+                // Seul joueur restant : il continue avec une nouvelle vie
                 ResetPositions(afterDeath: true);
-                readyTimer = 120;        // 120 frames = ~2 secondes à 60 Hz
+                readyTimer = 120;
             }
+        }
+
+        // L'autre joueur, s'il y en a un et qu'il lui reste des vies
+        private PlayerState OtherPlayerWithLives()
+        {
+            if (players.Length < 2) return null;
+
+            PlayerState other = players[player.Number % 2];   // 1 -> index 1, 2 -> index 0
+            return other.Lives > 0 ? other : null;
+        }
+
+        // Passe la main à l'autre joueur : son labyrinthe, son niveau et son avancement
+        private void SwitchPlayer(PlayerState next)
+        {
+            player = next;
+
+            Fruit.LoadProgress(player);
+            ghostHouse.LoadCounters(player);
+
+            // Un joueur qui a déjà perdu une vie reprend avec les règles "après une mort"
+            ResetPositions(afterDeath: player.HasLostALife);
+
+            // READY! complet (4 s) avec "PLAYER ONE" ou "PLAYER TWO", sans la musique de début
+            ShowPlayerLabel = true;
         }
 
         /// <summary>
@@ -483,7 +543,7 @@ namespace PacmanWinForms
         {
             if (IsDemo) return;   // En démo, le score reste à 00 et le high score ne bouge pas
 
-            if (scoreKeeper.Add(points))
+            if (scoreKeeper.Add(player, points))
             {
                 Lives++;
                 sound.PlayExtraLife();

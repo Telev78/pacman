@@ -1,41 +1,33 @@
-﻿namespace PacmanWinForms
+﻿using System;
+
+namespace PacmanWinForms
 {
     /// <summary>
-    /// Score, high score et vie bonus.
+    /// Points des joueurs, high score (partagé) et vie bonus.
     /// </summary>
     public class ScoreKeeper
     {
-        public int Score { get; private set; }
         public int HighScore { get; private set; }
-
-        private bool bonusLifeAwarded = false;
 
         public ScoreKeeper(int initialHighScore = 0)
         {
             HighScore = initialHighScore;
         }
 
-        // Nouvelle partie : le high score est conservé
-        public void NewGame()
+        // Ajoute des points au joueur. Renvoie true si une vie bonus vient d'être gagnée.
+        public bool Add(PlayerState player, int points)
         {
-            Score = 0;
-            bonusLifeAwarded = false;
-        }
+            player.Score += points;
 
-        // Ajoute des points. Renvoie true si une vie bonus vient d'être gagnée.
-        public bool Add(int points)
-        {
-            Score += points;
-
-            if (Score > HighScore)
+            if (player.Score > HighScore)
             {
-                HighScore = Score;
+                HighScore = player.Score;
             }
 
-            // Règle arcade : une seule vie bonus par partie
-            if (!bonusLifeAwarded && Score >= GameConfig.BonusLifeThreshold)
+            // Règle arcade : une seule vie bonus par partie et par joueur
+            if (!player.BonusLifeAwarded && player.Score >= GameConfig.BonusLifeThreshold)
             {
-                bonusLifeAwarded = true;
+                player.BonusLifeAwarded = true;
                 return true;
             }
 

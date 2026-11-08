@@ -20,9 +20,12 @@ namespace PacmanWinForms
         {
             if (key == InputKey.Start1)
             {
-                manager.StartGame();
+                manager.StartGame(1);
             }
-            // Start2 (mode 2 joueurs) : à venir
+            else if (key == InputKey.Start2)
+            {
+                manager.StartGame(2);   // Sans effet s'il n'y a pas 2 crédits
+            }
         }
 
         public void Draw(GameRenderer renderer, Graphics g)

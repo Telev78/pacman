@@ -12,14 +12,17 @@ namespace PacmanWinForms
 
         public Game Game { get { return game; } }
 
-        public PlayScreen(ScreenManager manager)
+        private readonly int playerCount;
+
+        public PlayScreen(ScreenManager manager, int playerCount)
         {
             this.manager = manager;
+            this.playerCount = playerCount;
         }
 
         public void Enter()
         {
-            game = new Game(manager.Sound, manager.HighScore);
+            game = new Game(manager.Sound, manager.HighScore, playerCount: playerCount);
         }
 
         public void Update()

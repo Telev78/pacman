@@ -14,6 +14,7 @@
         public const string Year = "1980";
         public const string Credit = "CREDIT";
         public const string PlayerOne = "PLAYER ONE";
+        public const string PlayerTwo = "PLAYER TWO";
 
         public const string CharacterNickname = "CHARACTER / NICKNAME";
 
