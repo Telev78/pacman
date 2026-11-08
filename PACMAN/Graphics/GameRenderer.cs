@@ -27,29 +27,40 @@ namespace PacmanWinForms
         private readonly SpriteManager sprites = new SpriteManager();
         private readonly Bitmap backBuffer = new Bitmap(DisplayConfig.NativeWidth, DisplayConfig.NativeHeight);
 
+        // Les écrans utilisent les sprites et les outils de dessin du moteur
+        public SpriteManager Sprites { get { return sprites; } }
+
         /// <summary>
-        /// Dessine une image complète du jeu sur la surface cible, agrandie à la taille de l'écran.
+        /// Dessine un écran complet sur la surface cible, agrandi à la taille de l'écran.
         /// </summary>
-        public void Render(Game game, Graphics screen)
+        public void Render(IScreen screen, Graphics target)
         {
-            // 1. On dessine tout le jeu à la résolution de l'arcade
+            // 1. On dessine tout à la résolution de l'arcade
             using (Graphics g = Graphics.FromImage(backBuffer))
             {
                 g.Clear(Color.Black);
                 g.InterpolationMode = InterpolationMode.NearestNeighbor;
                 g.PixelOffsetMode = PixelOffsetMode.Half;
 
-                DrawMaze(g, game);
-                DrawCharacters(g, game);
-                DrawMessages(g, game);
-                DrawBonuses(g, game);
-                DrawHud(g, game);
+                screen.Draw(this, g);
             }
 
             // 2. Puis on agrandit l'image d'un seul coup à l'écran
-            screen.InterpolationMode = InterpolationMode.NearestNeighbor;
-            screen.PixelOffsetMode = PixelOffsetMode.Half;
-            screen.DrawImage(backBuffer, 0, 0, DisplayConfig.ScreenWidth, DisplayConfig.ScreenHeight);
+            target.InterpolationMode = InterpolationMode.NearestNeighbor;
+            target.PixelOffsetMode = PixelOffsetMode.Half;
+            target.DrawImage(backBuffer, 0, 0, DisplayConfig.ScreenWidth, DisplayConfig.ScreenHeight);
+        }
+
+        /// <summary>
+        /// Dessine une partie en cours (labyrinthe, personnages, messages, bonus, HUD).
+        /// </summary>
+        public void DrawGame(Graphics g, Game game)
+        {
+            DrawMaze(g, game);
+            DrawCharacters(g, game);
+            DrawMessages(g, game);
+            DrawBonuses(g, game);
+            DrawHud(g, game);
         }
 
         public void Dispose()
@@ -175,6 +186,10 @@ namespace PacmanWinForms
 
         private void DrawMessages(Graphics g, Game game)
         {
+            if (game.ShowPlayerLabel)
+            {
+                DrawText(g, ArcadeTexts.PlayerOne, HudLayout.PlayerLabelColumn, HudLayout.PlayerLabelRow, ArcadeColor.Cyan);
+            }
             if (game.State == GameState.Ready)
             {
                 DrawText(g, "READY!", HudLayout.ReadyColumn, HudLayout.MessageRow, ArcadeColor.Yellow);
@@ -232,6 +247,14 @@ namespace PacmanWinForms
             bool show1Up = game.State != GameState.Playing
                            || (game.FrameCounter / OneUpBlinkFrames) % 2 == 0;
 
+            DrawTopHud(g, game.Score, game.HighScore, show1Up, show2Up: false);
+        }
+
+        /// <summary>
+        /// Bandeau supérieur : 1UP, HIGH SCORE, 2UP et les scores.
+        /// </summary>
+        public void DrawTopHud(Graphics g, int score, int highScore, bool show1Up, bool show2Up)
+        {
             if (show1Up)
             {
                 DrawText(g, "1UP", HudLayout.OneUpColumn, HudLayout.TopRow, ArcadeColor.White);
@@ -239,16 +262,32 @@ namespace PacmanWinForms
 
             DrawText(g, "HIGH SCORE", HudLayout.HighScoreLabelColumn, HudLayout.TopRow, ArcadeColor.White);
 
+            if (show2Up)
+            {
+                DrawText(g, "2UP", HudLayout.TwoUpColumn, HudLayout.TopRow, ArcadeColor.White);
+            }
+
             // Score du joueur : "00" s'il est à zéro, aligné à droite
-            string scoreText = (game.Score == 0) ? "00" : game.Score.ToString();
+            string scoreText = (score == 0) ? "00" : score.ToString();
             DrawText(g, scoreText, HudLayout.ScoreRightColumn - scoreText.Length + 1, HudLayout.ScoreRow, ArcadeColor.White);
 
             // Le high score reste vide tant que personne n'a marqué de points
-            if (game.HighScore > 0)
+            if (highScore > 0)
             {
-                string highScoreText = game.HighScore.ToString();
+                string highScoreText = highScore.ToString();
                 DrawText(g, highScoreText, HudLayout.HighScoreRightColumn - highScoreText.Length + 1, HudLayout.ScoreRow, ArcadeColor.White);
             }
+        }
+
+        /// <summary>
+        /// Compteur de crédits, tout en bas de l'écran (hors partie).
+        /// </summary>
+        public void DrawCredits(Graphics g, int credits)
+        {
+            DrawText(g, ArcadeTexts.Credit, HudLayout.CreditLabelColumn, HudLayout.CreditRow, ArcadeColor.White);
+
+            string value = credits.ToString();
+            DrawText(g, value, HudLayout.CreditValueRightColumn - value.Length + 1, HudLayout.CreditRow, ArcadeColor.White);
         }
 
         private void DrawLives(Graphics g, Game game)
@@ -289,14 +328,14 @@ namespace PacmanWinForms
         // ------------------------------------------------------------------
 
         // Dessine un sprite à l'échelle 1:1 (évite toute mise à l'échelle liée à la résolution de l'image)
-        private static void DrawSprite(Graphics g, Bitmap sprite, int x, int y)
+        public static void DrawSprite(Graphics g, Bitmap sprite, int x, int y)
         {
             g.DrawImage(sprite, new Rectangle(x, y, sprite.Width, sprite.Height),
                 0, 0, sprite.Width, sprite.Height, GraphicsUnit.Pixel);
         }
 
         // Dessine un texte lettre par lettre avec la police de l'arcade (une lettre = une tuile)
-        private void DrawText(Graphics g, string text, int startTileX, int tileY, ArcadeColor color)
+        public void DrawText(Graphics g, string text, int startTileX, int tileY, ArcadeColor color)
         {
             for (int i = 0; i < text.Length; i++)
             {

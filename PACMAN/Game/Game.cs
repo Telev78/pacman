@@ -46,7 +46,7 @@ namespace PacmanWinForms
 
         private SoundDirector sound;
 
-        private ScoreKeeper scoreKeeper = new ScoreKeeper();
+        private readonly ScoreKeeper scoreKeeper;
         public int Score { get { return scoreKeeper.Score; } }
         public int HighScore { get { return scoreKeeper.HighScore; } }
 
@@ -65,18 +65,26 @@ namespace PacmanWinForms
         public bool IsMazeFlashWhite { get; private set; } = false;
         public int FrameCounter { get { return frameCounter; } }
 
+        // La partie est complètement terminée (le GAME OVER a fini de s'afficher)
+        public bool IsFinished { get; private set; } = false;
+
+        // Affiche "PLAYER ONE" au-dessus du nid au tout début d'une partie
+        public bool ShowPlayerLabel { get; private set; } = false;
+
         /// <summary>
         /// Le mode de comportement global imposé par le timer des vagues (Scatter ou Chase).
         /// </summary>
         public GhostMode GlobalGhostMode { get { return waves.CurrentMode; } }
 
-        public Game()
+        public Game(SoundDirector sound, int highScore)
         {
+            this.sound = sound;
+            scoreKeeper = new ScoreKeeper(highScore);
+
             Map = new LevelMap();
             Fruit = new FruitManager();
             Pacman = new Pacman();
             ghostHouse = new GhostHouse(ghostList);
-            sound = new SoundDirector();
 
             Lives = 3;
             CurrentLevel = 1;
@@ -101,6 +109,7 @@ namespace PacmanWinForms
 
                     CountInitialPellets();
                     ResetPositions();
+                    ShowPlayerLabel = !IsNextLevelTransition;
                 }
                 else
                 {
@@ -161,6 +170,7 @@ namespace PacmanWinForms
             State = GameState.Ready;
             readyTimer = 240;
             ShowCharacters = false;
+            ShowPlayerLabel = false;
 
             ShowGhosts = true;
             IsMazeFlashWhite = false;
@@ -196,7 +206,11 @@ namespace PacmanWinForms
             if (State == GameState.Ready)
             {
                 readyTimer--;
-                if (readyTimer <= 120) ShowCharacters = true;
+                if (readyTimer <= 120)
+                {
+                    ShowCharacters = true;
+                    ShowPlayerLabel = false;
+                }
                 if (readyTimer <= 0)
                 {
                     State = GameState.Playing;
@@ -223,10 +237,9 @@ namespace PacmanWinForms
                 gameOverTimer--;
                 if (gameOverTimer <= 0)
                 {
-                    // Le temps est écoulé (2-3s), on relance une partie propre (qui repassera en READY!)
-                    RestartGame();
+                    IsFinished = true;
                 }
-                return; // On fige toute la physique du labyrinthe pendant le Game Over
+                return;
             }
 
             // SÉQUENCE DE MORT
@@ -459,20 +472,6 @@ namespace PacmanWinForms
         }
 
         /// <summary>
-        /// Réinitialise complètement le jeu à zéro pour démarrer une nouvelle partie (futur retour écran titre).
-        /// </summary>
-        private void RestartGame()
-        {
-            Lives = 3;
-            CurrentLevel = 1;
-            IsNextLevelTransition = false;
-            scoreKeeper.NewGame();
-
-            // Recharge la carte initiale, compte les pellets et déclenche le ResetPositions en mode Ready
-            InitializeGameValue();
-        }
-
-        /// <summary>
         /// Ajoute des points au score et vérifie l'attribution de la vie bonus arcade.
         /// </summary>
         private void AddScore(int points)
@@ -505,11 +504,6 @@ namespace PacmanWinForms
                 // Demi-tour des fantômes actifs ; dans le nid, la demande est gardée pour la sortie
                 ghost.RequestReverse();
             }
-        }
-
-        public void Shutdown()
-        {
-            sound.CleanUp();
         }
 
         private void UpdateDying()

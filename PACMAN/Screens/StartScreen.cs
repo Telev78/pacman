@@ -1,0 +1,52 @@
+﻿using System.Drawing;
+using static PacmanWinForms.SpriteManager;
+
+namespace PacmanWinForms
+{
+    public sealed class StartScreen : IScreen
+    {
+        private readonly ScreenManager manager;
+
+        public StartScreen(ScreenManager manager)
+        {
+            this.manager = manager;
+        }
+
+        public void Enter() { }
+
+        public void Update() { }
+
+        public void OnInput(InputKey key)
+        {
+            if (key == InputKey.Start1)
+            {
+                manager.StartGame();
+            }
+            // Start2 (mode 2 joueurs) : à venir
+        }
+
+        public void Draw(GameRenderer renderer, Graphics g)
+        {
+            int tile = GameConfig.TileSize;
+
+            renderer.DrawTopHud(g, 0, manager.HighScore, show1Up: true, show2Up: true);
+
+            renderer.DrawText(g, ArcadeTexts.PushStart, 6, 16, ArcadeColor.Orange);
+
+            // Avec deux crédits ou plus, on peut choisir entre 1 et 2 joueurs
+            string players = (manager.Credits >= 2) ? ArcadeTexts.OneOrTwoPlayers : ArcadeTexts.OnePlayerOnly;
+            renderer.DrawText(g, players, 8, 20, ArcadeColor.Cyan);
+
+            // "BONUS PUCKMAN FOR 10000 PTS" : le "PTS" est un sprite
+            renderer.DrawText(g, ArcadeTexts.BonusLife, 1, 24, ArcadeColor.Flesh);
+            GameRenderer.DrawSprite(g, renderer.Sprites.GetPtsSprite(ArcadeColor.Flesh), 25 * tile, 24 * tile);
+
+            // "© namco 1980" : le logo est un sprite
+            renderer.DrawText(g, ArcadeTexts.Copyright, 8, 28, ArcadeColor.Pink);
+            GameRenderer.DrawSprite(g, renderer.Sprites.GetNamcoLogo(ArcadeColor.Pink), 10 * tile, 28 * tile);
+            renderer.DrawText(g, ArcadeTexts.Year, 18, 28, ArcadeColor.Pink);
+
+            renderer.DrawCredits(g, manager.Credits);
+        }
+    }
+}

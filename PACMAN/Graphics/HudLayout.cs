@@ -29,5 +29,14 @@
         public const int LevelIndicatorRightColumn = 24;   // Fruits des niveaux, en bas à droite
         public const int LevelIndicatorSpacing = 2;
         public const int MaxLevelIndicators = 7;
+
+        public const int TwoUpColumn = 22;
+
+        public const int PlayerLabelColumn = 9;     // "PLAYER ONE" au-dessus du nid, pendant READY!
+        public const int PlayerLabelRow = 14;
+
+        public const int CreditRow = 35;            // Ligne tout en bas (hors partie)
+        public const int CreditLabelColumn = 2;
+        public const int CreditValueRightColumn = 10;   // Le nombre est aligné à droite sur cette colonne
     }
 }

@@ -79,6 +79,11 @@
             audio.PlaySequence(SoundId.Death0, SoundId.Death1, loopNext: false);
         }
 
+        public void PlayCredit()
+        {
+            audio.Play(SoundId.Credit);
+        }
+
         // --- Son de fond ---
 
         // À appeler à chaque frame de jeu.

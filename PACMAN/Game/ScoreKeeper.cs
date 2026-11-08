@@ -10,6 +10,11 @@
 
         private bool bonusLifeAwarded = false;
 
+        public ScoreKeeper(int initialHighScore = 0)
+        {
+            HighScore = initialHighScore;
+        }
+
         // Nouvelle partie : le high score est conservé
         public void NewGame()
         {
