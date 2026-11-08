@@ -87,8 +87,9 @@ namespace PacmanWinForms
 
                 case Keys.D2:
                 case Keys.NumPad2: input = InputKey.Start2; return true;
-                //case Keys.F9: input = InputKey.Record; return true;
-
+#if DEBUG
+                case Keys.F9: input = InputKey.Record; return true;
+#endif
                 default: input = InputKey.Coin; return false;
             }
         }
