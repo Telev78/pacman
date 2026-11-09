@@ -88,6 +88,30 @@ namespace PacmanWinForms
         public int PlayerCount { get { return players.Length; } }
         public int ActivePlayer { get { return player.Number; } }
 
+        // Numéro de l'intermission à jouer (1 à 3), 0 s'il n'y en a pas
+        public int PendingIntermission { get; private set; }
+
+        // Intermissions de l'arcade : après les niveaux 2, 5, 9, 13 et 17
+        private static int IntermissionAfterLevel(int level)
+        {
+            switch (level)
+            {
+                case 2: return 1;
+                case 5: return 2;
+                case 9:
+                case 13:
+                case 17: return 3;
+                default: return 0;
+            }
+        }
+
+        // À appeler quand l'intermission est terminée : on passe au niveau suivant
+        public void FinishIntermission()
+        {
+            PendingIntermission = 0;
+            StartNextLevel();
+        }
+
         // Score d'un joueur (1 ou 2) ; 0 si ce joueur n'existe pas dans cette partie
         public int GetScore(int playerNumber)
         {
@@ -283,6 +307,8 @@ namespace PacmanWinForms
                 UpdateVictory();
                 return;
             }
+
+            if (State == GameState.Intermission) return;
 
             if (State != GameState.Playing) return;
 
@@ -623,7 +649,16 @@ namespace PacmanWinForms
             // 3. Fin des clignotements : niveau suivant
             if (t >= VictoryFlashFrames * 2 * VictoryFlashCount)
             {
-                StartNextLevel();
+                int act = IntermissionAfterLevel(CurrentLevel);
+                if (act > 0)
+                {
+                    PendingIntermission = act;
+                    State = GameState.Intermission;
+                }
+                else
+                {
+                    StartNextLevel();
+                }
             }
         }
     }

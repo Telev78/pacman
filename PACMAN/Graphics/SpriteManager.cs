@@ -27,6 +27,7 @@ namespace PacmanWinForms
         private Bitmap[] frightenedBlueSprites;
         private Bitmap[] frightenedWhiteSprites;
         private Bitmap lifeSprite;
+        private Bitmap[] giantPacmanSprites;
 
         // Caches (remplis à la demande)
         private readonly Dictionary<(int, Direction), Bitmap> pacmanSprites = new Dictionary<(int, Direction), Bitmap>();
@@ -38,6 +39,22 @@ namespace PacmanWinForms
         private readonly Dictionary<int, Bitmap> ghostPointsSprites = new Dictionary<int, Bitmap>();
         private readonly Dictionary<int, Bitmap> fruitSprites = new Dictionary<int, Bitmap>();
         private readonly Dictionary<int, Bitmap> fruitPointsSprites = new Dictionary<int, Bitmap>();
+
+        private readonly Dictionary<(int, int), Bitmap> sheetSprites = new Dictionary<(int, int), Bitmap>();
+
+        /// <summary>
+        /// Sprite 16x16 de la feuille aux coordonnées (x, y), mis en cache (intermissions).
+        /// </summary>
+        public Bitmap GetSheetSprite(int x, int y)
+        {
+            Bitmap sprite;
+            if (!sheetSprites.TryGetValue((x, y), out sprite))
+            {
+                sprite = CropAsset(x, y);
+                sheetSprites[(x, y)] = sprite;
+            }
+            return sprite;
+        }
 
         public enum ArcadeColor
         {
@@ -496,6 +513,36 @@ namespace PacmanWinForms
             return sprite;
         }
 
+        /// <summary>
+        /// Pac-Man géant (32x32) de l'intermission 1 : large, ouvert, fermé, ouvert (puis on recommence).
+        /// </summary>
+        public Bitmap GetGiantPacmanSprite(int animFrame)
+        {
+            if (giantPacmanSprites == null)
+            {
+                giantPacmanSprites = new Bitmap[3];
+                giantPacmanSprites[0] = CropAsset(32, 97, 32, 32);   // Bouche grande ouverte
+                giantPacmanSprites[1] = CropAsset(64, 97, 32, 32);   // Bouche ouverte
+                giantPacmanSprites[2] = CropAsset(96, 97, 32, 32);   // Bouche fermée
+            }
+
+            int[] order = { 0, 1, 2, 1 };
+            return giantPacmanSprites[order[animFrame % 4]];
+        }
+
+        private readonly Dictionary<string, Bitmap> wideSheetSprites = new Dictionary<string, Bitmap>();
+
+        public Bitmap GetWideSheetSprite(int x, int y, int width, int height)
+        {
+            string key = x + "," + y + "," + width + "," + height;
+            if (!wideSheetSprites.TryGetValue(key, out Bitmap sprite))
+            {
+                sprite = CropAsset(x, y, width, height);
+                wideSheetSprites[key] = sprite;
+            }
+            return sprite;
+        }
+
         public void Dispose()
         {
             List<Bitmap> bitmaps = new List<Bitmap> { assetSheet, ghostDoorSprite, emptySprite16, emptyChar, lifeSprite };
@@ -503,6 +550,7 @@ namespace PacmanWinForms
             bitmaps.AddRange(frightenedBlueSprites);
             bitmaps.AddRange(frightenedWhiteSprites);
             bitmaps.AddRange(eyesSprites.Values);
+            if (giantPacmanSprites != null) bitmaps.AddRange(giantPacmanSprites);
 
             foreach (var perDirection in ghostSprites.Values)
             {
@@ -521,6 +569,8 @@ namespace PacmanWinForms
             bitmaps.AddRange(ghostPointsSprites.Values);
             bitmaps.AddRange(fruitSprites.Values);
             bitmaps.AddRange(fruitPointsSprites.Values);
+            bitmaps.AddRange(sheetSprites.Values);
+            bitmaps.AddRange(wideSheetSprites.Values);
 
             foreach (Bitmap bmp in bitmaps)
             {

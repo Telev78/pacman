@@ -7,6 +7,7 @@
         GhostEaten,
         Dying,
         Victory,
-        GameOver
+        GameOver,
+        Intermission
     }
 }

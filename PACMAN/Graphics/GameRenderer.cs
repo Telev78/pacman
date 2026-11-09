@@ -255,7 +255,7 @@ namespace PacmanWinForms
             DrawScores(g, game);
             if (game.IsDemo) return;   // En démo : pas de vies ni de niveau (les crédits sont dessinés par DemoScreen)
             DrawLives(g, game);
-            DrawLevelIndicator(g, game);
+            DrawLevelIndicator(g, game.CurrentLevel);
         }
 
         private void DrawScores(Graphics g, Game game)
@@ -346,18 +346,17 @@ namespace PacmanWinForms
             }
         }
 
-        private void DrawLevelIndicator(Graphics g, Game game)
+        public void DrawLevelIndicator(Graphics g, int level)
         {
             int tile = GameConfig.TileSize;
-            int fruitsToDraw = Math.Min(game.CurrentLevel, HudLayout.MaxLevelIndicators);
+            int fruitsToDraw = Math.Min(level, HudLayout.MaxLevelIndicators);
+            int firstLevel = level - fruitsToDraw + 1;   // Le plus ancien niveau affiché
 
             for (int i = 0; i < fruitsToDraw; i++)
             {
-                // i = 0 : niveau actuel (tout à droite), puis on recule d'un cran par niveau précédent
-                int level = game.CurrentLevel - i;
+                // i = 0 : le plus ancien, tout à droite ; le niveau actuel est le plus à gauche
                 int column = HudLayout.LevelIndicatorRightColumn - i * HudLayout.LevelIndicatorSpacing;
-
-                DrawSprite(g, sprites.GetFruitSprite(level), column * tile, HudLayout.BottomRow * tile);
+                DrawSprite(g, sprites.GetFruitSprite(firstLevel + i), column * tile, HudLayout.BottomRow * tile);
             }
         }
 

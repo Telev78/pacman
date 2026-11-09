@@ -92,6 +92,12 @@
             audio.Play(SoundId.Credit);
         }
 
+        public void PlayIntermission()
+        {
+            if (Muted) return;
+            audio.PlaySequence(SoundId.Intermission, SoundId.Intermission, loopNext: false);
+        }
+
         // --- Son de fond ---
 
         // À appeler à chaque frame de jeu.
