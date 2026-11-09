@@ -41,8 +41,11 @@ namespace PacmanWinForms
             renderer.DrawText(g, players, 8, 20, ArcadeColor.Cyan);
 
             // "BONUS PUCKMAN FOR 10000 PTS" : le "PTS" est un sprite
-            renderer.DrawText(g, ArcadeTexts.BonusLife, 1, 24, ArcadeColor.Flesh);
-            GameRenderer.DrawSprite(g, renderer.Sprites.GetPtsSprite(ArcadeColor.Flesh), 25 * tile, 24 * tile);
+            if (Settings.BonusLife > 0)
+            {
+                renderer.DrawText(g, ArcadeTexts.BonusLife, 1, 24, ArcadeColor.Flesh);
+                GameRenderer.DrawSprite(g, renderer.Sprites.GetPtsSprite(ArcadeColor.Flesh), 25 * tile, 24 * tile);
+            }
 
             if (ArcadeTexts.IsUsa)
             {

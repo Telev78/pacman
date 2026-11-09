@@ -10,7 +10,7 @@
 
         public int Score;
         public bool BonusLifeAwarded;                  // La vie bonus n'est donnée qu'une fois par partie
-        public int Lives = 3;
+        public int Lives;
         public int Level = 1;
 
         public LevelMap Map = new LevelMap();
@@ -28,9 +28,10 @@
         // (compteur global du nid, Elroy suspendu)
         public bool HasLostALife;
 
-        public PlayerState(int number)
+        public PlayerState(int number, int lives)
         {
             Number = number;
+            Lives = lives;
         }
     }
 }

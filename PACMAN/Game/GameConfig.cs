@@ -7,7 +7,6 @@ namespace PacmanWinForms
         public const int TileSize = 8;                  // Taille d'une case d'origine (8x8 pixels)
         public const int MapWidth = 28;                 // 28 colonnes
         public const int MapHeight = 36;                // 36 lignes
-        public const int BonusLifeThreshold = 10000;    // Vie bonus décernée à 10 000 points
         public const int FramesPerSecond = 60;
 
         // Les niveaux 21 et plus partagent les mêmes paramètres

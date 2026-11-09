@@ -127,7 +127,7 @@ namespace PacmanWinForms
             players = new PlayerState[playerCount];
             for (int i = 0; i < playerCount; i++)
             {
-                players[i] = new PlayerState(i + 1);
+                players[i] = new PlayerState(i + 1, isDemo ? 3 : Settings.Lives);
             }
 
             // Le labyrinthe du joueur 2 est prêt dès le départ (celui du joueur 1 est chargé par InitializeGameValue)

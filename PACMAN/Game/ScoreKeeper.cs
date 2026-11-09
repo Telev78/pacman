@@ -24,8 +24,8 @@ namespace PacmanWinForms
                 HighScore = player.Score;
             }
 
-            // Règle arcade : une seule vie bonus par partie et par joueur
-            if (!player.BonusLifeAwarded && player.Score >= GameConfig.BonusLifeThreshold)
+            int threshold = Settings.BonusLife;
+            if (threshold > 0 && !player.BonusLifeAwarded && player.Score >= threshold)
             {
                 player.BonusLifeAwarded = true;
                 return true;

@@ -26,6 +26,9 @@ namespace PacmanWinForms
 
         public static GameVersion Version { get; private set; } = GameVersion.Jap;
 
+        public static int Lives { get; private set; } = 3;            // Vies au départ : 1 à 5
+        public static int BonusLife { get; private set; } = 10000;    // Seuil de la vie bonus : 10000, 15000, 20000 ; 0 = aucune
+
         public static void Load()
         {
             try
@@ -70,6 +73,19 @@ namespace PacmanWinForms
                         if (value.Equals("USA", StringComparison.OrdinalIgnoreCase)) Version = GameVersion.Usa;
                         else if (value.Equals("JAP", StringComparison.OrdinalIgnoreCase)) Version = GameVersion.Jap;
                     }
+                    else if (key.Equals("Lives", StringComparison.OrdinalIgnoreCase))
+                    {
+                        int lives;
+                        if (int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out lives))
+                            Lives = Math.Max(1, Math.Min(5, lives));
+                    }
+                    else if (key.Equals("BonusLife", StringComparison.OrdinalIgnoreCase))
+                    {
+                        if (value.Equals("NONE", StringComparison.OrdinalIgnoreCase)) BonusLife = 0;
+                        else if (value == "10000") BonusLife = 10000;
+                        else if (value == "15000") BonusLife = 15000;
+                        else if (value == "20000") BonusLife = 20000;
+                    }
                 }
             }
             catch { /* Fichier illisible ou dossier en lecture seule : on garde les valeurs par défaut */ }
@@ -94,7 +110,11 @@ namespace PacmanWinForms
                     "; Volume : de 0 à 100 (touches F11 / F12 en jeu)\r\n" +
                     "Volume=" + Volume.ToString(CultureInfo.InvariantCulture) + "\r\n" +
                     "; Version : JAP (Namco, noms japonais) ou USA (Midway, noms américains)\r\n" +
-                    "Version=" + (Version == GameVersion.Usa ? "USA" : "JAP") + "\r\n");
+                    "Version=" + (Version == GameVersion.Usa ? "USA" : "JAP") + "\r\n" +
+                    "; Lives : nombre de vies au départ, de 1 à 5\r\n" +
+                    "Lives=" + Lives.ToString(CultureInfo.InvariantCulture) + "\r\n" +
+                    "; BonusLife : score donnant une vie bonus : 10000, 15000, 20000 ou NONE\r\n" +
+                    "BonusLife=" + (BonusLife == 0 ? "NONE" : BonusLife.ToString(CultureInfo.InvariantCulture)) + "\r\n");
             }
             catch { /* Dossier en lecture seule : le réglage vaut pour cette session seulement */ }
         }

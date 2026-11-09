@@ -11,7 +11,11 @@
         public const string OneOrTwoPlayers = "1 OR 2 PLAYERS";
         public static string BonusLife
         {
-            get { return IsUsa ? "BONUS PAC-MAN FOR 10000" : "BONUS PUCKMAN FOR 10000"; }   // Suivi du sprite "PTS"
+            get
+            {
+                string name = IsUsa ? "PAC-MAN" : "PUCKMAN";
+                return "BONUS " + name + " FOR " + Settings.BonusLife;   // Suivi du sprite "PTS"
+            }
         }
         public const string Copyright = "©";                         // Suivi du logo "namco" puis de l'année
         public const string Year = "1980";
