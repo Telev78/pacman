@@ -32,7 +32,7 @@ namespace PacmanWinForms
         /// <summary>
         /// Dessine un écran complet sur la surface cible, agrandi à la taille de l'écran.
         /// </summary>
-        public void Render(IScreen screen, Graphics target)
+        public void Render(IScreen screen, Graphics target, Rectangle destination)
         {
             // 1. On dessine tout à la résolution de l'arcade
             using (Graphics g = Graphics.FromImage(backBuffer))
@@ -47,7 +47,7 @@ namespace PacmanWinForms
             // 2. Puis on agrandit l'image d'un seul coup à l'écran
             target.InterpolationMode = InterpolationMode.NearestNeighbor;
             target.PixelOffsetMode = PixelOffsetMode.Half;
-            target.DrawImage(backBuffer, 0, 0, DisplayConfig.ScreenWidth, DisplayConfig.ScreenHeight);
+            target.DrawImage(backBuffer, destination);
         }
 
         /// <summary>

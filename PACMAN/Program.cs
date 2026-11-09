@@ -14,6 +14,8 @@ namespace PacmanWinForms
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
 
+            Settings.Load();
+
             MainForm form;
             try
             {

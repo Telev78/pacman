@@ -53,6 +53,15 @@ namespace PacmanWinForms
         private MixingSampleProvider mixer;
         private bool isAvailable = false;
 
+        private VolumeSampleProvider volumeStage;
+
+        /// <summary>Volume général, de 0 (muet) à 1 (maximum).</summary>
+        public float Volume
+        {
+            get { return volumeStage != null ? volumeStage.Volume : 0f; }
+            set { if (volumeStage != null) volumeStage.Volume = Math.Max(0f, Math.Min(1f, value)); }
+        }
+
         public AudioEngine()
         {
             // 1. Décodage de tous les sons en mémoire (une seule fois)
@@ -65,11 +74,14 @@ namespace PacmanWinForms
             try
             {
                 mixer = new MixingSampleProvider(OutputFormat);
-                mixer.ReadFully = true; // Silence quand aucune voix ne joue, au lieu de s'arrêter
+                mixer.ReadFully = true;
+
+                volumeStage = new VolumeSampleProvider(mixer);
+                volumeStage.Volume = Settings.Volume / 100f;
 
                 WaveOut waveOut = new WaveOut();
-                waveOut.BufferMilliseconds = 30; // Taille de chaque tampon : détermine la latence
-                waveOut.Init(new SampleToWaveProvider(mixer));
+                waveOut.BufferMilliseconds = 30;
+                waveOut.Init(new SampleToWaveProvider(volumeStage));   // volumeStage et non plus mixer
                 waveOut.Play();
 
                 player = waveOut;

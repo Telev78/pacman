@@ -361,6 +361,12 @@ namespace PacmanWinForms
             else if (upperC == '/') { rowOffset = 2; col = 10; }
             else if (upperC == '-') { rowOffset = 2; col = 11; }
             else if (upperC == '"') { rowOffset = 2; col = 12; }
+            else if (upperC == '.')
+            {
+                sprite = CreateDotGlyph(color);
+                charSprites[key] = sprite;
+                return sprite;
+            }
             else
             {
                 // Espace ou caractère inconnu : carré transparent
@@ -371,6 +377,27 @@ namespace PacmanWinForms
             sprite = CropAsset(col * 8, TextY + ((((int)color * 4) + rowOffset) * 8), 8, 8);
             charSprites[key] = sprite;
             return sprite;
+        }
+
+        // Le point n'existe pas dans la feuille : 2x2 pixels en bas à gauche de la tuile, de la couleur du texte
+        private Bitmap CreateDotGlyph(ArcadeColor color)
+        {
+            Bitmap reference = GetArcadeCharacter('A', color);
+            Color ink = Color.White;
+            for (int y = 0; y < reference.Height; y++)
+            {
+                for (int x = 0; x < reference.Width; x++)
+                {
+                    Color p = reference.GetPixel(x, y);
+                    if (p.A > 0) { ink = p; y = reference.Height; break; }
+                }
+            }
+
+            Bitmap dot = new Bitmap(8, 8);
+            for (int y = 5; y <= 6; y++)
+                for (int x = 1; x <= 2; x++)
+                    dot.SetPixel(x, y, ink);
+            return dot;
         }
 
         /// <summary>

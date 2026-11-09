@@ -14,6 +14,10 @@ namespace PacmanWinForms
         private Stopwatch gameStopwatch = new Stopwatch();
         private double accumulatedTimeMs = 0;
 
+        private bool fullscreen;
+
+        private int volumeShownFrames = 0;   // Compte à rebours de l'indicateur de volume
+
         // Touches de service déjà enfoncées (pour ignorer la répétition automatique du clavier)
         private readonly HashSet<Keys> heldServiceKeys = new HashSet<Keys>();
 
@@ -26,10 +30,14 @@ namespace PacmanWinForms
             }
             catch { /* Sécurité */ }
 
-            this.Text = "Pac-Man Arcade (C#)";
-            this.FormBorderStyle = FormBorderStyle.FixedSingle;
+            this.Text = "Pac-Man";
             this.MaximizeBox = false;
-            this.ClientSize = new Size(DisplayConfig.ScreenWidth, DisplayConfig.ScreenHeight);
+            this.ResizeRedraw = true;
+            this.BackColor = Color.Black;
+            this.StartPosition = FormStartPosition.CenterScreen;
+            SetWindowed();
+            if (Settings.StartFullscreen) SetFullscreen();
+            this.MaximizeBox = false;
             this.BackColor = Color.Black;
             this.DoubleBuffered = true;
             this.StartPosition = FormStartPosition.CenterScreen;
@@ -51,6 +59,22 @@ namespace PacmanWinForms
 
         private void OnKeyDown(object sender, KeyEventArgs e)
         {
+            if (e.Alt && e.KeyCode == Keys.Enter)
+            {
+                e.SuppressKeyPress = true;
+                ToggleFullscreen();
+                return;
+            }
+            if (e.KeyCode == Keys.F11 || e.KeyCode == Keys.F12)
+            {
+                e.SuppressKeyPress = true;
+                int volume = Settings.Volume + (e.KeyCode == Keys.F12 ? 10 : -10);
+                Settings.SetVolume(volume);
+                screens.Sound.Volume = Settings.Volume / 100f;
+                volumeShownFrames = 120;   // ≈ 2 secondes
+                return;
+            }
+
             InputKey input;
             if (!TryMapKey(e.KeyCode, out input))
                 return;
@@ -111,11 +135,13 @@ namespace PacmanWinForms
             }
 
             UpdateTitle();
+            if (volumeShownFrames > 0) volumeShownFrames--;
             Invalidate();
         }
 
         private void UpdateTitle()
         {
+#if DEBUG
             PlayScreen play = screens.Current as PlayScreen;
 
             if (play != null && play.Game != null)
@@ -131,11 +157,25 @@ namespace PacmanWinForms
             {
                 this.Text = $"Pac-Man Arcade (C#) - CRÉDITS: {screens.Credits}";
             }
+#endif
         }
 
         protected override void OnPaint(PaintEventArgs e)
         {
-            renderer.Render(screens.Current, e.Graphics);
+            e.Graphics.Clear(Color.Black);
+            renderer.Render(screens.Current, e.Graphics, ComputeDestination());
+            if (volumeShownFrames > 0)
+            {
+                Rectangle dest = ComputeDestination();
+                string text = "VOLUME " + Settings.Volume + "%";
+                using (Font font = new Font("Consolas", Math.Max(10, dest.Height / 40f), FontStyle.Bold, GraphicsUnit.Pixel))
+                {
+                    SizeF size = e.Graphics.MeasureString(text, font);
+                    float x = dest.Left + 8, y = dest.Bottom - size.Height - 8;
+                    e.Graphics.FillRectangle(Brushes.Black, x - 4, y - 2, size.Width + 8, size.Height + 4);
+                    e.Graphics.DrawString(text, font, Brushes.White, x, y);
+                }
+            }
         }
 
         protected override void OnFormClosed(FormClosedEventArgs e)
@@ -145,6 +185,53 @@ namespace PacmanWinForms
             if (renderer != null) renderer.Dispose();
 
             base.OnFormClosed(e);
+        }
+
+        private void SetWindowed()
+        {
+            fullscreen = false;
+            this.WindowState = FormWindowState.Normal;
+            this.FormBorderStyle = FormBorderStyle.FixedSingle;
+            this.ClientSize = new Size(DisplayConfig.NativeWidth * Settings.Zoom, DisplayConfig.NativeHeight * Settings.Zoom);
+            this.StartPosition = FormStartPosition.CenterScreen;
+            this.CenterToScreen();
+            Cursor.Show();
+        }
+
+        private void SetFullscreen()
+        {
+            fullscreen = true;
+            this.FormBorderStyle = FormBorderStyle.None;
+            this.WindowState = FormWindowState.Normal;   // Nécessaire pour reprendre les limites de l'écran
+            this.Bounds = Screen.FromControl(this).Bounds;
+            Cursor.Hide();
+        }
+
+        private void ToggleFullscreen()
+        {
+            if (fullscreen) SetWindowed(); else SetFullscreen();
+        }
+
+        // Plus grand multiple entier qui tient dans la fenêtre, centré (bandes noires autour) ;
+        // si même x1 ne tient pas, on réduit proportionnellement
+        private Rectangle ComputeDestination()
+        {
+            int w = this.ClientSize.Width, h = this.ClientSize.Height;
+            int scale = Math.Min(w / DisplayConfig.NativeWidth, h / DisplayConfig.NativeHeight);
+
+            int dw, dh;
+            if (scale >= 1)
+            {
+                dw = DisplayConfig.NativeWidth * scale;
+                dh = DisplayConfig.NativeHeight * scale;
+            }
+            else
+            {
+                double f = Math.Min((double)w / DisplayConfig.NativeWidth, (double)h / DisplayConfig.NativeHeight);
+                dw = (int)(DisplayConfig.NativeWidth * f);
+                dh = (int)(DisplayConfig.NativeHeight * f);
+            }
+            return new Rectangle((w - dw) / 2, (h - dh) / 2, dw, dh);
         }
     }
 }

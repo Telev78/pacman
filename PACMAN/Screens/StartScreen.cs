@@ -44,10 +44,16 @@ namespace PacmanWinForms
             renderer.DrawText(g, ArcadeTexts.BonusLife, 1, 24, ArcadeColor.Flesh);
             GameRenderer.DrawSprite(g, renderer.Sprites.GetPtsSprite(ArcadeColor.Flesh), 25 * tile, 24 * tile);
 
-            // "© namco 1980" : le logo est un sprite
-            renderer.DrawText(g, ArcadeTexts.Copyright, 8, 28, ArcadeColor.Pink);
-            GameRenderer.DrawSprite(g, renderer.Sprites.GetNamcoLogo(ArcadeColor.Pink), 10 * tile, 28 * tile);
-            renderer.DrawText(g, ArcadeTexts.Year, 18, 28, ArcadeColor.Pink);
+            if (ArcadeTexts.IsUsa)
+            {
+                renderer.DrawText(g, ArcadeTexts.MidwayLine, 4, 28, ArcadeColor.Pink);
+            }
+            else
+            {
+                renderer.DrawText(g, ArcadeTexts.Copyright, 8, 28, ArcadeColor.Pink);
+                GameRenderer.DrawSprite(g, renderer.Sprites.GetNamcoLogo(ArcadeColor.Pink), 10 * tile, 28 * tile);
+                renderer.DrawText(g, ArcadeTexts.Year, 18, 28, ArcadeColor.Pink);
+            }
 
             renderer.DrawCredits(g, manager.Credits);
         }

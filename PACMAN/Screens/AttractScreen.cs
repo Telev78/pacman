@@ -105,7 +105,10 @@ namespace PacmanWinForms
                     GameRenderer.DrawSprite(g, renderer.Sprites.GetEnergizerSprite(), 4 * tile, 20 * tile);
                 }
 
-                GameRenderer.DrawSprite(g, renderer.Sprites.GetNamcoLogo(ArcadeColor.Pink), 11 * tile, 31 * tile);
+                if (ArcadeTexts.IsUsa)
+                    renderer.DrawText(g, ArcadeTexts.MidwayLine, 4, 31, ArcadeColor.Pink);
+                else
+                    GameRenderer.DrawSprite(g, renderer.Sprites.GetNamcoLogo(ArcadeColor.Pink), 11 * tile, 31 * tile);
             }
 
             if (chase != null)
@@ -134,12 +137,12 @@ namespace PacmanWinForms
 
                 if (frame >= start + NameDelay)
                 {
-                    renderer.DrawText(g, name, 8, row, GhostColors[i]);
+                    renderer.DrawText(g, name, ArcadeTexts.GhostNameColumn, row, GhostColors[i]);
                 }
 
                 if (frame >= start + NicknameDelay)
                 {
-                    renderer.DrawText(g, ArcadeTexts.GhostNicknames[i], 8 + name.Length, row, GhostColors[i]);
+                    renderer.DrawText(g, ArcadeTexts.GhostNicknames[i], ArcadeTexts.GhostNicknameColumn(i), row, GhostColors[i]);
                 }
             }
         }

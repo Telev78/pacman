@@ -98,6 +98,12 @@
             audio.PlaySequence(SoundId.Intermission, SoundId.Intermission, loopNext: false);
         }
 
+        public float Volume
+        {
+            get { return audio.Volume; }
+            set { audio.Volume = value; }
+        }
+
         // --- Son de fond ---
 
         // À appeler à chaque frame de jeu.
