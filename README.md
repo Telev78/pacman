@@ -1,5 +1,7 @@
 # Pac-Man (C# WinForms)
 
+**Français** | [English](README.en.md)
+
 Reproduction fidèle du Pac-Man d'arcade (1980) en C# / Windows Forms : même labyrinthe, mêmes règles, mêmes
 comportements des fantômes, et tout l'habillage d'une borne : crédits, attract mode, démo, mode 2 joueurs
 et les trois intermissions.
