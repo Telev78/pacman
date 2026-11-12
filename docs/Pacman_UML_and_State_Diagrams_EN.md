@@ -65,7 +65,8 @@ flowchart TB
   GameC -.->|lives, bonus life| Settings
 ```
 
-*Figure 1: package diagram: the seven folders and their dependencies*
+*Figure 1: package diagram: the seven folders and their dependencies*  
+[Open full size (SVG, zoomable)](diagrams/en/01_paquets.svg)
 
 | Folder | Role | Main classes |
 | --- | --- | --- |
@@ -212,7 +213,8 @@ classDiagram
   StartScreen ..> ArcadeTexts
 ```
 
-*Figure 2: class diagram: screens and navigation*
+*Figure 2: class diagram: screens and navigation*  
+[Open full size (SVG, zoomable)](diagrams/en/02_classes_ecrans.svg)
 
 ### 2.2 Intermissions
 
@@ -288,7 +290,8 @@ classDiagram
   GameRenderer --> SpriteManager
 ```
 
-*Figure 3: class diagram: intermissions*
+*Figure 3: class diagram: intermissions*  
+[Open full size (SVG, zoomable)](diagrams/en/03_classes_intermissions.svg)
 
 ### 2.3 Game engine
 
@@ -432,7 +435,8 @@ classDiagram
   ScoreKeeper ..> PlayerState
 ```
 
-*Figure 4: class diagram: game engine*
+*Figure 4: class diagram: game engine*  
+[Open full size (SVG, zoomable)](diagrams/en/04_classes_moteur.svg)
 
 ### 2.4 Ghosts
 
@@ -509,7 +513,8 @@ classDiagram
   Ghost --> GhostMode
 ```
 
-*Figure 5: class diagram: ghosts*
+*Figure 5: class diagram: ghosts*  
+[Open full size (SVG, zoomable)](diagrams/en/05_classes_fantomes.svg)
 
 ### 2.5 Rendering
 
@@ -581,7 +586,8 @@ classDiagram
   SpriteManager ..> MazeColor
 ```
 
-*Figure 6: class diagram: rendering*
+*Figure 6: class diagram: rendering*  
+[Open full size (SVG, zoomable)](diagrams/en/06_classes_rendu.svg)
 
 ### 2.6 Audio
 
@@ -673,7 +679,8 @@ classDiagram
   AudioEngine ..> Settings : volume initial
 ```
 
-*Figure 7: class diagram: audio*
+*Figure 7: class diagram: audio*  
+[Open full size (SVG, zoomable)](diagrams/en/07_classes_audio.svg)
 
 ## 3. Sequence diagrams
 
@@ -714,7 +721,8 @@ sequenceDiagram
   P->>R: DrawGame(g, game)
 ```
 
-*Figure 17: sequence diagram: one game frame at 60 Hz*
+*Figure 17: sequence diagram: one game frame at 60 Hz*  
+[Open full size (SVG, zoomable)](diagrams/en/17_sequence_image.svg)
 
 ### 3.2 From a credit to the start of a game
 
@@ -751,7 +759,8 @@ sequenceDiagram
   S->>A: ShowAttract() otherwise
 ```
 
-*Figure 18: sequence diagram: from a credit to the start of a game*
+*Figure 18: sequence diagram: from a credit to the start of a game*  
+[Open full size (SVG, zoomable)](diagrams/en/18_sequence_credit.svg)
 
 ## 4. State diagrams
 
@@ -788,7 +797,8 @@ stateDiagram-v2
   end note
 ```
 
-*Figure 8: state diagram: screen cycle*
+*Figure 8: state diagram: screen cycle*  
+[Open full size (SVG, zoomable)](diagrams/en/08_etats_ecrans.svg)
 
 ### 4.2 Game states
 
@@ -832,7 +842,8 @@ stateDiagram-v2
   end note
 ```
 
-*Figure 9: state diagram: game states*
+*Figure 9: state diagram: game states*  
+[Open full size (SVG, zoomable)](diagrams/en/09_etats_partie.svg)
 
 ### 4.3 Ghost life cycle
 
@@ -861,7 +872,8 @@ stateDiagram-v2
   end note
 ```
 
-*Figure 10: state diagram: ghost life cycle*
+*Figure 10: state diagram: ghost life cycle*  
+[Open full size (SVG, zoomable)](diagrams/en/10_etats_fantome.svg)
 
 ### 4.4 Scatter / Chase waves
 
@@ -892,7 +904,8 @@ stateDiagram-v2
   end note
 ```
 
-*Figure 11: state diagram: Scatter and Chase waves*
+*Figure 11: state diagram: Scatter and Chase waves*  
+[Open full size (SVG, zoomable)](diagrams/en/11_etats_vagues.svg)
 
 ### 4.5 Background sound
 
@@ -924,7 +937,8 @@ stateDiagram-v2
   end note
 ```
 
-*Figure 12: state diagram: background sound*
+*Figure 12: state diagram: background sound*  
+[Open full size (SVG, zoomable)](diagrams/en/12_etats_son.svg)
 
 ### 4.6 Two-player mode
 
@@ -956,7 +970,8 @@ stateDiagram-v2
   end note
 ```
 
-*Figure 13: state diagram: two-player mode*
+*Figure 13: state diagram: two-player mode*  
+[Open full size (SVG, zoomable)](diagrams/en/13_etats_deux_joueurs.svg)
 
 ### 4.7 Intermission 1 (after level 2)
 
@@ -979,7 +994,8 @@ stateDiagram-v2
   end note
 ```
 
-*Figure 14: state diagram: intermission 1*
+*Figure 14: state diagram: intermission 1*  
+[Open full size (SVG, zoomable)](diagrams/en/14_etats_intermission1.svg)
 
 ### 4.8 Intermission 2 (after level 5)
 
@@ -1002,7 +1018,8 @@ stateDiagram-v2
   state "Everything black" as Black
 ```
 
-*Figure 15: state diagram: intermission 2*
+*Figure 15: state diagram: intermission 2*  
+[Open full size (SVG, zoomable)](diagrams/en/15_etats_intermission2.svg)
 
 ### 4.9 Intermission 3 (after levels 9, 13 and 17)
 
@@ -1021,7 +1038,8 @@ stateDiagram-v2
   state "Blinky crawls dragging his cloth (heading right)" as Crawl
 ```
 
-*Figure 16: state diagram: intermission 3*
+*Figure 16: state diagram: intermission 3*  
+[Open full size (SVG, zoomable)](diagrams/en/16_etats_intermission3.svg)
 
 ## 5. Analysis of ghost behavior
 

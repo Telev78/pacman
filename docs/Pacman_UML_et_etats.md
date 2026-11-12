@@ -65,7 +65,8 @@ flowchart TB
   GameC -.->|vies, vie bonus| Settings
 ```
 
-*Figure 1 : diagramme de paquets : les sept dossiers et leurs dépendances*
+*Figure 1 : diagramme de paquets : les sept dossiers et leurs dépendances*  
+[Ouvrir en grand (SVG, zoomable)](diagrams/fr/01_paquets.svg)
 
 | Dossier | Rôle | Classes principales |
 | --- | --- | --- |
@@ -212,7 +213,8 @@ classDiagram
   StartScreen ..> ArcadeTexts
 ```
 
-*Figure 2 : diagramme de classes : écrans et navigation*
+*Figure 2 : diagramme de classes : écrans et navigation*  
+[Ouvrir en grand (SVG, zoomable)](diagrams/fr/02_classes_ecrans.svg)
 
 ### 2.2 Intermissions
 
@@ -288,7 +290,8 @@ classDiagram
   GameRenderer --> SpriteManager
 ```
 
-*Figure 3 : diagramme de classes : intermissions*
+*Figure 3 : diagramme de classes : intermissions*  
+[Ouvrir en grand (SVG, zoomable)](diagrams/fr/03_classes_intermissions.svg)
 
 ### 2.3 Moteur de jeu
 
@@ -432,7 +435,8 @@ classDiagram
   ScoreKeeper ..> PlayerState
 ```
 
-*Figure 4 : diagramme de classes : moteur de jeu*
+*Figure 4 : diagramme de classes : moteur de jeu*  
+[Ouvrir en grand (SVG, zoomable)](diagrams/fr/04_classes_moteur.svg)
 
 ### 2.4 Fantômes
 
@@ -509,7 +513,8 @@ classDiagram
   Ghost --> GhostMode
 ```
 
-*Figure 5 : diagramme de classes : fantômes*
+*Figure 5 : diagramme de classes : fantômes*  
+[Ouvrir en grand (SVG, zoomable)](diagrams/fr/05_classes_fantomes.svg)
 
 ### 2.5 Rendu
 
@@ -581,7 +586,8 @@ classDiagram
   SpriteManager ..> MazeColor
 ```
 
-*Figure 6 : diagramme de classes : rendu*
+*Figure 6 : diagramme de classes : rendu*  
+[Ouvrir en grand (SVG, zoomable)](diagrams/fr/06_classes_rendu.svg)
 
 ### 2.6 Audio
 
@@ -673,7 +679,8 @@ classDiagram
   AudioEngine ..> Settings : volume initial
 ```
 
-*Figure 7 : diagramme de classes : audio*
+*Figure 7 : diagramme de classes : audio*  
+[Ouvrir en grand (SVG, zoomable)](diagrams/fr/07_classes_audio.svg)
 
 ## 3. Diagrammes de séquence
 
@@ -714,7 +721,8 @@ sequenceDiagram
   P->>R: DrawGame(g, game)
 ```
 
-*Figure 17 : diagramme de séquence : une image de jeu à 60 Hz*
+*Figure 17 : diagramme de séquence : une image de jeu à 60 Hz*  
+[Ouvrir en grand (SVG, zoomable)](diagrams/fr/17_sequence_image.svg)
 
 ### 3.2 Du crédit au lancement d'une partie
 
@@ -751,7 +759,8 @@ sequenceDiagram
   S->>A: ShowAttract() sinon
 ```
 
-*Figure 18 : diagramme de séquence : du crédit au lancement d'une partie*
+*Figure 18 : diagramme de séquence : du crédit au lancement d'une partie*  
+[Ouvrir en grand (SVG, zoomable)](diagrams/fr/18_sequence_credit.svg)
 
 ## 4. Diagrammes d'états
 
@@ -788,7 +797,8 @@ stateDiagram-v2
   end note
 ```
 
-*Figure 8 : diagramme d'états : cycle des écrans*
+*Figure 8 : diagramme d'états : cycle des écrans*  
+[Ouvrir en grand (SVG, zoomable)](diagrams/fr/08_etats_ecrans.svg)
 
 ### 4.2 États d'une partie
 
@@ -832,7 +842,8 @@ stateDiagram-v2
   end note
 ```
 
-*Figure 9 : diagramme d'états : états d'une partie*
+*Figure 9 : diagramme d'états : états d'une partie*  
+[Ouvrir en grand (SVG, zoomable)](diagrams/fr/09_etats_partie.svg)
 
 ### 4.3 Cycle de vie d'un fantôme
 
@@ -861,7 +872,8 @@ stateDiagram-v2
   end note
 ```
 
-*Figure 10 : diagramme d'états : cycle de vie d'un fantôme*
+*Figure 10 : diagramme d'états : cycle de vie d'un fantôme*  
+[Ouvrir en grand (SVG, zoomable)](diagrams/fr/10_etats_fantome.svg)
 
 ### 4.4 Vagues Scatter / Chase
 
@@ -892,7 +904,8 @@ stateDiagram-v2
   end note
 ```
 
-*Figure 11 : diagramme d'états : vagues Scatter et Chase*
+*Figure 11 : diagramme d'états : vagues Scatter et Chase*  
+[Ouvrir en grand (SVG, zoomable)](diagrams/fr/11_etats_vagues.svg)
 
 ### 4.5 Son de fond
 
@@ -924,7 +937,8 @@ stateDiagram-v2
   end note
 ```
 
-*Figure 12 : diagramme d'états : son de fond*
+*Figure 12 : diagramme d'états : son de fond*  
+[Ouvrir en grand (SVG, zoomable)](diagrams/fr/12_etats_son.svg)
 
 ### 4.6 Mode 2 joueurs
 
@@ -956,7 +970,8 @@ stateDiagram-v2
   end note
 ```
 
-*Figure 13 : diagramme d'états : mode 2 joueurs*
+*Figure 13 : diagramme d'états : mode 2 joueurs*  
+[Ouvrir en grand (SVG, zoomable)](diagrams/fr/13_etats_deux_joueurs.svg)
 
 ### 4.7 Intermission 1 (après le niveau 2)
 
@@ -979,7 +994,8 @@ stateDiagram-v2
   end note
 ```
 
-*Figure 14 : diagramme d'états : intermission 1*
+*Figure 14 : diagramme d'états : intermission 1*  
+[Ouvrir en grand (SVG, zoomable)](diagrams/fr/14_etats_intermission1.svg)
 
 ### 4.8 Intermission 2 (après le niveau 5)
 
@@ -1002,7 +1018,8 @@ stateDiagram-v2
   state "Tout est noir" as Noir
 ```
 
-*Figure 15 : diagramme d'états : intermission 2*
+*Figure 15 : diagramme d'états : intermission 2*  
+[Ouvrir en grand (SVG, zoomable)](diagrams/fr/15_etats_intermission2.svg)
 
 ### 4.9 Intermission 3 (après les niveaux 9, 13 et 17)
 
@@ -1021,7 +1038,8 @@ stateDiagram-v2
   state "Blinky rampe en traînant sa tunique (vers la droite)" as Rampe
 ```
 
-*Figure 16 : diagramme d'états : intermission 3*
+*Figure 16 : diagramme d'états : intermission 3*  
+[Ouvrir en grand (SVG, zoomable)](diagrams/fr/16_etats_intermission3.svg)
 
 ## 5. Analyse du comportement des fantômes
 
