@@ -66,7 +66,7 @@ flowchart TB
 ```
 
 *Figure 1: package diagram: the seven folders and their dependencies*  
-[Open full size (SVG, zoomable)](diagrams/en/01_paquets.svg)
+Open full size: [SVG](diagrams/en/01_paquets.svg) · [PNG](diagrams/en/01_paquets.png)
 
 | Folder | Role | Main classes |
 | --- | --- | --- |
@@ -214,7 +214,7 @@ classDiagram
 ```
 
 *Figure 2: class diagram: screens and navigation*  
-[Open full size (SVG, zoomable)](diagrams/en/02_classes_ecrans.svg)
+Open full size: [SVG](diagrams/en/02_classes_ecrans.svg) · [PNG](diagrams/en/02_classes_ecrans.png)
 
 ### 2.2 Intermissions
 
@@ -291,7 +291,7 @@ classDiagram
 ```
 
 *Figure 3: class diagram: intermissions*  
-[Open full size (SVG, zoomable)](diagrams/en/03_classes_intermissions.svg)
+Open full size: [SVG](diagrams/en/03_classes_intermissions.svg) · [PNG](diagrams/en/03_classes_intermissions.png)
 
 ### 2.3 Game engine
 
@@ -436,7 +436,7 @@ classDiagram
 ```
 
 *Figure 4: class diagram: game engine*  
-[Open full size (SVG, zoomable)](diagrams/en/04_classes_moteur.svg)
+Open full size: [SVG](diagrams/en/04_classes_moteur.svg) · [PNG](diagrams/en/04_classes_moteur.png)
 
 ### 2.4 Ghosts
 
@@ -514,7 +514,7 @@ classDiagram
 ```
 
 *Figure 5: class diagram: ghosts*  
-[Open full size (SVG, zoomable)](diagrams/en/05_classes_fantomes.svg)
+Open full size: [SVG](diagrams/en/05_classes_fantomes.svg) · [PNG](diagrams/en/05_classes_fantomes.png)
 
 ### 2.5 Rendering
 
@@ -587,7 +587,7 @@ classDiagram
 ```
 
 *Figure 6: class diagram: rendering*  
-[Open full size (SVG, zoomable)](diagrams/en/06_classes_rendu.svg)
+Open full size: [SVG](diagrams/en/06_classes_rendu.svg) · [PNG](diagrams/en/06_classes_rendu.png)
 
 ### 2.6 Audio
 
@@ -680,7 +680,7 @@ classDiagram
 ```
 
 *Figure 7: class diagram: audio*  
-[Open full size (SVG, zoomable)](diagrams/en/07_classes_audio.svg)
+Open full size: [SVG](diagrams/en/07_classes_audio.svg) · [PNG](diagrams/en/07_classes_audio.png)
 
 ## 3. Sequence diagrams
 
@@ -722,7 +722,7 @@ sequenceDiagram
 ```
 
 *Figure 17: sequence diagram: one game frame at 60 Hz*  
-[Open full size (SVG, zoomable)](diagrams/en/17_sequence_image.svg)
+Open full size: [SVG](diagrams/en/17_sequence_image.svg) · [PNG](diagrams/en/17_sequence_image.png)
 
 ### 3.2 From a credit to the start of a game
 
@@ -760,7 +760,7 @@ sequenceDiagram
 ```
 
 *Figure 18: sequence diagram: from a credit to the start of a game*  
-[Open full size (SVG, zoomable)](diagrams/en/18_sequence_credit.svg)
+Open full size: [SVG](diagrams/en/18_sequence_credit.svg) · [PNG](diagrams/en/18_sequence_credit.png)
 
 ## 4. State diagrams
 
@@ -798,7 +798,7 @@ stateDiagram-v2
 ```
 
 *Figure 8: state diagram: screen cycle*  
-[Open full size (SVG, zoomable)](diagrams/en/08_etats_ecrans.svg)
+Open full size: [SVG](diagrams/en/08_etats_ecrans.svg) · [PNG](diagrams/en/08_etats_ecrans.png)
 
 ### 4.2 Game states
 
@@ -843,7 +843,7 @@ stateDiagram-v2
 ```
 
 *Figure 9: state diagram: game states*  
-[Open full size (SVG, zoomable)](diagrams/en/09_etats_partie.svg)
+Open full size: [SVG](diagrams/en/09_etats_partie.svg) · [PNG](diagrams/en/09_etats_partie.png)
 
 ### 4.3 Ghost life cycle
 
@@ -873,7 +873,7 @@ stateDiagram-v2
 ```
 
 *Figure 10: state diagram: ghost life cycle*  
-[Open full size (SVG, zoomable)](diagrams/en/10_etats_fantome.svg)
+Open full size: [SVG](diagrams/en/10_etats_fantome.svg) · [PNG](diagrams/en/10_etats_fantome.png)
 
 ### 4.4 Scatter / Chase waves
 
@@ -905,7 +905,7 @@ stateDiagram-v2
 ```
 
 *Figure 11: state diagram: Scatter and Chase waves*  
-[Open full size (SVG, zoomable)](diagrams/en/11_etats_vagues.svg)
+Open full size: [SVG](diagrams/en/11_etats_vagues.svg) · [PNG](diagrams/en/11_etats_vagues.png)
 
 ### 4.5 Background sound
 
@@ -938,7 +938,7 @@ stateDiagram-v2
 ```
 
 *Figure 12: state diagram: background sound*  
-[Open full size (SVG, zoomable)](diagrams/en/12_etats_son.svg)
+Open full size: [SVG](diagrams/en/12_etats_son.svg) · [PNG](diagrams/en/12_etats_son.png)
 
 ### 4.6 Two-player mode
 
@@ -971,7 +971,7 @@ stateDiagram-v2
 ```
 
 *Figure 13: state diagram: two-player mode*  
-[Open full size (SVG, zoomable)](diagrams/en/13_etats_deux_joueurs.svg)
+Open full size: [SVG](diagrams/en/13_etats_deux_joueurs.svg) · [PNG](diagrams/en/13_etats_deux_joueurs.png)
 
 ### 4.7 Intermission 1 (after level 2)
 
@@ -995,7 +995,7 @@ stateDiagram-v2
 ```
 
 *Figure 14: state diagram: intermission 1*  
-[Open full size (SVG, zoomable)](diagrams/en/14_etats_intermission1.svg)
+Open full size: [SVG](diagrams/en/14_etats_intermission1.svg) · [PNG](diagrams/en/14_etats_intermission1.png)
 
 ### 4.8 Intermission 2 (after level 5)
 
@@ -1019,7 +1019,7 @@ stateDiagram-v2
 ```
 
 *Figure 15: state diagram: intermission 2*  
-[Open full size (SVG, zoomable)](diagrams/en/15_etats_intermission2.svg)
+Open full size: [SVG](diagrams/en/15_etats_intermission2.svg) · [PNG](diagrams/en/15_etats_intermission2.png)
 
 ### 4.9 Intermission 3 (after levels 9, 13 and 17)
 
@@ -1039,7 +1039,7 @@ stateDiagram-v2
 ```
 
 *Figure 16: state diagram: intermission 3*  
-[Open full size (SVG, zoomable)](diagrams/en/16_etats_intermission3.svg)
+Open full size: [SVG](diagrams/en/16_etats_intermission3.svg) · [PNG](diagrams/en/16_etats_intermission3.png)
 
 ## 5. Analysis of ghost behavior
 

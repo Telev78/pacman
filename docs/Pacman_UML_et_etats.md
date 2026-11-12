@@ -66,7 +66,7 @@ flowchart TB
 ```
 
 *Figure 1 : diagramme de paquets : les sept dossiers et leurs dépendances*  
-[Ouvrir en grand (SVG, zoomable)](diagrams/fr/01_paquets.svg)
+Ouvrir en grand : [SVG](diagrams/fr/01_paquets.svg) · [PNG](diagrams/fr/01_paquets.png)
 
 | Dossier | Rôle | Classes principales |
 | --- | --- | --- |
@@ -214,7 +214,7 @@ classDiagram
 ```
 
 *Figure 2 : diagramme de classes : écrans et navigation*  
-[Ouvrir en grand (SVG, zoomable)](diagrams/fr/02_classes_ecrans.svg)
+Ouvrir en grand : [SVG](diagrams/fr/02_classes_ecrans.svg) · [PNG](diagrams/fr/02_classes_ecrans.png)
 
 ### 2.2 Intermissions
 
@@ -291,7 +291,7 @@ classDiagram
 ```
 
 *Figure 3 : diagramme de classes : intermissions*  
-[Ouvrir en grand (SVG, zoomable)](diagrams/fr/03_classes_intermissions.svg)
+Ouvrir en grand : [SVG](diagrams/fr/03_classes_intermissions.svg) · [PNG](diagrams/fr/03_classes_intermissions.png)
 
 ### 2.3 Moteur de jeu
 
@@ -436,7 +436,7 @@ classDiagram
 ```
 
 *Figure 4 : diagramme de classes : moteur de jeu*  
-[Ouvrir en grand (SVG, zoomable)](diagrams/fr/04_classes_moteur.svg)
+Ouvrir en grand : [SVG](diagrams/fr/04_classes_moteur.svg) · [PNG](diagrams/fr/04_classes_moteur.png)
 
 ### 2.4 Fantômes
 
@@ -514,7 +514,7 @@ classDiagram
 ```
 
 *Figure 5 : diagramme de classes : fantômes*  
-[Ouvrir en grand (SVG, zoomable)](diagrams/fr/05_classes_fantomes.svg)
+Ouvrir en grand : [SVG](diagrams/fr/05_classes_fantomes.svg) · [PNG](diagrams/fr/05_classes_fantomes.png)
 
 ### 2.5 Rendu
 
@@ -587,7 +587,7 @@ classDiagram
 ```
 
 *Figure 6 : diagramme de classes : rendu*  
-[Ouvrir en grand (SVG, zoomable)](diagrams/fr/06_classes_rendu.svg)
+Ouvrir en grand : [SVG](diagrams/fr/06_classes_rendu.svg) · [PNG](diagrams/fr/06_classes_rendu.png)
 
 ### 2.6 Audio
 
@@ -680,7 +680,7 @@ classDiagram
 ```
 
 *Figure 7 : diagramme de classes : audio*  
-[Ouvrir en grand (SVG, zoomable)](diagrams/fr/07_classes_audio.svg)
+Ouvrir en grand : [SVG](diagrams/fr/07_classes_audio.svg) · [PNG](diagrams/fr/07_classes_audio.png)
 
 ## 3. Diagrammes de séquence
 
@@ -722,7 +722,7 @@ sequenceDiagram
 ```
 
 *Figure 17 : diagramme de séquence : une image de jeu à 60 Hz*  
-[Ouvrir en grand (SVG, zoomable)](diagrams/fr/17_sequence_image.svg)
+Ouvrir en grand : [SVG](diagrams/fr/17_sequence_image.svg) · [PNG](diagrams/fr/17_sequence_image.png)
 
 ### 3.2 Du crédit au lancement d'une partie
 
@@ -760,7 +760,7 @@ sequenceDiagram
 ```
 
 *Figure 18 : diagramme de séquence : du crédit au lancement d'une partie*  
-[Ouvrir en grand (SVG, zoomable)](diagrams/fr/18_sequence_credit.svg)
+Ouvrir en grand : [SVG](diagrams/fr/18_sequence_credit.svg) · [PNG](diagrams/fr/18_sequence_credit.png)
 
 ## 4. Diagrammes d'états
 
@@ -798,7 +798,7 @@ stateDiagram-v2
 ```
 
 *Figure 8 : diagramme d'états : cycle des écrans*  
-[Ouvrir en grand (SVG, zoomable)](diagrams/fr/08_etats_ecrans.svg)
+Ouvrir en grand : [SVG](diagrams/fr/08_etats_ecrans.svg) · [PNG](diagrams/fr/08_etats_ecrans.png)
 
 ### 4.2 États d'une partie
 
@@ -843,7 +843,7 @@ stateDiagram-v2
 ```
 
 *Figure 9 : diagramme d'états : états d'une partie*  
-[Ouvrir en grand (SVG, zoomable)](diagrams/fr/09_etats_partie.svg)
+Ouvrir en grand : [SVG](diagrams/fr/09_etats_partie.svg) · [PNG](diagrams/fr/09_etats_partie.png)
 
 ### 4.3 Cycle de vie d'un fantôme
 
@@ -873,7 +873,7 @@ stateDiagram-v2
 ```
 
 *Figure 10 : diagramme d'états : cycle de vie d'un fantôme*  
-[Ouvrir en grand (SVG, zoomable)](diagrams/fr/10_etats_fantome.svg)
+Ouvrir en grand : [SVG](diagrams/fr/10_etats_fantome.svg) · [PNG](diagrams/fr/10_etats_fantome.png)
 
 ### 4.4 Vagues Scatter / Chase
 
@@ -905,7 +905,7 @@ stateDiagram-v2
 ```
 
 *Figure 11 : diagramme d'états : vagues Scatter et Chase*  
-[Ouvrir en grand (SVG, zoomable)](diagrams/fr/11_etats_vagues.svg)
+Ouvrir en grand : [SVG](diagrams/fr/11_etats_vagues.svg) · [PNG](diagrams/fr/11_etats_vagues.png)
 
 ### 4.5 Son de fond
 
@@ -938,7 +938,7 @@ stateDiagram-v2
 ```
 
 *Figure 12 : diagramme d'états : son de fond*  
-[Ouvrir en grand (SVG, zoomable)](diagrams/fr/12_etats_son.svg)
+Ouvrir en grand : [SVG](diagrams/fr/12_etats_son.svg) · [PNG](diagrams/fr/12_etats_son.png)
 
 ### 4.6 Mode 2 joueurs
 
@@ -971,7 +971,7 @@ stateDiagram-v2
 ```
 
 *Figure 13 : diagramme d'états : mode 2 joueurs*  
-[Ouvrir en grand (SVG, zoomable)](diagrams/fr/13_etats_deux_joueurs.svg)
+Ouvrir en grand : [SVG](diagrams/fr/13_etats_deux_joueurs.svg) · [PNG](diagrams/fr/13_etats_deux_joueurs.png)
 
 ### 4.7 Intermission 1 (après le niveau 2)
 
@@ -995,7 +995,7 @@ stateDiagram-v2
 ```
 
 *Figure 14 : diagramme d'états : intermission 1*  
-[Ouvrir en grand (SVG, zoomable)](diagrams/fr/14_etats_intermission1.svg)
+Ouvrir en grand : [SVG](diagrams/fr/14_etats_intermission1.svg) · [PNG](diagrams/fr/14_etats_intermission1.png)
 
 ### 4.8 Intermission 2 (après le niveau 5)
 
@@ -1019,7 +1019,7 @@ stateDiagram-v2
 ```
 
 *Figure 15 : diagramme d'états : intermission 2*  
-[Ouvrir en grand (SVG, zoomable)](diagrams/fr/15_etats_intermission2.svg)
+Ouvrir en grand : [SVG](diagrams/fr/15_etats_intermission2.svg) · [PNG](diagrams/fr/15_etats_intermission2.png)
 
 ### 4.9 Intermission 3 (après les niveaux 9, 13 et 17)
 
@@ -1039,7 +1039,7 @@ stateDiagram-v2
 ```
 
 *Figure 16 : diagramme d'états : intermission 3*  
-[Ouvrir en grand (SVG, zoomable)](diagrams/fr/16_etats_intermission3.svg)
+Ouvrir en grand : [SVG](diagrams/fr/16_etats_intermission3.svg) · [PNG](diagrams/fr/16_etats_intermission3.png)
 
 ## 5. Analyse du comportement des fantômes
 
