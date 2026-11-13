@@ -1,5 +1,4 @@
 ﻿<Solution>
   <Project Path="PACMAN.Core/PACMAN.Core.csproj" Id="86ff9e49-e21f-47eb-85a1-a01c228616bb" />
-  <Project Path="PACMAN/PACMAN.csproj" Id="5dc5d30d-72c9-484e-b302-aebb233901ab" />
   <Project Path="PACMAN.Sdl/PACMAN.Sdl.csproj" Id="c3a1f6d2-5b7e-4f0a-9d41-7e2b8a6c1d53" />
 </Solution>

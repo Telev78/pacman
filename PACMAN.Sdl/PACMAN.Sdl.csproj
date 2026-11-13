@@ -5,7 +5,7 @@
     <OutputType>WinExe</OutputType>
     <TargetFramework>net10.0</TargetFramework>
 
-    <AssemblyName>PACMAN.Sdl</AssemblyName>
+    <AssemblyName>PACMAN</AssemblyName>
     <RootNamespace>PacmanSdl</RootNamespace>
     <ApplicationIcon>Icon.ico</ApplicationIcon>
 

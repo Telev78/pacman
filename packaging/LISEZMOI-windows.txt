@@ -1,0 +1,21 @@
+﻿PAC-MAN (Windows 64 bits)
+
+Aucune installation : décompressez le dossier où vous voulez et lancez PACMAN.exe.
+Rien d'autre à installer (le runtime .NET et SDL sont inclus dans le fichier).
+
+Réglages (fichier PACMAN.ini, créé au premier lancement à côté de l'exécutable) :
+  Zoom        taille de la fenêtre, de 1 à 8 (3 = 672x864)
+  Fullscreen  true pour démarrer en plein écran
+  Volume      de 0 à 100
+  Version     JAP (Namco) ou USA (Midway)
+  Lives       nombre de vies au départ, de 1 à 5
+  BonusLife   10000, 15000, 20000 ou NONE
+
+Commandes :
+  5 (ou 5 du pavé numérique)   insérer un crédit
+  1 / 2                        démarrer une partie à 1 / 2 joueurs
+  Flèches                      diriger Pac-Man
+  F11 / F12                    baisser / monter le volume
+  Alt + Entrée                 plein écran (Échap pour en sortir)
+  Manette : croix ou stick gauche = directions, Select = crédit,
+            Start ou A = 1 joueur, Y = 2 joueurs
