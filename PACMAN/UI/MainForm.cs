@@ -2,6 +2,9 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
+using System.Drawing.Imaging;
+using System.Runtime.InteropServices;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace PacmanWinForms
@@ -10,6 +13,8 @@ namespace PacmanWinForms
     {
         private readonly GameRenderer renderer;
         private readonly ScreenManager screens;
+        private readonly Bitmap frameBitmap;   // Copie GDI+ de l'image du jeu (224x288), réutilisée à chaque image
+        private readonly byte[] frameBytes;
         private Timer gameTimer;
         private Stopwatch gameStopwatch = new Stopwatch();
         private double accumulatedTimeMs = 0;
@@ -47,6 +52,9 @@ namespace PacmanWinForms
             // Si l'un des deux échoue (ressource manquante...), l'erreur est affichée par Program.Main
             renderer = new GameRenderer();
             screens = new ScreenManager(new AudioEngine());
+            screens.NotifyHandler = ShowNotification;
+            frameBitmap = new Bitmap(DisplayConfig.NativeWidth, DisplayConfig.NativeHeight, PixelFormat.Format32bppArgb);
+            frameBytes = new byte[DisplayConfig.NativeWidth * DisplayConfig.NativeHeight * 4];
             UpdateTitle();
 
             gameTimer = new Timer();
@@ -163,7 +171,12 @@ namespace PacmanWinForms
         protected override void OnPaint(PaintEventArgs e)
         {
             e.Graphics.Clear(Color.Black);
-            renderer.Render(screens.Current, e.Graphics, ComputeDestination());
+            Canvas frame = renderer.Render(screens.Current);
+            CopyToBitmap(frame);
+
+            e.Graphics.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.NearestNeighbor;
+            e.Graphics.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.Half;
+            e.Graphics.DrawImage(frameBitmap, ComputeDestination());
             if (volumeShownFrames > 0)
             {
                 Rectangle dest = ComputeDestination();
@@ -178,11 +191,39 @@ namespace PacmanWinForms
             }
         }
 
+        // Le Canvas stocke ses pixels en ARGB 32 bits, comme Format32bppArgb : une simple copie d'octets suffit
+        private void CopyToBitmap(Canvas frame)
+        {
+            Buffer.BlockCopy(frame.Pixels, 0, frameBytes, 0, frameBytes.Length);
+
+            Rectangle area = new Rectangle(0, 0, frameBitmap.Width, frameBitmap.Height);
+            BitmapData data = frameBitmap.LockBits(area, ImageLockMode.WriteOnly, PixelFormat.Format32bppArgb);
+            try
+            {
+                int rowBytes = frameBitmap.Width * 4;
+                for (int y = 0; y < frameBitmap.Height; y++)
+                {
+                    IntPtr row = IntPtr.Add(data.Scan0, y * data.Stride);
+                    Marshal.Copy(frameBytes, y * rowBytes, row, rowBytes);
+                }
+            }
+            finally
+            {
+                frameBitmap.UnlockBits(data);
+            }
+        }
+
+        // Boîte de dialogue dans une autre tâche, pour ne pas bloquer la boucle de jeu pendant son affichage
+        private static void ShowNotification(string title, string message)
+        {
+            Task.Run(() => MessageBox.Show(message, title));
+        }
+
         protected override void OnFormClosed(FormClosedEventArgs e)
         {
             if (gameTimer != null) gameTimer.Stop();
             if (screens != null) screens.Dispose();
-            if (renderer != null) renderer.Dispose();
+            if (frameBitmap != null) frameBitmap.Dispose();
 
             base.OnFormClosed(e);
         }

@@ -1,5 +1,4 @@
-﻿using System.Drawing;
-
+﻿
 namespace PacmanWinForms
 {
     /// <summary>
@@ -66,7 +65,7 @@ namespace PacmanWinForms
             }
         }
 
-        public void Draw(GameRenderer renderer, Graphics g)
+        public void Draw(GameRenderer renderer, Canvas g)
         {
             if (intermission != null) intermission.Draw(renderer, g);
             else renderer.DrawGame(g, game);

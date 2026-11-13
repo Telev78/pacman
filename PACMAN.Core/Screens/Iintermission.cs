@@ -1,5 +1,4 @@
-﻿using System.Drawing;
-
+﻿
 namespace PacmanWinForms
 {
     /// <summary>
@@ -9,6 +8,6 @@ namespace PacmanWinForms
     {
         bool Finished { get; }
         void Update();
-        void Draw(GameRenderer renderer, Graphics g);
+        void Draw(GameRenderer renderer, Canvas g);
     }
 }

@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Drawing;
 
 namespace PacmanWinForms
 {
@@ -165,7 +164,7 @@ namespace PacmanWinForms
             }
         }
 
-        public void Draw(GameRenderer renderer, Graphics g)
+        public void Draw(GameRenderer renderer, Canvas g)
         {
             SpriteManager sprites = renderer.Sprites;
             int legFrame = (animationTicks / LegAnimationFrames) % 2;
@@ -175,7 +174,7 @@ namespace PacmanWinForms
             {
                 if (ghostEaten[i]) continue;
 
-                Bitmap sprite = frightened
+                Sprite sprite = frightened
                     ? sprites.GetGhostFrightenedSprite(legFrame)
                     : sprites.GetGhostSprite(GhostTypes[i], Direction.Left, legFrame);
 

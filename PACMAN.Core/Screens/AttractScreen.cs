@@ -1,5 +1,4 @@
-﻿using System.Drawing;
-using static PacmanWinForms.SpriteManager;
+﻿using static PacmanWinForms.SpriteManager;
 
 namespace PacmanWinForms
 {
@@ -63,7 +62,7 @@ namespace PacmanWinForms
             // Rien en attract mode : l'insertion d'un crédit est gérée par le ScreenManager
         }
 
-        public void Draw(GameRenderer renderer, Graphics g)
+        public void Draw(GameRenderer renderer, Canvas g)
         {
             int tile = GameConfig.TileSize;
 
@@ -118,7 +117,7 @@ namespace PacmanWinForms
         }
 
         // Les quatre fantômes, un à la fois : sprite, puis nom, puis surnom
-        private void DrawGhosts(GameRenderer renderer, Graphics g)
+        private void DrawGhosts(GameRenderer renderer, Canvas g)
         {
             int tile = GameConfig.TileSize;
 
@@ -130,7 +129,7 @@ namespace PacmanWinForms
                 int row = 7 + 3 * i;
 
                 // Sprite fixe, regardant vers la droite, centré sur la ligne de texte
-                Bitmap sprite = renderer.Sprites.GetGhostSprite(Ghosts[i], Direction.Right, 0);
+                Sprite sprite = renderer.Sprites.GetGhostSprite(Ghosts[i], Direction.Right, 0);
                 GameRenderer.DrawSprite(g, sprite, 4 * tile, row * tile - 4);
 
                 string name = ArcadeTexts.GhostNames[i];

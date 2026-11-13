@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Drawing;
 
 namespace PacmanWinForms
 {
@@ -65,7 +64,7 @@ namespace PacmanWinForms
             }
         }
 
-        public void Draw(GameRenderer renderer, Graphics g)
+        public void Draw(GameRenderer renderer, Canvas g)
         {
             SpriteManager sprites = renderer.Sprites;
 

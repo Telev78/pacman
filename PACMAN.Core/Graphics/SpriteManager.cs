@@ -1,52 +1,52 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Drawing;
 using System.IO;
 
 namespace PacmanWinForms
 {
     /// <summary>
     /// Découpe les sprites de la feuille unique (asset.png) et les met en cache.
-    /// IMPORTANT : les Bitmap renvoyés sont partagés. Ne jamais les Dispose ni les modifier.
+    /// Un Sprite n'est qu'un rectangle de la feuille (aucune copie de pixels) : rien à libérer.
+    /// IMPORTANT : les Sprite renvoyés sont partagés, ne jamais modifier leurs pixels.
     /// </summary>
-    public class SpriteManager : IDisposable
+    public class SpriteManager
     {
         private const int SpriteSize = 16;
         private const int SpritesX = 0;    // Début des sprites de personnages dans la feuille
         private const int SpritesY = 81;
         private const int TextY = 292;     // Début des blocs de texte dans la feuille
 
-        private Bitmap assetSheet;
-        private Bitmap ghostDoorSprite;
-        private Bitmap emptySprite16;
-        private Bitmap emptyChar;
-        private Bitmap[] pacmanDeathSprites;
-        private Dictionary<GhostType, Dictionary<Direction, Bitmap[]>> ghostSprites;
-        private Dictionary<Direction, Bitmap> eyesSprites;
-        private Bitmap[] frightenedBlueSprites;
-        private Bitmap[] frightenedWhiteSprites;
-        private Bitmap lifeSprite;
-        private Bitmap[] giantPacmanSprites;
+        private Canvas assetSheet;
+        private Sprite ghostDoorSprite;
+        private Sprite emptySprite16;
+        private Sprite emptyChar;
+        private Sprite[] pacmanDeathSprites;
+        private Dictionary<GhostType, Dictionary<Direction, Sprite[]>> ghostSprites;
+        private Dictionary<Direction, Sprite> eyesSprites;
+        private Sprite[] frightenedBlueSprites;
+        private Sprite[] frightenedWhiteSprites;
+        private Sprite lifeSprite;
+        private Sprite[] giantPacmanSprites;
 
         // Caches (remplis à la demande)
-        private readonly Dictionary<(int, Direction), Bitmap> pacmanSprites = new Dictionary<(int, Direction), Bitmap>();
-        private readonly Dictionary<(int, int, MazeColor), Bitmap> mazeTiles = new Dictionary<(int, int, MazeColor), Bitmap>();
-        private readonly Dictionary<MazeColor, Bitmap> mazeLayers = new Dictionary<MazeColor, Bitmap>();
-        private readonly Dictionary<(char, ArcadeColor), Bitmap> charSprites = new Dictionary<(char, ArcadeColor), Bitmap>();
-        private readonly Dictionary<ArcadeColor, Bitmap> ptsSprites = new Dictionary<ArcadeColor, Bitmap>();
-        private readonly Dictionary<ArcadeColor, Bitmap> namcoLogos = new Dictionary<ArcadeColor, Bitmap>();
-        private readonly Dictionary<int, Bitmap> ghostPointsSprites = new Dictionary<int, Bitmap>();
-        private readonly Dictionary<int, Bitmap> fruitSprites = new Dictionary<int, Bitmap>();
-        private readonly Dictionary<int, Bitmap> fruitPointsSprites = new Dictionary<int, Bitmap>();
+        private readonly Dictionary<(int, Direction), Sprite> pacmanSprites = new Dictionary<(int, Direction), Sprite>();
+        private readonly Dictionary<(int, int, MazeColor), Sprite> mazeTiles = new Dictionary<(int, int, MazeColor), Sprite>();
+        private readonly Dictionary<MazeColor, Sprite> mazeLayers = new Dictionary<MazeColor, Sprite>();
+        private readonly Dictionary<(char, ArcadeColor), Sprite> charSprites = new Dictionary<(char, ArcadeColor), Sprite>();
+        private readonly Dictionary<ArcadeColor, Sprite> ptsSprites = new Dictionary<ArcadeColor, Sprite>();
+        private readonly Dictionary<ArcadeColor, Sprite> namcoLogos = new Dictionary<ArcadeColor, Sprite>();
+        private readonly Dictionary<int, Sprite> ghostPointsSprites = new Dictionary<int, Sprite>();
+        private readonly Dictionary<int, Sprite> fruitSprites = new Dictionary<int, Sprite>();
+        private readonly Dictionary<int, Sprite> fruitPointsSprites = new Dictionary<int, Sprite>();
 
-        private readonly Dictionary<(int, int), Bitmap> sheetSprites = new Dictionary<(int, int), Bitmap>();
+        private readonly Dictionary<(int, int), Sprite> sheetSprites = new Dictionary<(int, int), Sprite>();
 
         /// <summary>
         /// Sprite 16x16 de la feuille aux coordonnées (x, y), mis en cache (intermissions).
         /// </summary>
-        public Bitmap GetSheetSprite(int x, int y)
+        public Sprite GetSheetSprite(int x, int y)
         {
-            Bitmap sprite;
+            Sprite sprite;
             if (!sheetSprites.TryGetValue((x, y), out sprite))
             {
                 sprite = CropAsset(x, y);
@@ -73,52 +73,44 @@ namespace PacmanWinForms
             White = 2
         }
 
-        private Bitmap LoadEmbeddedBitmap(string resourcePath)
+        private Canvas LoadEmbeddedCanvas(string resourcePath)
         {
             // Exemple de chemin : asset.asset.png (ressource embarquée dans PACMAN.Core)
             using (Stream stream = Assets.Open(resourcePath))
             {
-                return new Bitmap(stream);
+                return PngDecoder.Decode(stream);
             }
         }
 
-        // Découpe un rectangle de la feuille dans un nouveau Bitmap
-        private Bitmap CropAsset(int x, int y, int width = 16, int height = 16)
+        // Un rectangle de la feuille (simple vue, sans copie de pixels)
+        private Sprite CropAsset(int x, int y, int width = 16, int height = 16)
         {
-            Bitmap bmp = new Bitmap(width, height);
-            using (Graphics g = Graphics.FromImage(bmp))
-            {
-                g.DrawImage(assetSheet,
-                    new Rectangle(0, 0, width, height),
-                    new Rectangle(x, y, width, height),
-                    GraphicsUnit.Pixel);
-            }
-            return bmp;
+            return new Sprite(assetSheet, x, y, width, height);
         }
 
         public SpriteManager()
         {
-            assetSheet = LoadEmbeddedBitmap("asset.asset.png");
-            assetSheet.MakeTransparent(Color.Black);
+            assetSheet = LoadEmbeddedCanvas("asset.asset.png");
+            assetSheet.MakeTransparent(0x000000);   // Le noir pur de la feuille devient transparent
 
-            emptySprite16 = new Bitmap(SpriteSize, SpriteSize);
-            emptyChar = new Bitmap(8, 8);
+            emptySprite16 = Sprite.Empty(SpriteSize, SpriteSize);
+            emptyChar = Sprite.Empty(8, 8);
 
             // Porte du nid (8x8, étirée en 16x8 au dessin)
             ghostDoorSprite = CropAsset(144, 72, 8, 8);
 
             // Fantômes : 4 directions x 2 frames, une ligne de 16 px par fantôme (dans l'ordre de GhostType)
-            ghostSprites = new Dictionary<GhostType, Dictionary<Direction, Bitmap[]>>();
+            ghostSprites = new Dictionary<GhostType, Dictionary<Direction, Sprite[]>>();
             Direction[] dirOrder = { Direction.Right, Direction.Left, Direction.Up, Direction.Down };
 
             foreach (GhostType type in Enum.GetValues(typeof(GhostType)))
             {
-                var currentGhostDict = new Dictionary<Direction, Bitmap[]>();
+                var currentGhostDict = new Dictionary<Direction, Sprite[]>();
                 int y = SpritesY + 64 + ((int)type * SpriteSize);
 
                 for (int d = 0; d < dirOrder.Length; d++)
                 {
-                    Bitmap[] frames = new Bitmap[2];
+                    Sprite[] frames = new Sprite[2];
                     for (int f = 0; f < 2; f++)
                     {
                         frames[f] = CropAsset(SpritesX + (d * 2 + f) * SpriteSize, y);
@@ -130,8 +122,8 @@ namespace PacmanWinForms
 
             // Fantômes effrayés : à droite des 8 sprites de Blinky (2 bleus puis 2 blancs)
             int frightX = SpritesX + (8 * SpriteSize);
-            frightenedBlueSprites = new Bitmap[2];
-            frightenedWhiteSprites = new Bitmap[2];
+            frightenedBlueSprites = new Sprite[2];
+            frightenedWhiteSprites = new Sprite[2];
             for (int f = 0; f < 2; f++)
             {
                 frightenedBlueSprites[f] = CropAsset(frightX + f * SpriteSize, SpritesY + 64);
@@ -139,7 +131,7 @@ namespace PacmanWinForms
             }
 
             // Yeux (Droite, Gauche, Haut, Bas)
-            eyesSprites = new Dictionary<Direction, Bitmap>();
+            eyesSprites = new Dictionary<Direction, Sprite>();
             Direction[] eyeDirs = { Direction.Right, Direction.Left, Direction.Up, Direction.Down };
             for (int d = 0; d < eyeDirs.Length; d++)
             {
@@ -147,7 +139,7 @@ namespace PacmanWinForms
             }
 
             // Animation de mort de Pac-Man (12 frames alignées horizontalement)
-            pacmanDeathSprites = new Bitmap[12];
+            pacmanDeathSprites = new Sprite[12];
             for (int f = 0; f < 12; f++)
             {
                 pacmanDeathSprites[f] = CropAsset(SpritesX + (3 + f) * SpriteSize, SpritesY);
@@ -158,7 +150,7 @@ namespace PacmanWinForms
         // Personnages
         // ------------------------------------------------------------------
 
-        public Bitmap GetGhostSprite(GhostType type, Direction direction, int frame)
+        public Sprite GetGhostSprite(GhostType type, Direction direction, int frame)
         {
             if (ghostSprites.ContainsKey(type) && ghostSprites[type].ContainsKey(direction))
             {
@@ -167,14 +159,14 @@ namespace PacmanWinForms
             return ghostSprites[GhostType.Blinky][Direction.Left][0]; // Repli de secours
         }
 
-        public Bitmap GetGhostFrightenedSprite(int frame, bool flashWhite = false)
+        public Sprite GetGhostFrightenedSprite(int frame, bool flashWhite = false)
         {
             if (flashWhite)
                 return frightenedWhiteSprites[frame % 2];
             return frightenedBlueSprites[frame % 2];
         }
 
-        public Bitmap GetGhostEyesSprite(Direction direction)
+        public Sprite GetGhostEyesSprite(Direction direction)
         {
             if (eyesSprites.ContainsKey(direction))
                 return eyesSprites[direction];
@@ -185,12 +177,12 @@ namespace PacmanWinForms
         /// Sprite de Pac-Man selon sa frame d'animation et sa direction.
         /// La frame 3 (bouche fermée) est partagée par toutes les directions.
         /// </summary>
-        public Bitmap GetPacmanSprite(int animFrame, Direction direction)
+        public Sprite GetPacmanSprite(int animFrame, Direction direction)
         {
             Direction cacheDirection = (animFrame == 3) ? Direction.None : direction;
             var key = (animFrame, cacheDirection);
 
-            Bitmap sprite;
+            Sprite sprite;
             if (pacmanSprites.TryGetValue(key, out sprite))
                 return sprite;
 
@@ -224,7 +216,7 @@ namespace PacmanWinForms
             return sprite;
         }
 
-        public Bitmap GetPacmanDeathSprite(int frame)
+        public Sprite GetPacmanDeathSprite(int frame)
         {
             if (frame >= 0 && frame < 12)
                 return pacmanDeathSprites[frame];
@@ -240,11 +232,11 @@ namespace PacmanWinForms
         /// <summary>
         /// Tuile 8x8 de la feuille du labyrinthe selon sa colonne et sa ligne.
         /// </summary>
-        public Bitmap GetMazeTile(int sheetColumn, int sheetRow, MazeColor color = MazeColor.Blue)
+        public Sprite GetMazeTile(int sheetColumn, int sheetRow, MazeColor color = MazeColor.Blue)
         {
             var key = (sheetColumn, sheetRow, color);
 
-            Bitmap tile;
+            Sprite tile;
             if (mazeTiles.TryGetValue(key, out tile))
                 return tile;
 
@@ -256,12 +248,12 @@ namespace PacmanWinForms
             return tile;
         }
 
-        public Bitmap GetDotSprite()
+        public Sprite GetDotSprite()
         {
             return GetMazeTile(13, 2);
         }
 
-        public Bitmap GetEnergizerSprite()
+        public Sprite GetEnergizerSprite()
         {
             return GetMazeTile(15, 2);
         }
@@ -269,7 +261,7 @@ namespace PacmanWinForms
         /// <summary>
         /// Icône de la réserve de vies (HUD du bas), située en (128, 97) dans la feuille de sprites.
         /// </summary>
-        public Bitmap GetLifeSprite()
+        public Sprite GetLifeSprite()
         {
             if (lifeSprite == null)
             {
@@ -277,7 +269,7 @@ namespace PacmanWinForms
             }
             return lifeSprite;
         }
-        public Bitmap GetGhostDoorSprite()
+        public Sprite GetGhostDoorSprite()
         {
             return ghostDoorSprite;
         }
@@ -286,41 +278,37 @@ namespace PacmanWinForms
         /// Image pré-dessinée du labyrinthe (murs et porte du nid, sans les gommes), à l'échelle native 224x288.
         /// Construite une seule fois par couleur : les murs ne changent jamais.
         /// </summary>
-        public Bitmap GetMazeLayer(LevelMap map, MazeColor color)
+        public Sprite GetMazeLayer(LevelMap map, MazeColor color)
         {
-            Bitmap layer;
-            if (mazeLayers.TryGetValue(color, out layer))
-                return layer;
+            Sprite cached;
+            if (mazeLayers.TryGetValue(color, out cached))
+                return cached;
 
             int tile = GameConfig.TileSize;
-            layer = new Bitmap(GameConfig.MapWidth * tile, GameConfig.MapHeight * tile);
+            Canvas layer = new Canvas(GameConfig.MapWidth * tile, GameConfig.MapHeight * tile);
 
-            using (Graphics g = Graphics.FromImage(layer))
+            for (int r = 0; r < GameConfig.MapHeight; r++)
             {
-                for (int r = 0; r < GameConfig.MapHeight; r++)
+                for (int c = 0; c < GameConfig.MapWidth; c++)
                 {
-                    for (int c = 0; c < GameConfig.MapWidth; c++)
+                    int tileID = map.VisualGrid[r, c];
+                    if (tileID != -1)
                     {
-                        int tileID = map.VisualGrid[r, c];
-                        if (tileID != -1)
-                        {
-                            Bitmap tileSprite = GetMazeTile(tileID % 16, tileID / 16, color);
-                            g.DrawImage(tileSprite, new Rectangle(c * tile, r * tile, tile, tile),
-                                0, 0, tile, tile, GraphicsUnit.Pixel);
-                        }
+                        layer.Draw(GetMazeTile(tileID % 16, tileID / 16, color), c * tile, r * tile);
+                    }
 
-                        // Porte du nid : un sprite 8x8 étiré sur 16x8 (deux colonnes)
-                        if (map.Grid[r, c] == TileType.GhostDoor && c == 13)
-                        {
-                            g.DrawImage(ghostDoorSprite, new Rectangle(c * tile, r * tile, 16, 8),
-                                0, 0, ghostDoorSprite.Width, ghostDoorSprite.Height, GraphicsUnit.Pixel);
-                        }
+                    // Porte du nid : le même sprite 8x8 posé deux fois côte à côte (deux colonnes)
+                    if (map.Grid[r, c] == TileType.GhostDoor && c == 13)
+                    {
+                        layer.Draw(ghostDoorSprite, c * tile, r * tile);
+                        layer.Draw(ghostDoorSprite, (c + 1) * tile, r * tile);
                     }
                 }
             }
 
-            mazeLayers[color] = layer;
-            return layer;
+            Sprite result = new Sprite(layer, 0, 0, layer.Width, layer.Height);
+            mazeLayers[color] = result;
+            return result;
         }
 
         // ------------------------------------------------------------------
@@ -330,12 +318,12 @@ namespace PacmanWinForms
         /// <summary>
         /// Caractère 8x8 de la feuille de texte dans la couleur demandée.
         /// </summary>
-        public Bitmap GetArcadeCharacter(char c, ArcadeColor color = ArcadeColor.Yellow)
+        public Sprite GetArcadeCharacter(char c, ArcadeColor color = ArcadeColor.Yellow)
         {
             char upperC = char.ToUpper(c);
             var key = (upperC, color);
 
-            Bitmap sprite;
+            Sprite sprite;
             if (charSprites.TryGetValue(key, out sprite))
                 return sprite;
 
@@ -372,32 +360,33 @@ namespace PacmanWinForms
         }
 
         // Le point n'existe pas dans la feuille : 2x2 pixels en bas à gauche de la tuile, de la couleur du texte
-        private Bitmap CreateDotGlyph(ArcadeColor color)
+        private Sprite CreateDotGlyph(ArcadeColor color)
         {
-            Bitmap reference = GetArcadeCharacter('A', color);
-            Color ink = Color.White;
-            for (int y = 0; y < reference.Height; y++)
+            Sprite reference = GetArcadeCharacter('A', color);
+            uint ink = 0xFFFFFFFF;
+            bool found = false;
+            for (int y = 0; y < reference.Height && !found; y++)
             {
                 for (int x = 0; x < reference.Width; x++)
                 {
-                    Color p = reference.GetPixel(x, y);
-                    if (p.A > 0) { ink = p; y = reference.Height; break; }
+                    uint p = reference.GetPixel(x, y);
+                    if ((p >> 24) > 0) { ink = p; found = true; break; }
                 }
             }
 
-            Bitmap dot = new Bitmap(8, 8);
+            Canvas dot = new Canvas(8, 8);
             for (int y = 5; y <= 6; y++)
                 for (int x = 1; x <= 2; x++)
                     dot.SetPixel(x, y, ink);
-            return dot;
+            return new Sprite(dot, 0, 0, 8, 8);
         }
 
         /// <summary>
         /// Glyphe combiné "PTS" (17x8) à la fin de la 2ème ligne d'un bloc de couleur.
         /// </summary>
-        public Bitmap GetPtsSprite(ArcadeColor color = ArcadeColor.Yellow)
+        public Sprite GetPtsSprite(ArcadeColor color = ArcadeColor.Yellow)
         {
-            Bitmap sprite;
+            Sprite sprite;
             if (ptsSprites.TryGetValue(color, out sprite))
                 return sprite;
 
@@ -412,9 +401,9 @@ namespace PacmanWinForms
         /// <summary>
         /// Logo "NAMCO" (50x8) sur la 4ème ligne d'un bloc de couleur.
         /// </summary>
-        public Bitmap GetNamcoLogo(ArcadeColor color = ArcadeColor.Red)
+        public Sprite GetNamcoLogo(ArcadeColor color = ArcadeColor.Red)
         {
-            Bitmap sprite;
+            Sprite sprite;
             if (namcoLogos.TryGetValue(color, out sprite))
                 return sprite;
 
@@ -433,9 +422,9 @@ namespace PacmanWinForms
         /// <summary>
         /// Score stylisé affiché quand un fantôme est mangé (200, 400, 800, 1600).
         /// </summary>
-        public Bitmap GetGhostPointsSprite(int points)
+        public Sprite GetGhostPointsSprite(int points)
         {
-            Bitmap sprite;
+            Sprite sprite;
             if (ghostPointsSprites.TryGetValue(points, out sprite))
                 return sprite;
 
@@ -457,7 +446,7 @@ namespace PacmanWinForms
         /// <summary>
         /// Sprite du fruit correspondant au niveau.
         /// </summary>
-        public Bitmap GetFruitSprite(int level)
+        public Sprite GetFruitSprite(int level)
         {
             int fruitIndex; // 0: Cerise, 1: Fraise, 2: Pêche, 3: Pomme, 4: Melon, 5: Galaxian, 6: Cloche, 7: Clé
 
@@ -470,7 +459,7 @@ namespace PacmanWinForms
             else if (level == 11 || level == 12) fruitIndex = 6;
             else fruitIndex = 7; // Niveau 13 et plus
 
-            Bitmap sprite;
+            Sprite sprite;
             if (fruitSprites.TryGetValue(fruitIndex, out sprite))
                 return sprite;
 
@@ -483,9 +472,9 @@ namespace PacmanWinForms
         /// <summary>
         /// Score stylisé d'un fruit (100 à 5000), largeurs et alignements variables.
         /// </summary>
-        public Bitmap GetFruitPointsSprite(int points)
+        public Sprite GetFruitPointsSprite(int points)
         {
-            Bitmap sprite;
+            Sprite sprite;
             if (fruitPointsSprites.TryGetValue(points, out sprite))
                 return sprite;
 
@@ -535,11 +524,11 @@ namespace PacmanWinForms
         /// <summary>
         /// Pac-Man géant (32x32) de l'intermission 1 : large, ouvert, fermé, ouvert (puis on recommence).
         /// </summary>
-        public Bitmap GetGiantPacmanSprite(int animFrame)
+        public Sprite GetGiantPacmanSprite(int animFrame)
         {
             if (giantPacmanSprites == null)
             {
-                giantPacmanSprites = new Bitmap[3];
+                giantPacmanSprites = new Sprite[3];
                 giantPacmanSprites[0] = CropAsset(32, 97, 32, 32);   // Bouche grande ouverte
                 giantPacmanSprites[1] = CropAsset(64, 97, 32, 32);   // Bouche ouverte
                 giantPacmanSprites[2] = CropAsset(96, 97, 32, 32);   // Bouche fermée
@@ -549,52 +538,17 @@ namespace PacmanWinForms
             return giantPacmanSprites[order[animFrame % 4]];
         }
 
-        private readonly Dictionary<string, Bitmap> wideSheetSprites = new Dictionary<string, Bitmap>();
+        private readonly Dictionary<string, Sprite> wideSheetSprites = new Dictionary<string, Sprite>();
 
-        public Bitmap GetWideSheetSprite(int x, int y, int width, int height)
+        public Sprite GetWideSheetSprite(int x, int y, int width, int height)
         {
             string key = x + "," + y + "," + width + "," + height;
-            if (!wideSheetSprites.TryGetValue(key, out Bitmap sprite))
+            if (!wideSheetSprites.TryGetValue(key, out Sprite sprite))
             {
                 sprite = CropAsset(x, y, width, height);
                 wideSheetSprites[key] = sprite;
             }
             return sprite;
-        }
-
-        public void Dispose()
-        {
-            List<Bitmap> bitmaps = new List<Bitmap> { assetSheet, ghostDoorSprite, emptySprite16, emptyChar, lifeSprite };
-            bitmaps.AddRange(pacmanDeathSprites);
-            bitmaps.AddRange(frightenedBlueSprites);
-            bitmaps.AddRange(frightenedWhiteSprites);
-            bitmaps.AddRange(eyesSprites.Values);
-            if (giantPacmanSprites != null) bitmaps.AddRange(giantPacmanSprites);
-
-            foreach (var perDirection in ghostSprites.Values)
-            {
-                foreach (Bitmap[] frames in perDirection.Values)
-                {
-                    bitmaps.AddRange(frames);
-                }
-            }
-
-            bitmaps.AddRange(pacmanSprites.Values);
-            bitmaps.AddRange(mazeTiles.Values);
-            bitmaps.AddRange(mazeLayers.Values);
-            bitmaps.AddRange(charSprites.Values);
-            bitmaps.AddRange(ptsSprites.Values);
-            bitmaps.AddRange(namcoLogos.Values);
-            bitmaps.AddRange(ghostPointsSprites.Values);
-            bitmaps.AddRange(fruitSprites.Values);
-            bitmaps.AddRange(fruitPointsSprites.Values);
-            bitmaps.AddRange(sheetSprites.Values);
-            bitmaps.AddRange(wideSheetSprites.Values);
-
-            foreach (Bitmap bmp in bitmaps)
-            {
-                if (bmp != null) bmp.Dispose();
-            }
         }
     }
 }

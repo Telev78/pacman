@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Drawing;
 
 namespace PacmanWinForms
 {
@@ -77,7 +76,7 @@ namespace PacmanWinForms
             }
         }
 
-        public void Draw(GameRenderer renderer, Graphics g)
+        public void Draw(GameRenderer renderer, Canvas g)
         {
             // La dernière partie de la scène est un écran entièrement noir
             if (frame >= BlackFrame) return;
@@ -116,7 +115,7 @@ namespace PacmanWinForms
         }
 
         // Blinky qui court, puis qui se retrouve retenu par sa tunique
-        private void DrawBlinky(SpriteManager sprites, Graphics g)
+        private void DrawBlinky(SpriteManager sprites, Canvas g)
         {
             int steps = 0;
             int x;
@@ -155,7 +154,7 @@ namespace PacmanWinForms
         }
 
         // Blinky troué (il regarde d'abord vers le haut, puis vers le bas) et le morceau de tunique resté au clou
-        private void DrawAfterTear(SpriteManager sprites, Graphics g)
+        private void DrawAfterTear(SpriteManager sprites, Canvas g)
         {
             int spriteX = (frame >= LookDownFrame) ? 144 : 128;
             GameRenderer.DrawSprite(g, sprites.GetSheetSprite(spriteX, 193), RippedGhostX, SpriteY);

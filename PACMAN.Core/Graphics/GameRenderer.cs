@@ -1,15 +1,13 @@
 ﻿using System;
-using System.Drawing;
-using System.Drawing.Drawing2D;
 using static PacmanWinForms.SpriteManager;
 
 namespace PacmanWinForms
 {
     /// <summary>
     /// Dessine le jeu. Tout est dessiné à la résolution de l'arcade (224x288) dans une image intermédiaire,
-    /// qui est ensuite agrandie d'un seul coup à l'écran.
+    /// (un Canvas), que l'hôte (fenêtre) affiche ensuite agrandie.
     /// </summary>
-    public sealed class GameRenderer : IDisposable
+    public sealed class GameRenderer
     {
         // Durées de clignotement, en frames de jeu à 60 Hz
         private const int OneUpBlinkFrames = 13;       // ~220 ms par phase
@@ -24,36 +22,26 @@ namespace PacmanWinForms
         private const int WideFruitScoreMinValue = 2000;
 
         private readonly SpriteManager sprites = new SpriteManager();
-        private readonly Bitmap backBuffer = new Bitmap(DisplayConfig.NativeWidth, DisplayConfig.NativeHeight);
+        private readonly Canvas backBuffer = new Canvas(DisplayConfig.NativeWidth, DisplayConfig.NativeHeight);
 
         // Les écrans utilisent les sprites et les outils de dessin du moteur
         public SpriteManager Sprites { get { return sprites; } }
 
         /// <summary>
-        /// Dessine un écran complet sur la surface cible, agrandi à la taille de l'écran.
+        /// Dessine un écran complet à la résolution de l'arcade (224x288) et renvoie l'image obtenue.
+        /// Le Canvas renvoyé est réutilisé à chaque appel : l'hôte doit le copier/afficher tout de suite.
         /// </summary>
-        public void Render(IScreen screen, Graphics target, Rectangle destination)
+        public Canvas Render(IScreen screen)
         {
-            // 1. On dessine tout à la résolution de l'arcade
-            using (Graphics g = Graphics.FromImage(backBuffer))
-            {
-                g.Clear(Color.Black);
-                g.InterpolationMode = InterpolationMode.NearestNeighbor;
-                g.PixelOffsetMode = PixelOffsetMode.Half;
-
-                screen.Draw(this, g);
-            }
-
-            // 2. Puis on agrandit l'image d'un seul coup à l'écran
-            target.InterpolationMode = InterpolationMode.NearestNeighbor;
-            target.PixelOffsetMode = PixelOffsetMode.Half;
-            target.DrawImage(backBuffer, destination);
+            backBuffer.Clear(0xFF000000);
+            screen.Draw(this, backBuffer);
+            return backBuffer;
         }
 
         /// <summary>
         /// Dessine une partie en cours (labyrinthe, personnages, messages, bonus, HUD).
         /// </summary>
-        public void DrawGame(Graphics g, Game game)
+        public void DrawGame(Canvas g, Game game)
         {
             DrawMaze(g, game);
 
@@ -69,17 +57,11 @@ namespace PacmanWinForms
             DrawHud(g, game);
         }
 
-        public void Dispose()
-        {
-            backBuffer.Dispose();
-            sprites.Dispose();
-        }
-
         // ------------------------------------------------------------------
         // Labyrinthe et gommes
         // ------------------------------------------------------------------
 
-        private void DrawMaze(Graphics g, Game game)
+        private void DrawMaze(Canvas g, Game game)
         {
             int tile = GameConfig.TileSize;
 
@@ -91,8 +73,8 @@ namespace PacmanWinForms
             bool energizerVisible = game.State != GameState.Playing
                         || IsEnergizerOn(game.FrameCounter);
 
-            Bitmap dotSprite = sprites.GetDotSprite();
-            Bitmap energizerSprite = sprites.GetEnergizerSprite();
+            Sprite dotSprite = sprites.GetDotSprite();
+            Sprite energizerSprite = sprites.GetEnergizerSprite();
 
             for (int r = 0; r < GameConfig.MapHeight; r++)
             {
@@ -116,7 +98,7 @@ namespace PacmanWinForms
         // Pac-Man et fantômes
         // ------------------------------------------------------------------
 
-        private void DrawCharacters(Graphics g, Game game)
+        private void DrawCharacters(Canvas g, Game game)
         {
             if (!game.ShowCharacters || game.State == GameState.GameOver)
                 return;
@@ -129,7 +111,7 @@ namespace PacmanWinForms
             }
         }
 
-        private void DrawPacman(Graphics g, Game game)
+        private void DrawPacman(Canvas g, Game game)
         {
             // Pac-Man disparaît pendant le gel du score d'un fantôme mangé
             if (game.State == GameState.GhostEaten)
@@ -151,7 +133,7 @@ namespace PacmanWinForms
             }
         }
 
-        private void DrawGhosts(Graphics g, Game game)
+        private void DrawGhosts(Canvas g, Game game)
         {
             foreach (Ghost ghost in game.Ghosts)
             {
@@ -163,7 +145,7 @@ namespace PacmanWinForms
             }
         }
 
-        private Bitmap GetGhostSprite(Game game, Ghost ghost)
+        private Sprite GetGhostSprite(Game game, Ghost ghost)
         {
             if (ghost.Phase == GhostPhase.Eaten)
             {
@@ -190,7 +172,7 @@ namespace PacmanWinForms
         // Messages, scores flottants et fruit
         // ------------------------------------------------------------------
 
-        private void DrawMessages(Graphics g, Game game)
+        private void DrawMessages(Canvas g, Game game)
         {
             if (game.ShowPlayerLabel)
             {
@@ -211,17 +193,17 @@ namespace PacmanWinForms
             }
         }
 
-        private void DrawGameOverLabel(Graphics g)
+        private void DrawGameOverLabel(Canvas g)
         {
             DrawText(g, "GAME  OVER", HudLayout.GameOverColumn, HudLayout.MessageRow, ArcadeColor.Red);
         }
 
-        private void DrawBonuses(Graphics g, Game game)
+        private void DrawBonuses(Canvas g, Game game)
         {
             // Score du fantôme mangé, à l'endroit où il a été capturé
             if (game.State == GameState.GhostEaten)
             {
-                Bitmap points = sprites.GetGhostPointsSprite(game.EatenGhostScoreValue);
+                Sprite points = sprites.GetGhostPointsSprite(game.EatenGhostScoreValue);
                 DrawSprite(g, points, game.EatenGhostScoreX, game.EatenGhostScoreY);
             }
 
@@ -234,7 +216,7 @@ namespace PacmanWinForms
             // Score du fruit mangé
             if (game.Fruit.IsScoreVisible)
             {
-                Bitmap points = sprites.GetFruitPointsSprite(game.Fruit.Value);
+                Sprite points = sprites.GetFruitPointsSprite(game.Fruit.Value);
                 int x = game.Fruit.X;
 
                 if (game.Fruit.Value >= WideFruitScoreMinValue)
@@ -250,7 +232,7 @@ namespace PacmanWinForms
         // HUD
         // ------------------------------------------------------------------
 
-        private void DrawHud(Graphics g, Game game)
+        private void DrawHud(Canvas g, Game game)
         {
             DrawScores(g, game);
             if (game.IsDemo) return;   // En démo : pas de vies ni de niveau (les crédits sont dessinés par DemoScreen)
@@ -258,7 +240,7 @@ namespace PacmanWinForms
             DrawLevelIndicator(g, game.CurrentLevel);
         }
 
-        private void DrawScores(Graphics g, Game game)
+        private void DrawScores(Canvas g, Game game)
         {
             // Pendant le jeu actif, le "UP" du joueur dont c'est le tour clignote ; l'autre reste fixe
             bool animate = !game.IsDemo && game.State == GameState.Playing;
@@ -275,7 +257,7 @@ namespace PacmanWinForms
         /// <summary>
         /// Bandeau supérieur (attract mode et écran start) : seul le score du joueur 1 est affiché.
         /// </summary>
-        public void DrawTopHud(Graphics g, int score, int highScore, bool show1Up, bool show2Up)
+        public void DrawTopHud(Canvas g, int score, int highScore, bool show1Up, bool show2Up)
         {
             DrawTopHud(g, score, 0, highScore, show1Up, show2Up, showScore2: false);
         }
@@ -283,7 +265,7 @@ namespace PacmanWinForms
         /// <summary>
         /// Bandeau supérieur : 1UP, HIGH SCORE, 2UP et les scores.
         /// </summary>
-        public void DrawTopHud(Graphics g, int score1, int score2, int highScore,
+        public void DrawTopHud(Canvas g, int score1, int score2, int highScore,
             bool show1Up, bool show2Up, bool showScore2)
         {
             if (show1Up)
@@ -320,7 +302,7 @@ namespace PacmanWinForms
         /// <summary>
         /// Compteur de crédits, tout en bas de l'écran (hors partie).
         /// </summary>
-        public void DrawCredits(Graphics g, int credits)
+        public void DrawCredits(Canvas g, int credits)
         {
             DrawText(g, ArcadeTexts.Credit, HudLayout.CreditLabelColumn, HudLayout.CreditRow, ArcadeColor.White);
 
@@ -328,7 +310,7 @@ namespace PacmanWinForms
             DrawText(g, value, HudLayout.CreditValueRightColumn - value.Length + 1, HudLayout.CreditRow, ArcadeColor.White);
         }
 
-        private void DrawLives(Graphics g, Game game)
+        private void DrawLives(Canvas g, Game game)
         {
             int tile = GameConfig.TileSize;
 
@@ -338,7 +320,7 @@ namespace PacmanWinForms
             int livesToDraw = subtractLifeIcon ? game.Lives - 1 : game.Lives;
             int visibleLives = Math.Min(livesToDraw, HudLayout.MaxVisibleLives);
 
-            Bitmap lifeSprite = sprites.GetLifeSprite();
+            Sprite lifeSprite = sprites.GetLifeSprite();
             for (int i = 0; i < visibleLives; i++)
             {
                 int column = HudLayout.LivesFirstColumn + i * HudLayout.LivesSpacing;
@@ -346,7 +328,7 @@ namespace PacmanWinForms
             }
         }
 
-        public void DrawLevelIndicator(Graphics g, int level)
+        public void DrawLevelIndicator(Canvas g, int level)
         {
             int tile = GameConfig.TileSize;
             int fruitsToDraw = Math.Min(level, HudLayout.MaxLevelIndicators);
@@ -365,21 +347,20 @@ namespace PacmanWinForms
         // ------------------------------------------------------------------
 
         // Dessine un sprite à l'échelle 1:1 (évite toute mise à l'échelle liée à la résolution de l'image)
-        public static void DrawSprite(Graphics g, Bitmap sprite, int x, int y)
+        public static void DrawSprite(Canvas g, Sprite sprite, int x, int y)
         {
-            g.DrawImage(sprite, new Rectangle(x, y, sprite.Width, sprite.Height),
-                0, 0, sprite.Width, sprite.Height, GraphicsUnit.Pixel);
+            g.Draw(sprite, x, y);
         }
 
         // Dessine un texte lettre par lettre avec la police de l'arcade (une lettre = une tuile)
-        public void DrawText(Graphics g, string text, int startTileX, int tileY, ArcadeColor color)
+        public void DrawText(Canvas g, string text, int startTileX, int tileY, ArcadeColor color)
         {
             for (int i = 0; i < text.Length; i++)
             {
                 char c = text[i];
                 if (c == ' ') continue; // On ne dessine rien pour un espace
 
-                Bitmap letter = sprites.GetArcadeCharacter(c, color);
+                Sprite letter = sprites.GetArcadeCharacter(c, color);
                 DrawSprite(g, letter, (startTileX + i) * GameConfig.TileSize, tileY * GameConfig.TileSize);
             }
         }

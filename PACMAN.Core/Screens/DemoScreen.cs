@@ -1,8 +1,5 @@
 ﻿using System;
-using System.Drawing;
 using System.IO;
-using System.Threading.Tasks;
-using System.Windows.Forms;
 
 namespace PacmanWinForms
 {
@@ -92,7 +89,7 @@ namespace PacmanWinForms
             }
         }
 
-        public void Draw(GameRenderer renderer, Graphics g)
+        public void Draw(GameRenderer renderer, Canvas g)
         {
             if (game == null) return;
 
@@ -116,8 +113,8 @@ namespace PacmanWinForms
                 message = "Impossible d'enregistrer la démo : " + ex.Message;
             }
 
-            // Dans une autre tâche, pour ne pas bloquer la boucle de jeu pendant que le message est affiché
-            Task.Run(() => MessageBox.Show(message, "Enregistrement de la démo"));
+            // L'affichage du message dépend de la plateforme : c'est l'hôte qui s'en charge
+            manager.Notify("Enregistrement de la démo", message);
         }
     }
 }

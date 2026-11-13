@@ -1,5 +1,4 @@
-﻿using System.Drawing;
-using static PacmanWinForms.SpriteManager;
+﻿using static PacmanWinForms.SpriteManager;
 
 namespace PacmanWinForms
 {
@@ -28,7 +27,7 @@ namespace PacmanWinForms
             }
         }
 
-        public void Draw(GameRenderer renderer, Graphics g)
+        public void Draw(GameRenderer renderer, Canvas g)
         {
             int tile = GameConfig.TileSize;
 

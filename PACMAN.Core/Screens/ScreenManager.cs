@@ -15,6 +15,18 @@ namespace PacmanWinForms
         public int Credits { get; private set; }
         public int HighScore { get; private set; }
 
+        /// <summary>
+        /// Appelé quand le jeu veut informer l'utilisateur (titre, message). L'hôte le branche sur une boîte
+        /// de dialogue ou autre ; sans hôte, le message est simplement ignoré.
+        /// </summary>
+        public Action<string, string> NotifyHandler { get; set; }
+
+        public void Notify(string title, string message)
+        {
+            Action<string, string> handler = NotifyHandler;
+            if (handler != null) handler(title, message);
+        }
+
         public SoundDirector Sound { get { return sound; } }
         public IScreen Current { get { return current; } }
 
