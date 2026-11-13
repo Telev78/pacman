@@ -1,15 +1,14 @@
 ﻿using System;
-using NAudio.Wave;
 
 namespace PacmanWinForms
 {
     /// <summary>
-    /// Un son décodé en mémoire (échantillons flottants au format de sortie du moteur).
+    /// Un son décodé en mémoire (échantillons flottants stéréo entrelacés, à la fréquence de sortie du moteur).
     /// </summary>
     internal sealed class SoundData
     {
-        public SoundId Id { get; }
-        public float[] Samples { get; }
+        public SoundId Id { get; private set; }
+        public float[] Samples { get; private set; }
 
         public SoundData(SoundId id, float[] samples)
         {
@@ -21,9 +20,9 @@ namespace PacmanWinForms
     /// <summary>
     /// Une "voix" en cours de lecture : joue un son (une fois ou en boucle),
     /// puis éventuellement enchaîne sur un second son sans aucun trou.
-    /// Read() est appelée par le thread audio ; Stop() par le thread du jeu.
+    /// MixInto() est appelée par le thread audio ; Stop() par le thread du jeu.
     /// </summary>
-    internal sealed class SoundVoice : ISampleProvider
+    internal sealed class SoundVoice
     {
         private SoundData current;
         private SoundData next;
@@ -34,10 +33,8 @@ namespace PacmanWinForms
         private volatile bool stopRequested = false;
         private volatile bool ended = false;
 
-        public SoundId FirstId { get; }
-        public SoundId? ChainedId { get; }
-
-        public WaveFormat WaveFormat { get { return AudioEngine.OutputFormat; } }
+        public SoundId FirstId { get; private set; }
+        public SoundId? ChainedId { get; private set; }
 
         public bool IsFinished { get { return stopRequested || ended; } }
 
@@ -57,7 +54,10 @@ namespace PacmanWinForms
             stopRequested = true;
         }
 
-        public int Read(Span<float> buffer)
+        /// <summary>
+        /// Ajoute les prochains échantillons de cette voix à ceux déjà présents dans le tampon.
+        /// </summary>
+        public void MixInto(Span<float> buffer)
         {
             int written = 0;
 
@@ -88,17 +88,18 @@ namespace PacmanWinForms
                 }
 
                 int toCopy = Math.Min(available, buffer.Length - written);
-                data.AsSpan(position, toCopy).CopyTo(buffer.Slice(written, toCopy));
+                for (int i = 0; i < toCopy; i++)
+                {
+                    buffer[written + i] += data[position + i];
+                }
                 position += toCopy;
                 written += toCopy;
             }
 
-            if (written == 0)
+            if (written < buffer.Length)
             {
-                ended = true; // Le mélangeur retirera cette voix
+                ended = true;   // Plus rien à jouer : le moteur retirera cette voix
             }
-
-            return written;
         }
     }
 }
