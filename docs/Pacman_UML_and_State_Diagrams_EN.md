@@ -995,8 +995,8 @@ stateDiagram-v2
   Siren --> Eyes : ghost as eyes
   Frightened --> Eyes : ghost as eyes
   Eyes --> Frightened : no more eyes, ghost still frightened
-  Eyes --> Siren : plus d'yeux, plus de frightened ghost
-  Frightened --> Siren : plus de frightened ghost
+  Eyes --> Siren : no more eyes, no more frightened ghost
+  Frightened --> Siren : no more frightened ghost
   Siren --> None : death, victory or new level
   Frightened --> None : death, victory or new level
   Eyes --> None : death, victory or new level
