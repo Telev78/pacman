@@ -1,0 +1,30 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- WinExe : pas de console sous Windows ; sous Linux et macOS c'est un exécutable ordinaire -->
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+
+    <AssemblyName>PACMAN.Sdl</AssemblyName>
+    <RootNamespace>PacmanSdl</RootNamespace>
+
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>disable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\PACMAN.Core\PACMAN.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Liaisons C# de SDL3 -->
+    <PackageReference Include="SDL3-CS" Version="3.4.*" />
+
+    <!-- Bibliothèques natives SDL3 : chaque paquet apporte ses fichiers dans runtimes\<rid>\native,
+         .NET ne copie que ceux de la plateforme visée -->
+    <PackageReference Include="SDL3-CS.Windows" Version="3.4.*" />
+    <PackageReference Include="SDL3-CS.Linux" Version="3.4.*" />
+    <PackageReference Include="SDL3-CS.MacOS" Version="3.4.*" />
+  </ItemGroup>
+
+</Project>
