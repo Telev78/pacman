@@ -32,6 +32,7 @@ namespace PacmanSdl
         private bool running = true;
         private bool fullscreen;
         private int volumeFrames;
+        private string currentTitle = "Pac-Man";
 
         // Touches de service déjà enfoncées (pour ignorer la répétition automatique du clavier)
         private readonly HashSet<SDL.Scancode> heldServiceKeys = new HashSet<SDL.Scancode>();
@@ -63,6 +64,8 @@ namespace PacmanSdl
                 DisplayConfig.NativeWidth, DisplayConfig.NativeHeight);
             if (texture == IntPtr.Zero)
                 throw new InvalidOperationException("Impossible de créer la texture : " + SDL.GetError());
+
+            SetWindowIcon();
 
             SDL.SetTextureScaleMode(texture, SDL.ScaleMode.Nearest);
             SDL.SetRenderLogicalPresentation(sdlRenderer, DisplayConfig.NativeWidth, DisplayConfig.NativeHeight,
@@ -105,6 +108,9 @@ namespace PacmanSdl
 
                 if (volumeFrames > 0) volumeFrames--;
 
+#if DEBUG
+                UpdateTitle();
+#endif
                 Draw();
             }
         }
@@ -133,6 +139,72 @@ namespace PacmanSdl
             SDL.RenderTexture(sdlRenderer, texture, IntPtr.Zero, IntPtr.Zero);
             SDL.RenderPresent(sdlRenderer);
         }
+
+        // Icône de la fenêtre (Linux, macOS ; sous Windows l'icône de l'exécutable sert déjà) :
+        // un Pac-Man tiré de la feuille de sprites, agrandi 4 fois
+        private void SetWindowIcon()
+        {
+            try
+            {
+                const int scale = 4;
+                const int size = 16 * scale;
+
+                Sprite pacman = gameRenderer.Sprites.GetPacmanSprite(1, Direction.Right);
+                uint[] pixels = new uint[size * size];
+                for (int y = 0; y < size; y++)
+                    for (int x = 0; x < size; x++)
+                        pixels[y * size + x] = pacman.GetPixel(x / scale, y / scale);
+
+                GCHandle handle = GCHandle.Alloc(pixels, GCHandleType.Pinned);
+                try
+                {
+                    IntPtr surface = SDL.CreateSurfaceFrom(size, size, SDL.PixelFormat.ARGB8888, handle.AddrOfPinnedObject(), size * 4);
+                    if (surface != IntPtr.Zero)
+                    {
+                        SDL.SetWindowIcon(window, surface);   // SDL en garde une copie
+                        SDL.DestroySurface(surface);
+                    }
+                }
+                finally
+                {
+                    handle.Free();
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine("Icône de fenêtre indisponible : " + ex.Message);
+            }
+        }
+
+#if DEBUG
+        // En Debug : les informations de partie dans la barre de titre, comme dans la version WinForms
+        private void UpdateTitle()
+        {
+            string title;
+            PlayScreen play = screens.Current as PlayScreen;
+
+            if (play != null && play.Game != null)
+            {
+                Game game = play.Game;
+                title = "Pac-Man Arcade (C#) - J" + game.ActivePlayer + " - SCORE: " + game.Score
+                        + " - VIES: " + game.Lives + " - Gommes: " + game.DotsRemaining;
+            }
+            else if (screens.Current is DemoScreen demo && demo.IsRecording)
+            {
+                title = "Pac-Man Arcade (C#) - ENREGISTREMENT DE LA DÉMO";
+            }
+            else
+            {
+                title = "Pac-Man Arcade (C#) - CRÉDITS: " + screens.Credits;
+            }
+
+            if (title != currentTitle)
+            {
+                currentTitle = title;
+                SDL.SetWindowTitle(window, title);
+            }
+        }
+#endif
 
         private void SetFullscreen(bool value)
         {
