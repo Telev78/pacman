@@ -46,7 +46,7 @@ namespace PacmanWinForms
 
             // Si l'un des deux échoue (ressource manquante...), l'erreur est affichée par Program.Main
             renderer = new GameRenderer();
-            screens = new ScreenManager();
+            screens = new ScreenManager(new AudioEngine());
             UpdateTitle();
 
             gameTimer = new Timer();

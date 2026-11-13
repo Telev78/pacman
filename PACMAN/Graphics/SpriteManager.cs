@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
-using System.Reflection;
 
 namespace PacmanWinForms
 {
@@ -76,16 +75,9 @@ namespace PacmanWinForms
 
         private Bitmap LoadEmbeddedBitmap(string resourcePath)
         {
-            Assembly assembly = Assembly.GetExecutingAssembly();
-            // Format cible : PacmanWinForms.asset.asset.png
-            string fullResourceName = $"PacmanWinForms.{resourcePath}";
-
-            using (Stream stream = assembly.GetManifestResourceStream(fullResourceName))
+            // Exemple de chemin : asset.asset.png (ressource embarquée dans PACMAN.Core)
+            using (Stream stream = Assets.Open(resourcePath))
             {
-                if (stream == null)
-                {
-                    throw new FileNotFoundException($"Ressource image embarquée introuvable : {fullResourceName}");
-                }
                 return new Bitmap(stream);
             }
         }

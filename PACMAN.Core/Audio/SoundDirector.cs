@@ -19,13 +19,19 @@
             SoundId.Siren0, SoundId.Siren1, SoundId.Siren2, SoundId.Siren3, SoundId.Siren4
         };
 
-        private readonly AudioEngine audio = new AudioEngine();
+        private readonly IAudioEngine audio;
 
         private bool wakaToggle = false;
         private Background background = Background.None;
         private int currentSirenIndex = -1; // Sirène en cours de lecture (quand background == Siren)
 
         public bool Muted { get; set; }
+
+        public SoundDirector(IAudioEngine audio)
+        {
+            if (audio == null) throw new System.ArgumentNullException("audio");
+            this.audio = audio;
+        }
 
         public void StopAll()
         {

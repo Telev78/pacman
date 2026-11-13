@@ -9,7 +9,7 @@ namespace PacmanWinForms
     {
         public const int MaxCredits = 99;
 
-        private readonly SoundDirector sound = new SoundDirector();
+        private readonly SoundDirector sound;
         private IScreen current;
 
         public int Credits { get; private set; }
@@ -18,8 +18,9 @@ namespace PacmanWinForms
         public SoundDirector Sound { get { return sound; } }
         public IScreen Current { get { return current; } }
 
-        public ScreenManager()
+        public ScreenManager(IAudioEngine audio)
         {
+            sound = new SoundDirector(audio);
             ShowAttract();
         }
 

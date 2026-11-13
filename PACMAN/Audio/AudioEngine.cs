@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Reflection;
 using NAudio.Wave;
 using NAudio.Wave.SampleProviders;
 
@@ -10,7 +9,7 @@ namespace PacmanWinForms
     /// <summary>
     /// Moteur audio : décode tous les sons au démarrage, puis les mélange et les joue via NAudio.
     /// </summary>
-    public sealed class AudioEngine : IDisposable
+    public sealed class AudioEngine : IAudioEngine
     {
         public const int SampleRate = 44100;
         public const int Channels = 2;
@@ -178,10 +177,9 @@ namespace PacmanWinForms
 
         private static SoundData LoadSound(SoundId id, string fileName)
         {
-            string resourceName = $"PacmanWinForms.asset.sounds.{fileName}.wav";
-            Assembly assembly = Assembly.GetExecutingAssembly();
+            string resourceName = $"asset.sounds.{fileName}.wav";
 
-            using (Stream stream = assembly.GetManifestResourceStream(resourceName))
+            using (Stream stream = Assets.TryOpen(resourceName))
             {
                 if (stream == null)
                 {

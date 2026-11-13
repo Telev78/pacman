@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
-using System.Reflection;
 
 namespace PacmanWinForms
 {
@@ -13,7 +12,7 @@ namespace PacmanWinForms
     /// </summary>
     public sealed class DemoRecording
     {
-        public const string ResourceName = "PacmanWinForms.asset.demo.txt";
+        public const string ResourceName = "asset.demo.txt";
         public const string FileName = "demo.txt";
 
         public struct Entry
@@ -39,7 +38,7 @@ namespace PacmanWinForms
         /// </summary>
         public static DemoRecording LoadEmbedded()
         {
-            using (Stream stream = Assembly.GetExecutingAssembly().GetManifestResourceStream(ResourceName))
+            using (Stream stream = Assets.TryOpen(ResourceName))
             {
                 if (stream == null) return null;
 
