@@ -6,7 +6,8 @@
 #     powershell -ExecutionPolicy Bypass -File .\publier.ps1 -Version 1.0
 # Sans -Version, la date du jour est utilisée.
 #
-# Chaque archive contient un dossier PACMAN avec l'exécutable (fichier unique autonome) et une notice.
+# Chaque archive contient un dossier PACMAN avec l'exécutable (fichier unique autonome) et deux notices :
+# LISEZMOI.txt (français) et README.txt (anglais).
 # L'archive Linux est un .tar.gz écrit ici même, avec le droit d'exécution (0755) sur le programme :
 # l'utilisateur n'a pas besoin de faire "chmod +x".
 
@@ -93,8 +94,8 @@ public static class TarGz
 }
 
 $cibles = @(
-    @{ Profil = 'Windows-x64'; Rid = 'win-x64';   Nom = 'windows-x64'; Exe = 'PACMAN.exe'; Notice = 'LISEZMOI-windows.txt'; Format = 'zip' },
-    @{ Profil = 'Linux-x64';   Rid = 'linux-x64'; Nom = 'linux-x64';   Exe = 'PACMAN';     Notice = 'LISEZMOI-linux.txt';   Format = 'tar.gz' }
+    @{ Profil = 'Windows-x64'; Rid = 'win-x64';   Nom = 'windows-x64'; Exe = 'PACMAN.exe'; Notice = 'LISEZMOI-windows.txt'; NoticeEn = 'README-windows.txt'; Format = 'zip' },
+    @{ Profil = 'Linux-x64';   Rid = 'linux-x64'; Nom = 'linux-x64';   Exe = 'PACMAN';     Notice = 'LISEZMOI-linux.txt';   NoticeEn = 'README-linux.txt';   Format = 'tar.gz' }
 )
 
 if (Test-Path 'dist') { Remove-Item 'dist' -Recurse -Force }
@@ -115,6 +116,7 @@ foreach ($c in $cibles) {
     $exe = Join-Path $sortie $c.Exe
     if (-not (Test-Path $exe)) { throw "Exécutable introuvable : $exe" }
     $notice = "packaging\$($c.Notice)"
+    $noticeEn = "packaging\$($c.NoticeEn)"
 
     $archive = Join-Path $racineDepot "dist\PACMAN-$Version-$($c.Nom).$($c.Format)"
 
@@ -123,15 +125,16 @@ foreach ($c in $cibles) {
         New-Item -ItemType Directory -Path $dossier -Force | Out-Null
         Copy-Item $exe $dossier
         Copy-Item $notice (Join-Path $dossier 'LISEZMOI.txt')
+        Copy-Item $noticeEn (Join-Path $dossier 'README.txt')
         Compress-Archive -Path $dossier -DestinationPath $archive
         Remove-Item (Split-Path $dossier -Parent) -Recurse -Force
     }
     else {
-        # 493 = 0755 (rwxr-xr-x) pour le dossier et le programme ; 420 = 0644 (rw-r--r--) pour la notice
+        # 493 = 0755 (rwxr-xr-x) pour le dossier et le programme ; 420 = 0644 (rw-r--r--) pour les notices
         [TarGz]::Create($archive,
-            [string[]]@('PACMAN/', 'PACMAN/PACMAN', 'PACMAN/LISEZMOI.txt'),
-            [string[]]@($null, (Resolve-Path $exe).Path, (Resolve-Path $notice).Path),
-            [int[]]@(493, 493, 420))
+            [string[]]@('PACMAN/', 'PACMAN/PACMAN', 'PACMAN/LISEZMOI.txt', 'PACMAN/README.txt'),
+            [string[]]@($null, (Resolve-Path $exe).Path, (Resolve-Path $notice).Path, (Resolve-Path $noticeEn).Path),
+            [int[]]@(493, 493, 420, 420))
     }
 
     $taille = [math]::Round((Get-Item $archive).Length / 1MB, 1)

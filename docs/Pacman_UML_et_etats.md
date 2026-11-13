@@ -1,49 +1,61 @@
-# Pac-Man (C# WinForms) : UML et diagrammes d'états
+# Pac-Man (C#, .NET 10, SDL3) : UML et diagrammes d'états
 
-Ce document décrit l'architecture finale du jeu en 18 diagrammes : un diagramme de paquets, 6 diagrammes de classes, 2 diagrammes de séquence et 9 diagrammes d'états, tous établis à partir du code source. Les diagrammes sont écrits en [Mermaid](https://mermaid.js.org) et s'affichent directement dans les visionneuses Markdown qui le prennent en charge (GitHub, GitLab, VS Code avec extension, Obsidian…).
+Ce document décrit l'architecture finale du jeu en 18 diagrammes : un diagramme de paquets, 6 diagrammes de classes, 2 diagrammes de séquence et 9 diagrammes d'états, tous établis à partir du code source. Le jeu est découpé en deux projets : la bibliothèque `PACMAN.Core`, indépendante de toute plateforme (règles, rendu logiciel, mixage audio), et l'hôte `PACMAN.Sdl`, qui ouvre la fenêtre, lit le clavier et la manette et joue le son avec SDL3 sous Windows et Linux. Les diagrammes sont écrits en [Mermaid](https://mermaid.js.org) et s'affichent directement dans les visionneuses Markdown qui le prennent en charge (GitHub, GitLab, VS Code avec extension, Obsidian…).
 
 ## 1. Vue d'ensemble
 
-Les sept dossiers du projet forment trois niveaux : l'interface (UI) et les écrans (Screens) pilotent le jeu (Game, Ghosts, Maze), qui s'appuie sur le rendu (Graphics) et l'audio (Audio). Game et Ghosts sont étroitement liés : Game crée les quatre fantômes, et un fantôme lit Pacman et LevelSpecs, définis dans Game.
+Le projet `PACMAN.Sdl` (Program, SdlHost, SdlAudioOutput) est la seule partie qui connaît SDL3. Il pilote la bibliothèque `PACMAN.Core`, dont les sept dossiers forment trois niveaux : la plateforme (Platform) et les écrans (Screens) pilotent le jeu (Game, Ghosts, Maze), qui s'appuie sur le rendu (Graphics) et l'audio (Audio). Game et Ghosts sont étroitement liés : Game crée les quatre fantômes, et un fantôme lit Pacman et LevelSpecs, définis dans Game. Le rendu et l'audio ne dépendent d'aucune API graphique ou sonore : GameRenderer dessine dans un Canvas (tableau de pixels) et MixerAudioEngine produit des échantillons que l'hôte envoie à la carte son.
 
 ```mermaid
 flowchart TB
-  subgraph UI["UI"]
-    MainForm["MainForm"]
-    Settings["Settings / PACMAN.ini"]
-    DisplayConfig["DisplayConfig"]
-    InputKey["InputKey"]
+  subgraph Sdl["PACMAN.Sdl (hôte)"]
+    Program["Program"]
+    SdlHost["SdlHost"]
+    SdlAudioOutput["SdlAudioOutput"]
   end
-  subgraph Screens["Screens"]
-    ScreenManager["ScreenManager"]
-    Ecrans["AttractScreen, StartScreen, PlayScreen, DemoScreen"]
-    Scenes["ChaseScene, Intermission1/2/3Scene"]
-    ArcadeTexts["ArcadeTexts"]
-  end
-  subgraph Game["Game"]
-    GameC["Game, PlayerState, ScoreKeeper"]
-    Regles["FruitManager, WaveScheduler, GameConfig, LevelSpecs"]
-    PacmanC["Pacman"]
-  end
-  subgraph Ghosts["Ghosts"]
-    GhostC["Ghost, Blinky, Pinky, Inky, Clyde"]
-    GhostHouse["GhostHouse"]
-  end
-  subgraph Maze["Maze"]
-    MazeC["LevelMap, MazeLayout, Tiles, Direction"]
-  end
-  subgraph Graphics["Graphics"]
-    GameRenderer["GameRenderer, HudLayout"]
-    SpriteManager["SpriteManager"]
-  end
-  subgraph Audio["Audio"]
-    SoundDirector["SoundDirector"]
-    AudioEngine["AudioEngine, SoundVoice"]
+  subgraph Core["PACMAN.Core (bibliothèque)"]
+    subgraph Platform["Platform"]
+      Settings["Settings / PACMAN.ini"]
+      DisplayConfig["DisplayConfig"]
+      InputKey["InputKey"]
+      Assets["Assets"]
+    end
+    subgraph Screens["Screens"]
+      ScreenManager["ScreenManager"]
+      Ecrans["AttractScreen, StartScreen, PlayScreen, DemoScreen"]
+      Scenes["ChaseScene, Intermission1/2/3Scene"]
+      ArcadeTexts["ArcadeTexts"]
+    end
+    subgraph Game["Game"]
+      GameC["Game, PlayerState, ScoreKeeper"]
+      Regles["FruitManager, WaveScheduler, GameConfig, LevelSpecs"]
+      PacmanC["Pacman"]
+    end
+    subgraph Ghosts["Ghosts"]
+      GhostC["Ghost, Blinky, Pinky, Inky, Clyde"]
+      GhostHouse["GhostHouse"]
+    end
+    subgraph Maze["Maze"]
+      MazeC["LevelMap, MazeLayout, Tiles, Direction"]
+    end
+    subgraph Graphics["Graphics"]
+      GameRenderer["GameRenderer, HudLayout"]
+      SpriteManager["SpriteManager"]
+      Pixels["Canvas, Sprite, PngDecoder"]
+    end
+    subgraph Audio["Audio"]
+      SoundDirector["SoundDirector"]
+      AudioEngine["IAudioEngine, MixerAudioEngine, SoundVoice, WavDecoder"]
+    end
   end
 
-  MainForm --> ScreenManager
-  MainForm --> GameRenderer
-  MainForm --> Settings
+  Program --> SdlHost
+  SdlHost --> ScreenManager
+  SdlHost --> GameRenderer
+  SdlHost --> AudioEngine
+  SdlHost --> SdlAudioOutput
+  SdlHost --> Platform
+  SdlAudioOutput -.->|lit les échantillons| AudioEngine
   ScreenManager --> Ecrans
   Ecrans --> Scenes
   Ecrans --> GameC
@@ -58,25 +70,29 @@ flowchart TB
   PacmanC --> MazeC
   GameC --> MazeC
   GameRenderer --> SpriteManager
+  GameRenderer --> Pixels
+  SpriteManager --> Pixels
   GameRenderer -.->|lit l'état| GameC
   SoundDirector --> AudioEngine
-  ArcadeTexts -.-> Settings
-  AudioEngine -.->|volume| Settings
-  GameC -.->|vies, vie bonus| Settings
+  SpriteManager -.->|charge| Platform
+  AudioEngine -.->|charge| Platform
+  ArcadeTexts -.-> Platform
+  GameC -.->|vies, vie bonus| Platform
 ```
 
-*Figure 1 : diagramme de paquets : les sept dossiers et leurs dépendances*  
+*Figure 1 : diagramme de paquets : l'hôte PACMAN.Sdl, les sept dossiers de PACMAN.Core et leurs dépendances*  
 Ouvrir en grand : [SVG](diagrams/fr/01_paquets.svg) · [PNG](diagrams/fr/01_paquets.png)
 
 | Dossier | Rôle | Classes principales |
 | --- | --- | --- |
-| UI | Fenêtre, clavier, plein écran, réglages `PACMAN.ini` | MainForm, Settings, DisplayConfig, InputKey |
+| PACMAN.Sdl (projet) | Hôte SDL3 : fenêtre, plein écran, clavier, manette, boucle à pas fixe, sortie audio | Program, SdlHost, SdlAudioOutput |
+| Platform | Réglages `PACMAN.ini`, touches abstraites, accès aux ressources embarquées | Settings, DisplayConfig, InputKey, Assets |
 | Screens | Enchaînement des écrans, crédits, intermissions | ScreenManager, IScreen, AttractScreen, StartScreen, PlayScreen, DemoScreen, Intermission1/2/3Scene |
 | Game | Règles et état d'une partie | Game, PlayerState, ScoreKeeper, FruitManager, WaveScheduler, Pacman, GameConfig |
 | Ghosts | Comportement des fantômes et du nid | Ghost, Blinky, Pinky, Inky, Clyde, GhostHouse |
 | Maze | Labyrinthe, cases, directions | LevelMap, MazeLayout, Tiles, Direction |
-| Graphics | Dessin à la résolution de l'arcade (224×288) | GameRenderer, SpriteManager, HudLayout |
-| Audio | Sons, mixage et volume | SoundDirector, AudioEngine, SoundVoice |
+| Graphics | Dessin logiciel à la résolution de l'arcade (224×288) | GameRenderer, SpriteManager, HudLayout, Canvas, Sprite, PngDecoder |
+| Audio | Sons, mixage logiciel et volume | SoundDirector, IAudioEngine, MixerAudioEngine, SoundVoice, WavDecoder |
 
 ## 2. Diagrammes de classes
 
@@ -84,25 +100,32 @@ Les membres affichés sont les plus significatifs, pas la liste complète. Les r
 
 ### 2.1 Écrans et navigation
 
-MainForm possède un ScreenManager, qui garde l'écran courant derrière l'interface IScreen. Les crédits, le high score et le son traversent les écrans : ils vivent dans le ScreenManager.
+Program crée le SdlHost, qui possède un ScreenManager. Celui-ci garde l'écran courant derrière l'interface IScreen. Les crédits, le high score et le son traversent les écrans : ils vivent dans le ScreenManager. Le SdlHost traduit les touches du clavier et de la manette en InputKey, ce qui garde les écrans indépendants de SDL.
 
 ```mermaid
 classDiagram
   direction TB
-  class Form {
-    <<WinForms>>
+  class Program {
+    <<static>>
+    -Main() int
   }
-  class MainForm {
-    -GameRenderer renderer
+  class SdlHost {
+    <<internal>>
+    -GameRenderer gameRenderer
+    -MixerAudioEngine audio
     -ScreenManager screens
-    -Timer gameTimer
+    -SdlAudioOutput audioOutput
     -bool fullscreen
-    -int volumeShownFrames
-    -OnKeyDown()
-    -GameLoop()
-    -OnPaint()
-    -ToggleFullscreen()
-    -ComputeDestination() Rectangle
+    -int volumeFrames
+    +Run()
+    -Draw()
+    -PumpEvents()
+    -OnKeyDown(KeyboardEvent)
+    -OnGamepadButton(GamepadButton)
+    -OnGamepadAxis(GamepadAxis, short)
+    -TryMapKey(Scancode, out InputKey)$ bool
+    -SetFullscreen(bool)
+    -ShowNotification(string, string)
   }
   class Settings {
     <<static>>
@@ -132,7 +155,7 @@ classDiagram
     +Enter()
     +Update()
     +OnInput(InputKey)
-    +Draw(GameRenderer, Graphics)
+    +Draw(GameRenderer, Canvas)
   }
   class ScreenManager {
     +int MaxCredits = 99
@@ -172,7 +195,7 @@ classDiagram
     +bool EnergizerEaten
     +bool Finished
     +Update()
-    +Draw(GameRenderer, Graphics)
+    +Draw(GameRenderer, Canvas)
   }
   class DemoRecording {
     +LoadEmbedded()$ DemoRecording
@@ -192,10 +215,10 @@ classDiagram
     +string[] GhostNicknames
   }
 
-  Form <|-- MainForm
-  MainForm *-- ScreenManager
-  MainForm ..> InputKey : traduit les touches
-  MainForm ..> Settings
+  Program ..> SdlHost : crée et lance
+  SdlHost *-- ScreenManager
+  SdlHost ..> InputKey : traduit les touches
+  SdlHost ..> Settings
   IScreen <|.. AttractScreen
   IScreen <|.. StartScreen
   IScreen <|.. PlayScreen
@@ -227,13 +250,13 @@ classDiagram
     <<interface>>
     +bool Finished
     +Update()
-    +Draw(GameRenderer, Graphics)
+    +Draw(GameRenderer, Canvas)
   }
   class PlayScreen {
     -Game game
     -IIntermission intermission
     +Update()
-    +Draw(GameRenderer, Graphics)
+    +Draw(GameRenderer, Canvas)
     -CreateIntermission(int number, int level) IIntermission
   }
   class Game {
@@ -265,7 +288,7 @@ classDiagram
     +PlayIntermission()
   }
   class GameRenderer {
-    +DrawLevelIndicator(Graphics, int level)
+    +DrawLevelIndicator(Canvas, int level)
   }
   class SpriteManager {
     +GetGiantPacmanSprite(int)
@@ -518,20 +541,20 @@ Ouvrir en grand : [SVG](diagrams/fr/05_classes_fantomes.svg) · [PNG](diagrams/f
 
 ### 2.5 Rendu
 
-GameRenderer dessine tout dans un bitmap natif de 224×288, puis l'agrandit d'un bloc dans le rectangle calculé par MainForm. SpriteManager découpe la feuille unique `asset.png` et garde chaque sprite en cache.
+GameRenderer dessine tout dans un Canvas natif de 224×288 (pixels 0xAARRGGBB), puis l'hôte l'envoie à SDL, qui l'agrandit à l'entier le plus proche. Un Sprite est une simple vue rectangulaire sur un Canvas, sans copie de pixels. PngDecoder décode la feuille unique `asset.png` et SpriteManager la découpe en sprites mis en cache.
 
 ```mermaid
 classDiagram
   direction TB
   class GameRenderer {
     +SpriteManager Sprites
-    +Render(IScreen, Graphics, Rectangle)
-    +DrawGame(Graphics, Game)
+    +Render(IScreen) Canvas
+    +DrawGame(Canvas, Game)
     +DrawTopHud(...)
-    +DrawCredits(Graphics, int)
-    +DrawLevelIndicator(Graphics, int)
-    +DrawText(Graphics, string, int, int, ArcadeColor)
-    +DrawSprite(Graphics, Bitmap, int, int)$
+    +DrawCredits(Canvas, int)
+    +DrawLevelIndicator(Canvas, int)
+    +DrawText(Canvas, string, int, int, ArcadeColor)
+    +DrawSprite(Canvas, Sprite, int, int)$
     +IsEnergizerOn(int)$ bool
   }
   class SpriteManager {
@@ -548,7 +571,35 @@ classDiagram
     +GetNamcoLogo(ArcadeColor)
     +GetSheetSprite(int, int)
     +GetWideSheetSprite(int, int, int, int)
-    +Dispose()
+  }
+  class Canvas {
+    +int Width
+    +int Height
+    +uint[] Pixels
+    +Clear(uint)
+    +GetPixel(int, int) uint
+    +SetPixel(int, int, uint)
+    +MakeTransparent(uint rgb)
+    +Draw(Sprite, int, int)
+    +DrawScaled(Sprite, int, int, int, int)
+  }
+  class Sprite {
+    +Canvas Source
+    +int X
+    +int Y
+    +int Width
+    +int Height
+    +Empty(int, int)$ Sprite
+    +GetPixel(int, int) uint
+  }
+  class PngDecoder {
+    <<static>>
+    +Decode(Stream) Canvas
+  }
+  class Assets {
+    <<static>>
+    +Open(string) Stream
+    +TryOpen(string) Stream
   }
   class ArcadeColor {
     <<enumeration>>
@@ -567,20 +618,22 @@ classDiagram
   }
   class IScreen {
     <<interface>>
-    +Draw(GameRenderer, Graphics)
+    +Draw(GameRenderer, Canvas)
   }
   class Game
   class asset_png["asset.png (feuille unique)"]
-  class Bitmap {
-    <<backBuffer 224x288>>
-  }
 
   GameRenderer *-- SpriteManager
-  GameRenderer *-- Bitmap : dessin natif puis agrandi
+  GameRenderer *-- Canvas : dessin natif 224x288
   GameRenderer ..> IScreen : Render()
   GameRenderer ..> Game : DrawGame()
   GameRenderer ..> HudLayout
   GameRenderer ..> DisplayConfig
+  Sprite --> Canvas : Source (vue)
+  SpriteManager ..> Sprite : retourne des vues
+  SpriteManager ..> PngDecoder : décode la feuille
+  SpriteManager ..> Assets : ouvre
+  PngDecoder ..> Canvas : produit
   SpriteManager --> asset_png : découpe et met en cache
   SpriteManager ..> ArcadeColor
   SpriteManager ..> MazeColor
@@ -591,7 +644,7 @@ Ouvrir en grand : [SVG](diagrams/fr/06_classes_rendu.svg) · [PNG](diagrams/fr/0
 
 ### 2.6 Audio
 
-SoundDirector traduit les événements du jeu en sons et garantit qu'un seul son de fond joue à la fois. AudioEngine décode les 24 sons au démarrage, les mixe avec NAudio, puis applique le volume avant la sortie WaveOut.
+SoundDirector traduit les événements du jeu en sons et garantit qu'un seul son de fond joue à la fois, via l'interface IAudioEngine. MixerAudioEngine décode les 24 sons au démarrage (WavDecoder), les mixe lui-même en flottants 48 kHz stéréo et applique le volume. Il ne connaît aucune sortie audio : SdlAudioOutput, côté hôte, appelle Read() depuis le callback de SDL pour remplir le tampon de la carte son.
 
 ```mermaid
 classDiagram
@@ -619,21 +672,37 @@ classDiagram
     Frightened
     Eyes
   }
-  class AudioEngine {
+  class IAudioEngine {
+    <<interface>>
     +float Volume
+    +Play(SoundId, bool loop)
+    +PlaySequence(first, next, loopNext)
+    +Stop(SoundId)
+    +StopAll()
+  }
+  class MixerAudioEngine {
+    +SampleRate = 48000$
+    +Channels = 2$
+    +float Volume
+    +bool OutputAvailable
+    +Read(Span~float~) int
     +Play(SoundId, bool loop)
     +PlaySequence(first, next, loopNext)
     +Stop(SoundId)
     +StopAll()
     +Dispose()
   }
+  class WavDecoder {
+    <<static>>
+    +Decode(Stream, int targetSampleRate)$ float[]
+  }
   class SoundVoice {
-    <<internal, ISampleProvider>>
+    <<internal>>
     +SoundId FirstId
     +SoundId ChainedId
     +bool IsFinished
     +Stop()
-    +Read(Span~float~) int
+    +MixInto(Span~float~)
   }
   class SoundData {
     <<internal>>
@@ -653,30 +722,27 @@ classDiagram
     Eyes, EyesFirstLoop
     Intermission
   }
-  class MixingSampleProvider {
-    <<NAudio>>
-  }
-  class VolumeSampleProvider {
-    <<NAudio>>
-  }
-  class WaveOut {
-    <<NAudio>>
-  }
-  class Settings {
+  class Assets {
     <<static>>
-    +int Volume
+    +TryOpen(string) Stream
+  }
+  class SdlAudioOutput {
+    <<PACMAN.Sdl>>
+    +Start() bool
+    -Feed(...)
+    +Dispose()
   }
 
-  SoundDirector *-- AudioEngine
+  SoundDirector *-- IAudioEngine
   SoundDirector --> Background : un seul son de fond
-  AudioEngine *-- "24" SoundData : décodés au démarrage
-  AudioEngine o-- "0..*" SoundVoice : voix en cours
+  IAudioEngine <|.. MixerAudioEngine
+  MixerAudioEngine *-- "24" SoundData : décodés au démarrage
+  MixerAudioEngine o-- "0..*" SoundVoice : voix en cours
+  MixerAudioEngine ..> WavDecoder : décode
+  MixerAudioEngine ..> Assets : ouvre les WAV
   SoundVoice --> SoundData
   SoundData --> SoundId
-  AudioEngine *-- MixingSampleProvider
-  MixingSampleProvider --> VolumeSampleProvider : flux audio
-  VolumeSampleProvider --> WaveOut : flux audio
-  AudioEngine ..> Settings : volume initial
+  SdlAudioOutput --> MixerAudioEngine : Read()
 ```
 
 *Figure 7 : diagramme de classes : audio*  
@@ -686,39 +752,41 @@ Ouvrir en grand : [SVG](diagrams/fr/07_classes_audio.svg) · [PNG](diagrams/fr/0
 
 ### 3.1 Une image de jeu à 60 Hz
 
-Le Timer de MainForm accumule le temps écoulé et appelle autant de fois que nécessaire la mise à jour logique, à pas fixe de 1/60 s, avant de redessiner. La vitesse du jeu reste ainsi identique quelle que soit la machine.
+La boucle de SdlHost.Run accumule le temps écoulé et appelle autant de fois que nécessaire la mise à jour logique, à pas fixe de 1/60 s (rattrapage limité à 100 ms), avant de redessiner. Le Canvas produit par GameRenderer est ensuite copié dans une texture SDL puis affiché. La vitesse du jeu reste ainsi identique quelle que soit la machine.
 
 ```mermaid
 sequenceDiagram
-  participant T as Timer (MainForm)
+  participant H as SdlHost
   participant S as ScreenManager
   participant P as PlayScreen
   participant G as Game
   participant W as WaveScheduler
   participant F as FruitManager
   participant D as SoundDirector
-  participant H as GhostHouse
+  participant GH as GhostHouse
   participant PM as Pacman
-  participant GH as Ghost x4
+  participant GS as Ghost x4
   participant R as GameRenderer
-  T->>T: GameLoop, temps accumulé
+  participant X as SDL3
+  H->>H: Run(), PumpEvents(), temps accumulé
   loop tant que le temps accumulé ≥ 16,67 ms
-    T->>S: Update()
+    H->>S: Update()
     S->>P: Update()
     P->>G: Update()
     G->>W: Update(niveau, effrayé)
     G->>F: Update(niveau, gommes, Pacman)
     G->>D: UpdateBackground(...)
-    G->>H: Update(niveau)
+    G->>GH: Update(niveau)
     G->>PM: Move(carte, specs, effrayé)
-    G->>GH: Move(carte, Pacman, specs, mode)
+    G->>GS: Move(carte, Pacman, specs, mode)
     G->>G: CheckPelletCollision()
     G->>G: CheckGhostCollisions()
   end
-  T->>T: Invalidate()
-  T->>R: Render(écran courant, Graphics, rectangle)
-  R->>P: Draw(renderer, g)
-  P->>R: DrawGame(g, game)
+  H->>R: Render(écran courant)
+  R->>P: Draw(renderer, canvas)
+  P->>R: DrawGame(canvas, game)
+  R-->>H: Canvas 224×288
+  H->>X: UpdateTexture(), RenderPresent()
 ```
 
 *Figure 17 : diagramme de séquence : une image de jeu à 60 Hz*  
@@ -731,13 +799,14 @@ Un crédit mène de l'attract mode à l'écran start ; la touche 1 démarre une 
 ```mermaid
 sequenceDiagram
   actor J as Joueur
-  participant M as MainForm
+  participant M as SdlHost
   participant S as ScreenManager
   participant A as AttractScreen
   participant ST as StartScreen
   participant P as PlayScreen
   participant G as Game
   J->>M: touche 5
+  M->>M: OnKeyDown(), TryMapKey()
   M->>S: OnInput(Coin)
   S->>S: InsertCoin(), crédit + 1
   S->>ST: ShowStart() via SwitchTo
