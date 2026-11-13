@@ -1,24 +1,16 @@
 ﻿using System;
 using System.Reflection;
-using System.Runtime.InteropServices;
 using SDL3;
 
 namespace PacmanSdl
 {
     internal static class Program
     {
-        [DllImport("kernel32.dll")]
-        private static extern bool AttachConsole(int processId);
-
         private static int Main(string[] args)
         {
-            if (args.Length > 0 && IsVersionOption(args[0]))
+            // --version : uniquement sous Linux (sous Windows, la version est dans les propriétés du fichier)
+            if (OperatingSystem.IsLinux() && args.Length > 0 && IsVersionOption(args[0]))
             {
-                // Sous Windows (WinExe) il faut se rattacher à la console du terminal pour pouvoir y écrire
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-                {
-                    AttachConsole(-1);
-                }
                 Console.WriteLine("Pac-Man " + GetVersion());
                 return 0;
             }
