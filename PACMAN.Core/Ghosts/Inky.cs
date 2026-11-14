@@ -9,8 +9,11 @@ namespace PacmanWinForms
         public override GhostType Type { get { return GhostType.Inky; } }
 
         // Départ : gauche du nid
-        public Inky(Ghost blinkyRef) : base(12, 13 + 3, MazeLayout.InkyScatterTarget)
+        private readonly bool overflowBug;
+
+        public Inky(Ghost blinkyRef, bool overflowBug = true) : base(12, 13 + 3, MazeLayout.InkyScatterTarget)
         {
+            this.overflowBug = overflowBug;
             this.blinky = blinkyRef;
             this.Phase = GhostPhase.InHouse;
             this.CurrentDirection = Direction.Up;
@@ -32,7 +35,7 @@ namespace PacmanWinForms
             {
                 case Direction.Up:
                     pacmanY -= 2;
-                    pacmanX -= 2; // Bug d'overflow de l'arcade
+                    if (overflowBug) pacmanX -= 2; // Bug d'overflow de l'arcade
                     break;
                 case Direction.Down: pacmanY += 2; break;
                 case Direction.Left: pacmanX -= 2; break;

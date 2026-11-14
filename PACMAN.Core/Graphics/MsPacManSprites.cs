@@ -33,6 +33,7 @@ namespace PacmanWinForms
         private readonly Dictionary<(int, int), Sprite> pacmanSprites = new Dictionary<(int, int), Sprite>();
         private readonly Dictionary<int, Sprite> ghostPoints = new Dictionary<int, Sprite>();
         private readonly Dictionary<int, Sprite> fruitSprites = new Dictionary<int, Sprite>();
+        private readonly Dictionary<int, Sprite> indicatorSprites = new Dictionary<int, Sprite>();
         private readonly Dictionary<int, Sprite> fruitPoints = new Dictionary<int, Sprite>();
         private Sprite lifeSprite;
 
@@ -179,14 +180,10 @@ namespace PacmanWinForms
             return sprite;
         }
 
-        /// <summary>
-        /// Fruit du niveau : cerise, fraise, orange, bretzel, pomme, poire, banane aux niveaux 1 à 7.
-        /// (Au-delà, ils reviennent à tour de rôle en attendant le tirage au hasard de l'arcade.)
-        /// </summary>
+        /// <summary>Fruit du niveau : cerise, fraise, orange, bretzel, pomme, poire, banane aux niveaux 1 à 7, puis tirage fixe par niveau.</summary>
         public override Sprite GetFruitSprite(int level)
         {
-            int index = (level <= 7) ? (level - 1) : ((level - 8) % 7);
-            if (index < 0) index = 0;
+            int index = MsFruitManager.FruitIndexForLevel(level);
 
             Sprite sprite;
             if (fruitSprites.TryGetValue(index, out sprite)) return sprite;
@@ -195,6 +192,19 @@ namespace PacmanWinForms
             int y = (index >= 5) ? SheetSpritesY + 2 * SpriteSize : SheetSpritesY;
             sprite = CropAsset(48 + index * SpriteSize, y);
             fruitSprites[index] = sprite;
+            return sprite;
+        }
+
+        /// <summary>Indicateur de niveau : les sept fruits à la suite sur la première ligne de la feuille.</summary>
+        public override Sprite GetLevelIndicatorSprite(int level)
+        {
+            int index = MsFruitManager.FruitIndexForLevel(level);
+
+            Sprite sprite;
+            if (indicatorSprites.TryGetValue(index, out sprite)) return sprite;
+
+            sprite = CropAsset(48 + index * SpriteSize, SheetSpritesY);
+            indicatorSprites[index] = sprite;
             return sprite;
         }
 

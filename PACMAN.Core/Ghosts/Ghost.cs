@@ -23,6 +23,15 @@ namespace PacmanWinForms
         // Vulnérable (après une super-gomme). Peut être vrai même dans le nid ou à la sortie.
         public bool IsFrightened { get; set; } = false;
 
+        /// <summary>Ms Pac-Man : en Scatter, le fantôme erre au hasard au lieu de rejoindre son coin.</summary>
+        public bool WandersInScatter { get; set; }
+
+        // Le fantôme actif choisit-il ses virages au hasard (comme un fantôme effrayé) ?
+        protected virtual bool ShouldWander()
+        {
+            return WandersInScatter && Phase == GhostPhase.Active && Mode == GhostMode.Scatter;
+        }
+
         protected float initialY;
         protected int bobDirection = 1;
         protected Point ScatterTargetTile { get; set; }
@@ -178,7 +187,7 @@ namespace PacmanWinForms
                 {
                     reverseRequested = false;
 
-                    if (isActive && IsFrightened)
+                    if (isActive && (IsFrightened || ShouldWander()))
                         CurrentDirection = ChooseFrightenedDirection(map);
                     else
                         CurrentDirection = ChooseNextDirection(map, pacman, currentTileX, currentTileY);

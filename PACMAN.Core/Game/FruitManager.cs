@@ -18,11 +18,30 @@ namespace PacmanWinForms
 
         private const int ScoreDisplayFrames = 120;   // 2 secondes
 
-        public bool IsActive { get; private set; }
-        public int X { get; private set; }
-        public int Y { get; private set; }
-        public bool IsScoreVisible { get; private set; }
-        public int Value { get; private set; } = 100;
+        // (X, Y) : coin haut-gauche du sprite 16x16 du fruit
+        public bool IsActive { get; protected set; }
+        public int X { get; protected set; }
+        public int Y { get; protected set; }
+        public bool IsScoreVisible { get; protected set; }
+        public int Value { get; protected set; } = 100;
+
+        // Nombre de gommes mangées qui font apparaître le fruit
+        protected virtual int FirstFruitDots { get { return 70; } }
+        protected virtual int SecondFruitDots { get { return 170; } }
+
+        // Le fruit disparaît-il après 9 à 10 secondes ? (Ms Pac-Man : il disparaît en quittant le labyrinthe)
+        protected virtual bool ExpiresByTimer { get { return true; } }
+
+        // Déplace le fruit d'une frame (immobile dans Pac-Man)
+        protected virtual void MoveFruit(LevelMap map) { }
+
+        // Pac-Man touche-t-il le fruit ?
+        protected virtual bool IsTouchedBy(Pacman pacman)
+        {
+            return pacman.TileX == Tiles.Of(X) && pacman.TileY == Tiles.Of(Y);
+        }
+
+        protected Random Rng { get { return random; } }
 
         private int fruitTimer = 0;
         private int scoreTimer = 0;
@@ -46,18 +65,23 @@ namespace PacmanWinForms
         }
 
         // À appeler à chaque frame de jeu. Renvoie les points gagnés si Pac-Man mange le fruit, sinon 0.
-        public int Update(int level, int dotsRemaining, Pacman pacman)
+        public int Update(int level, int dotsRemaining, Pacman pacman, LevelMap map)
         {
             int pointsEarned = 0;
 
             if (IsActive)
             {
+                MoveFruit(map);
                 fruitTimer--;
-                if (fruitTimer <= 0)
+                if (!IsActive)
+                {
+                    // Le fruit a quitté le labyrinthe
+                }
+                else if (ExpiresByTimer && fruitTimer <= 0)
                 {
                     IsActive = false; // Le fruit disparaît après ~10 secondes
                 }
-                else if (pacman.TileX == Tiles.Of(X) && pacman.TileY == Tiles.Of(Y))
+                else if (IsTouchedBy(pacman))
                 {
                     IsActive = false;
                     IsScoreVisible = true;
@@ -77,25 +101,30 @@ namespace PacmanWinForms
 
             int dotsEaten = totalDots - dotsRemaining;
 
-            if (!spawned70 && dotsEaten >= 70)
+            if (!spawned70 && dotsEaten >= FirstFruitDots)
             {
                 spawned70 = true;
-                Spawn(level);
+                Spawn(level, map);
             }
-            if (!spawned170 && dotsEaten >= 170)
+            if (!spawned170 && dotsEaten >= SecondFruitDots)
             {
                 spawned170 = true;
-                Spawn(level);
+                Spawn(level, map);
             }
 
             return pointsEarned;
         }
 
-        private void Spawn(int level)
+        protected void StartTimer()
         {
-            IsActive = true;
             // Le fruit reste entre 9 et 10 secondes, durée variable et non reproductible
             fruitTimer = random.Next(FruitMinFrames, FruitMaxFrames + 1);
+        }
+
+        protected virtual void Spawn(int level, LevelMap map)
+        {
+            IsActive = true;
+            StartTimer();
 
             // Alignement sous le nid (même colonne que le spawn de Pac-Man, ligne 20)
             X = 13 * GameConfig.TileSize;

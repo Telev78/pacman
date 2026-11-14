@@ -49,14 +49,19 @@
         public override int PacmanStartX { get { return MazeLayout.PacmanStartX; } }
         public override int PacmanStartY { get { return MazeLayout.PacmanStartY; } }
 
-        // Étape 4 : fantômes, niveaux et fruit propres à Ms Pac-Man
+        // Étape 4 : fantômes errants, fruit mobile ; vitesses, vagues et sorties du nid comme dans Pac-Man
         public override Ghost[] CreateGhosts()
         {
+            // Pas de bug de débordement vers le haut ; Sue (orange) se comporte comme Clyde ;
+            // en Scatter, les quatre fantômes errent au hasard (sauf Blinky en Cruise Elroy)
             Blinky blinky = new Blinky();
-            Pinky pinky = new Pinky();
-            Inky inky = new Inky(blinky);
-            Clyde clyde = new Clyde();
-            return new Ghost[] { blinky, pinky, inky, clyde };
+            Pinky pinky = new Pinky(false);
+            Inky inky = new Inky(blinky, false);
+            Clyde sue = new Clyde();
+
+            Ghost[] ghosts = { blinky, pinky, inky, sue };
+            foreach (Ghost ghost in ghosts) ghost.WandersInScatter = true;
+            return ghosts;
         }
 
         public override LevelSpecs GetSpecs(int level)
@@ -66,7 +71,7 @@
 
         public override FruitManager CreateFruit(int? seed)
         {
-            return new FruitManager(seed);
+            return new MsFruitManager(seed);
         }
 
         // Étape 6 : intermissions de Ms Pac-Man

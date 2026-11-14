@@ -488,6 +488,12 @@ namespace PacmanWinForms
         /// <summary>
         /// Sprite du fruit correspondant au niveau.
         /// </summary>
+        /// <summary>Fruit de l'indicateur de niveau (bas de l'écran) ; par défaut le même que celui du jeu.</summary>
+        public virtual Sprite GetLevelIndicatorSprite(int level)
+        {
+            return GetFruitSprite(level);
+        }
+
         public virtual Sprite GetFruitSprite(int level)
         {
             int fruitIndex; // 0: Cerise, 1: Fraise, 2: Pêche, 3: Pomme, 4: Melon, 5: Galaxian, 6: Cloche, 7: Clé

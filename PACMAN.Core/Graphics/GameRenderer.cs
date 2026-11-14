@@ -340,7 +340,7 @@ namespace PacmanWinForms
             {
                 // i = 0 : le plus ancien, tout à droite ; le niveau actuel est le plus à gauche
                 int column = HudLayout.LevelIndicatorRightColumn - i * HudLayout.LevelIndicatorSpacing;
-                DrawSprite(g, sprites.GetFruitSprite(firstLevel + i), column * tile, HudLayout.BottomRow * tile);
+                DrawSprite(g, sprites.GetLevelIndicatorSprite(firstLevel + i), column * tile, HudLayout.BottomRow * tile);
             }
         }
 

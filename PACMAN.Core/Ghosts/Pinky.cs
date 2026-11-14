@@ -7,8 +7,12 @@ namespace PacmanWinForms
         public override GhostType Type { get { return GhostType.Pinky; } }
 
         // Départ : milieu du nid
-        public Pinky() : base(14, 13 + 3, MazeLayout.PinkyScatterTarget)
+        private readonly bool overflowBug;
+
+        // overflowBug : la cible "4 cases devant Pac-Man" a le bug de l'arcade (vers le haut, 4 cases aussi à gauche).
+        public Pinky(bool overflowBug = true) : base(14, 13 + 3, MazeLayout.PinkyScatterTarget)
         {
+            this.overflowBug = overflowBug;
             this.Phase = GhostPhase.InHouse;
             this.CurrentDirection = Direction.Down;
 
@@ -28,7 +32,7 @@ namespace PacmanWinForms
             {
                 case Direction.Up:
                     targetY -= 4;
-                    targetX -= 4; // Bug d'overflow de l'arcade
+                    if (overflowBug) targetX -= 4; // Bug d'overflow de l'arcade
                     break;
                 case Direction.Down: targetY += 4; break;
                 case Direction.Left: targetX -= 4; break;

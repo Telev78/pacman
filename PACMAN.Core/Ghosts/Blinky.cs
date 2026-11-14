@@ -39,6 +39,12 @@ namespace PacmanWinForms
             return specs.GhostNormal;
         }
 
+        // Cruise Elroy : Blinky ne quitte jamais la poursuite, même en Scatter
+        protected override bool ShouldWander()
+        {
+            return elroyLevel == 0 && base.ShouldWander();
+        }
+
         protected override Point GetCurrentTargetTile(Pacman pacman)
         {
             // Cruise Elroy : en Scatter, Blinky continue de foncer sur Pac-Man
