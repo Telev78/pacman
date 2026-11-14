@@ -54,6 +54,15 @@ namespace PacmanSdl
             if (window == IntPtr.Zero)
                 throw new InvalidOperationException("Impossible de créer la fenêtre : " + SDL.GetError());
 
+            // Sous Windows, le rendu OpenGL évite que les couleurs soient éclaircies sur un écran HDR
+            // (les rendus Direct3D et Vulkan sont convertis différemment par Windows).
+            // "software" sert de secours si OpenGL est indisponible.
+            // Une variable d'environnement SDL_RENDER_DRIVER définie par l'utilisateur reste prioritaire.
+            if (OperatingSystem.IsWindows())
+            {
+                SDL.SetHint("SDL_RENDER_DRIVER", "opengl,software");
+            }
+
             sdlRenderer = SDL.CreateRenderer(window, null);
             if (sdlRenderer == IntPtr.Zero)
                 throw new InvalidOperationException("Impossible de créer le moteur de rendu : " + SDL.GetError());
