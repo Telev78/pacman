@@ -46,7 +46,7 @@ namespace PacmanWinForms
         // Ms Pac-Man
         // ------------------------------------------------------------------
 
-        // Lignes de la feuille : droite, gauche, haut, bas ; colonnes : 0 = bouche la plus ouverte, 1 = mi-ouverte, 2 = fermée
+        // Lignes de la feuille : droite, gauche, haut, bas ; colonnes : 0 = bouche grande ouverte, 1 = mi-ouverte, 2 = fermée
         private static int RowOf(Direction direction)
         {
             switch (direction)
@@ -60,7 +60,8 @@ namespace PacmanWinForms
 
         public override Sprite GetPacmanSprite(int animFrame, Direction direction)
         {
-            int column = (animFrame == 3) ? 2 : (animFrame == 1 ? 1 : 0);
+            // Cycle commun aux deux jeux : mi-ouverte, grande ouverte, mi-ouverte, fermée
+            int column = (animFrame == 3) ? 2 : (animFrame == 1 ? 0 : 1);
             return PacmanCell(RowOf(direction), column);
         }
 

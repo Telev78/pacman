@@ -50,15 +50,16 @@ namespace PacmanWinForms
 
         public void ShowMenu()
         {
+            // Quitter un jeu, c'est changer de borne : crédits et high score repartent de zéro
+            Credits = 0;
+            HighScore = 0;
+
             SwitchTo(new GameSelectScreen(this));
         }
 
         /// <summary>Choisit le jeu (charge ses sons, prévient l'hôte) et démarre son attract mode.</summary>
         public void SelectVariant(GameVariant variant)
         {
-            // Un autre jeu repart d'un high score vide
-            if (Variant != null && Variant.Id != variant.Id) HighScore = 0;
-
             if (loadedSoundFolder != variant.SoundFolder)
             {
                 audio.LoadSoundPack(variant.SoundFolder);

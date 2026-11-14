@@ -45,7 +45,7 @@ namespace PacmanWinForms
             if (Settings.BonusLife > 0)
             {
                 renderer.DrawText(g, "ADDITIONAL", 2, 24, ArcadeColor.Orange);
-                GameRenderer.DrawSprite(g, renderer.Sprites.GetPacmanSprite(1, Direction.Right), 13 * tile, 23 * tile);
+                GameRenderer.DrawSprite(g, renderer.Sprites.GetPacmanSprite(0, Direction.Right), 13 * tile, 23 * tile);
                 renderer.DrawText(g, "AT " + Settings.BonusLife, 16, 24, ArcadeColor.Orange);
                 GameRenderer.DrawSprite(g, renderer.Sprites.GetPtsSprite(ArcadeColor.Orange), 25 * tile, 24 * tile);
             }
