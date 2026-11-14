@@ -37,6 +37,7 @@ namespace PacmanWinForms
             {
                 LoadMapFromStream(stream);
             }
+            definition.Analyze(Grid);
             Definition = definition;
         }
 

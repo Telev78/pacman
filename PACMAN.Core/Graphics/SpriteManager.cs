@@ -11,10 +11,13 @@ namespace PacmanWinForms
     /// </summary>
     public class SpriteManager
     {
-        private const int SpriteSize = 16;
+        protected const int SpriteSize = 16;
         private const int SpritesX = 0;    // Début des sprites de personnages dans la feuille
-        private const int SpritesY = 81;
-        private const int TextY = 292;     // Début des blocs de texte dans la feuille
+
+        // Position des sprites de personnages et des blocs de texte dans la feuille (propre à chaque jeu)
+        private readonly int SpritesY;
+        private readonly int TextX;
+        private readonly int TextY;
 
         private Canvas assetSheet;
         private Sprite ghostDoorSprite;
@@ -83,7 +86,7 @@ namespace PacmanWinForms
         }
 
         // Un rectangle de la feuille (simple vue, sans copie de pixels)
-        private Sprite CropAsset(int x, int y, int width = 16, int height = 16)
+        protected Sprite CropAsset(int x, int y, int width = 16, int height = 16)
         {
             return new Sprite(assetSheet, x, y, width, height);
         }
@@ -93,9 +96,21 @@ namespace PacmanWinForms
         {
         }
 
-        /// <param name="sheetResource">Ressource embarquée de la feuille, ex. "asset.pacman.asset.png".</param>
-        public SpriteManager(string sheetResource)
+        /// <summary>Feuille de sprites de Pac-Man, dans la ressource donnée.</summary>
+        public SpriteManager(string sheetResource) : this(sheetResource, 81, 0, 292)
         {
+        }
+
+        /// <param name="sheetResource">Ressource embarquée de la feuille, ex. "asset.pacman.asset.png".</param>
+        /// <param name="spritesY">Ordonnée de la première ligne de sprites de personnages.</param>
+        /// <param name="textX">Abscisse des blocs de texte.</param>
+        /// <param name="textY">Ordonnée du premier bloc de texte.</param>
+        protected SpriteManager(string sheetResource, int spritesY, int textX, int textY)
+        {
+            SpritesY = spritesY;
+            TextX = textX;
+            TextY = textY;
+
             assetSheet = LoadEmbeddedCanvas(sheetResource);
             assetSheet.MakeTransparent(0x000000);   // Le noir pur de la feuille devient transparent
 
@@ -183,7 +198,7 @@ namespace PacmanWinForms
         /// Sprite de Pac-Man selon sa frame d'animation et sa direction.
         /// La frame 3 (bouche fermée) est partagée par toutes les directions.
         /// </summary>
-        public Sprite GetPacmanSprite(int animFrame, Direction direction)
+        public virtual Sprite GetPacmanSprite(int animFrame, Direction direction)
         {
             Direction cacheDirection = (animFrame == 3) ? Direction.None : direction;
             var key = (animFrame, cacheDirection);
@@ -222,7 +237,7 @@ namespace PacmanWinForms
             return sprite;
         }
 
-        public Sprite GetPacmanDeathSprite(int frame)
+        public virtual Sprite GetPacmanDeathSprite(int frame)
         {
             if (frame >= 0 && frame < 12)
                 return pacmanDeathSprites[frame];
@@ -254,12 +269,33 @@ namespace PacmanWinForms
             return tile;
         }
 
-        public Sprite GetDotSprite()
+        /// <summary>Gomme du labyrinthe donné (la couleur change d'un labyrinthe à l'autre dans Ms Pac-Man).</summary>
+        public virtual Sprite GetDotSprite(MazeDefinition maze)
+        {
+            return GetDotSprite();
+        }
+
+        /// <summary>Super-gomme du labyrinthe donné.</summary>
+        public virtual Sprite GetEnergizerSprite(MazeDefinition maze)
+        {
+            return GetEnergizerSprite();
+        }
+
+        /// <summary>Décalage horizontal du score d'un fruit (la feuille de Pac-Man dessine les grands scores 3 pixels plus à gauche).</summary>
+        public virtual int GetFruitPointsOffsetX(int points)
+        {
+            return points >= 2000 ? -3 : 0;
+        }
+
+        /// <summary>Carré transparent de 16x16.</summary>
+        protected Sprite EmptySprite { get { return emptySprite16; } }
+
+        public virtual Sprite GetDotSprite()
         {
             return GetMazeTile(13, 2);
         }
 
-        public Sprite GetEnergizerSprite()
+        public virtual Sprite GetEnergizerSprite()
         {
             return GetMazeTile(15, 2);
         }
@@ -267,7 +303,7 @@ namespace PacmanWinForms
         /// <summary>
         /// Icône de la réserve de vies (HUD du bas), située en (128, 97) dans la feuille de sprites.
         /// </summary>
-        public Sprite GetLifeSprite()
+        public virtual Sprite GetLifeSprite()
         {
             if (lifeSprite == null)
             {
@@ -284,7 +320,7 @@ namespace PacmanWinForms
         /// Image pré-dessinée du labyrinthe (murs et porte du nid, sans les gommes), à l'échelle native 224x288.
         /// Construite une seule fois par couleur : les murs ne changent jamais.
         /// </summary>
-        public Sprite GetMazeLayer(LevelMap map, MazeColor color)
+        public virtual Sprite GetMazeLayer(LevelMap map, MazeColor color)
         {
             Sprite cached;
             if (mazeLayers.TryGetValue(color, out cached))
@@ -360,7 +396,7 @@ namespace PacmanWinForms
             }
 
             // Chaque bloc de couleur fait 4 lignes de 8 pixels
-            sprite = CropAsset(col * 8, TextY + ((((int)color * 4) + rowOffset) * 8), 8, 8);
+            sprite = CropAsset(TextX + col * 8, TextY + ((((int)color * 4) + rowOffset) * 8), 8, 8);
             charSprites[key] = sprite;
             return sprite;
         }
@@ -399,7 +435,7 @@ namespace PacmanWinForms
             int localRow = 1;    // 2ème ligne du sous-bloc de couleur
             int startCol = 13;
 
-            sprite = CropAsset(startCol * 8, TextY + ((((int)color * 4) + localRow) * 8), 17, 8);
+            sprite = CropAsset(TextX + startCol * 8, TextY + ((((int)color * 4) + localRow) * 8), 17, 8);
             ptsSprites[color] = sprite;
             return sprite;
         }
@@ -416,7 +452,7 @@ namespace PacmanWinForms
             int localRow = 3;    // 4ème ligne du sous-bloc de couleur
             int startCol = 0;
 
-            sprite = CropAsset(startCol * 8, TextY + ((((int)color * 4) + localRow) * 8), 50, 8);
+            sprite = CropAsset(TextX + startCol * 8, TextY + ((((int)color * 4) + localRow) * 8), 50, 8);
             namcoLogos[color] = sprite;
             return sprite;
         }
@@ -428,7 +464,7 @@ namespace PacmanWinForms
         /// <summary>
         /// Score stylisé affiché quand un fantôme est mangé (200, 400, 800, 1600).
         /// </summary>
-        public Sprite GetGhostPointsSprite(int points)
+        public virtual Sprite GetGhostPointsSprite(int points)
         {
             Sprite sprite;
             if (ghostPointsSprites.TryGetValue(points, out sprite))
@@ -452,7 +488,7 @@ namespace PacmanWinForms
         /// <summary>
         /// Sprite du fruit correspondant au niveau.
         /// </summary>
-        public Sprite GetFruitSprite(int level)
+        public virtual Sprite GetFruitSprite(int level)
         {
             int fruitIndex; // 0: Cerise, 1: Fraise, 2: Pêche, 3: Pomme, 4: Melon, 5: Galaxian, 6: Cloche, 7: Clé
 
@@ -478,7 +514,7 @@ namespace PacmanWinForms
         /// <summary>
         /// Score stylisé d'un fruit (100 à 5000), largeurs et alignements variables.
         /// </summary>
-        public Sprite GetFruitPointsSprite(int points)
+        public virtual Sprite GetFruitPointsSprite(int points)
         {
             Sprite sprite;
             if (fruitPointsSprites.TryGetValue(points, out sprite))

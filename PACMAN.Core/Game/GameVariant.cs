@@ -27,8 +27,8 @@
         public abstract string AssetFolder { get; }
 
         public string SheetResource { get { return AssetFolder + "asset.png"; } }
-        public string SoundFolder { get { return AssetFolder + "sounds."; } }
-        public string DemoResource { get { return AssetFolder + "demo.txt"; } }
+        public virtual string SoundFolder { get { return AssetFolder + "sounds."; } }
+        public virtual string DemoResource { get { return AssetFolder + "demo.txt"; } }
 
         /// <summary>Paramètres de vitesse, durées et fantômes d'un niveau. L'objet renvoyé est partagé : ne pas le modifier.</summary>
         public abstract LevelSpecs GetSpecs(int level);

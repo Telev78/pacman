@@ -16,11 +16,6 @@ namespace PacmanWinForms
         private const int FlashCycleFrames = 16;
         private const int FlashHalfCycleFrames = 8;
 
-        // Le score d'un fruit de 2000 points ou plus est dessiné 3 pixels plus à gauche dans la feuille :
-        // on décale pour garder la bordure droite alignée avec celle de 1000
-        private const int WideFruitScoreOffset = 3;
-        private const int WideFruitScoreMinValue = 2000;
-
         // Au départ, les sprites de Pac-Man ; SetVariant les remplace quand un autre jeu est choisi
         private const string DefaultSpritesVariantId = "pacman";
         private SpriteManager sprites = new SpriteManager();
@@ -85,8 +80,8 @@ namespace PacmanWinForms
             bool energizerVisible = game.State != GameState.Playing
                         || IsEnergizerOn(game.FrameCounter);
 
-            Sprite dotSprite = sprites.GetDotSprite();
-            Sprite energizerSprite = sprites.GetEnergizerSprite();
+            Sprite dotSprite = sprites.GetDotSprite(game.Map.Definition);
+            Sprite energizerSprite = sprites.GetEnergizerSprite(game.Map.Definition);
 
             for (int r = 0; r < GameConfig.MapHeight; r++)
             {
@@ -229,12 +224,7 @@ namespace PacmanWinForms
             if (game.Fruit.IsScoreVisible)
             {
                 Sprite points = sprites.GetFruitPointsSprite(game.Fruit.Value);
-                int x = game.Fruit.X;
-
-                if (game.Fruit.Value >= WideFruitScoreMinValue)
-                {
-                    x -= WideFruitScoreOffset;
-                }
+                int x = game.Fruit.X + sprites.GetFruitPointsOffsetX(game.Fruit.Value);
 
                 DrawSprite(g, points, x, game.Fruit.Y);
             }
