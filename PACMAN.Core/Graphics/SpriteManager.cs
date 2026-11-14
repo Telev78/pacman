@@ -423,6 +423,12 @@ namespace PacmanWinForms
             return new Sprite(dot, 0, 0, 8, 8);
         }
 
+        /// <summary>Logo "M/M" de Midway (32x32) : seulement dans la feuille de Ms Pac-Man.</summary>
+        public virtual Sprite GetMidwayLogo()
+        {
+            return EmptySprite;
+        }
+
         /// <summary>
         /// Glyphe combiné "PTS" (17x8) à la fin de la 2ème ligne d'un bloc de couleur.
         /// </summary>

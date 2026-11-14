@@ -36,6 +36,7 @@ namespace PacmanWinForms
         private readonly Dictionary<int, Sprite> indicatorSprites = new Dictionary<int, Sprite>();
         private readonly Dictionary<int, Sprite> fruitPoints = new Dictionary<int, Sprite>();
         private Sprite lifeSprite;
+        private Sprite midwayLogo;
 
         public MsPacManSprites(string sheetResource) : base(sheetResource, SheetSpritesY, TextX, TextY)
         {
@@ -91,6 +92,17 @@ namespace PacmanWinForms
         {
             if (lifeSprite == null) lifeSprite = PacmanCell(1, 1);
             return lifeSprite;
+        }
+
+        // ------------------------------------------------------------------
+        // Écrans hors partie
+        // ------------------------------------------------------------------
+
+        /// <summary>Logo "M/M" de Midway (32x32).</summary>
+        public override Sprite GetMidwayLogo()
+        {
+            if (midwayLogo == null) midwayLogo = CropAsset(343, 109, 32, 32);
+            return midwayLogo;
         }
 
         // ------------------------------------------------------------------

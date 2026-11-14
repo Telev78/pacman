@@ -88,7 +88,7 @@
             return new MsPacManSprites(SheetResource);
         }
 
-        // Étape 6 : attract mode et écran start de Ms Pac-Man (en attendant, ceux de Pac-Man avec les sprites de Ms Pac-Man)
+        // Étape 6 : écran start de Ms Pac-Man ; l'attract mode est encore celui de Pac-Man
         public override IAttractScreen CreateAttractScreen(ScreenManager manager)
         {
             return new AttractScreen(manager);
@@ -96,7 +96,7 @@
 
         public override IStartScreen CreateStartScreen(ScreenManager manager)
         {
-            return new StartScreen(manager);
+            return new MsStartScreen(manager);
         }
     }
 }
