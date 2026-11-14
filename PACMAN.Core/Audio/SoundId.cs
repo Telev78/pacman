@@ -15,6 +15,9 @@
         Siren2, Siren2FirstLoop,
         Siren3, Siren3FirstLoop,
         Siren4, Siren4FirstLoop,
-        Start
+        Start,
+        // Ms Pac-Man uniquement (absents du pack de Pac-Man)
+        Intermission2, Intermission3, IntermissionBump,
+        FruitBounce
     }
 }

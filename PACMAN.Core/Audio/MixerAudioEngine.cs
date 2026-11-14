@@ -41,7 +41,11 @@ namespace PacmanWinForms
             { SoundId.Siren3FirstLoop, "siren3_firstloop" },
             { SoundId.Siren4, "siren4" },
             { SoundId.Siren4FirstLoop, "siren4_firstloop" },
-            { SoundId.Start, "start" }
+            { SoundId.Start, "start" },
+            { SoundId.Intermission2, "intermission2" },
+            { SoundId.Intermission3, "intermission3" },
+            { SoundId.IntermissionBump, "intermission_bump" },
+            { SoundId.FruitBounce, "fruit_bounce" }
         };
 
         private readonly Dictionary<SoundId, SoundData> sounds = new Dictionary<SoundId, SoundData>();
@@ -84,7 +88,9 @@ namespace PacmanWinForms
             Dictionary<SoundId, SoundData> loaded = new Dictionary<SoundId, SoundData>();
             foreach (KeyValuePair<SoundId, string> entry in FileNames)
             {
-                loaded[entry.Key] = LoadSound(entry.Key, resourceFolder, entry.Value);
+                // Un jeu n'a pas forcément tous les sons : ceux qui manquent sont simplement ignorés
+                SoundData data = LoadSound(entry.Key, resourceFolder, entry.Value);
+                if (data != null) loaded[entry.Key] = data;
             }
 
             StopAll();
@@ -137,7 +143,10 @@ namespace PacmanWinForms
         /// </summary>
         public void Play(SoundId id, bool loop = false)
         {
-            StartVoice(new SoundVoice(sounds[id], loop, null, false));
+            SoundData data;
+            if (!sounds.TryGetValue(id, out data)) return;   // Son absent de ce jeu
+
+            StartVoice(new SoundVoice(data, loop, null, false));
         }
 
         /// <summary>
@@ -145,7 +154,18 @@ namespace PacmanWinForms
         /// </summary>
         public void PlaySequence(SoundId first, SoundId next, bool loopNext = true)
         {
-            StartVoice(new SoundVoice(sounds[first], false, sounds[next], loopNext));
+            SoundData firstData, nextData;
+            sounds.TryGetValue(first, out firstData);
+            sounds.TryGetValue(next, out nextData);
+
+            if (firstData == null)
+            {
+                // Pas d'intro dans ce jeu : on joue directement le second son (en boucle si demandé)
+                if (nextData != null) StartVoice(new SoundVoice(nextData, loopNext, null, false));
+                return;
+            }
+
+            StartVoice(new SoundVoice(firstData, false, nextData, loopNext));
         }
 
         /// <summary>
@@ -208,10 +228,7 @@ namespace PacmanWinForms
 
             using (Stream stream = Assets.TryOpen(resourceName))
             {
-                if (stream == null)
-                {
-                    throw new FileNotFoundException("Ressource audio introuvable : " + resourceName);
-                }
+                if (stream == null) return null;
 
                 try
                 {

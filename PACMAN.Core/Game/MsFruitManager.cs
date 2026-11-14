@@ -15,11 +15,13 @@ namespace PacmanWinForms
         private const int MinWalkFrames = 420;             // 7 secondes de promenade au minimum
         private const int MaxWalkFrames = 600;             // 10 secondes au maximum
         private const int TileSize = GameConfig.TileSize;
+        private const int BounceFrames = 16;
 
         // Position logique (coin haut-gauche de la boîte 8x8, comme les fantômes)
         private float fx, fy;
         private Direction direction = Direction.Left;
         private float accumulator;
+        private int bounceFrames;
         private int walkFramesLeft;
         private Point exitTile;
 
@@ -62,6 +64,7 @@ namespace PacmanWinForms
             fx = fromLeft ? -2 * TileSize : (GameConfig.MapWidth + 1) * TileSize;
             direction = fromLeft ? Direction.Right : Direction.Left;
             accumulator = 0;
+            bounceFrames = 0;
             walkFramesLeft = Rng.Next(MinWalkFrames, MaxWalkFrames + 1);
             exitTile = new Point(-1, row);
 
@@ -90,6 +93,10 @@ namespace PacmanWinForms
                 if (direction == Direction.Left && fx <= -2 * TileSize) IsActive = false;
                 if (direction == Direction.Right && fx >= (GameConfig.MapWidth + 1) * TileSize) IsActive = false;
             }
+
+            // Rebond du fruit toutes les 16 frames (période mesurée sur la vidéo de l'arcade : 0,267 s)
+            bounceFrames++;
+            if (IsActive && bounceFrames % BounceFrames == 0) HasBounced = true;
 
             Sync();
         }

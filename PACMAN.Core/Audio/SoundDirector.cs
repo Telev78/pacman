@@ -93,6 +93,12 @@
             audio.PlaySequence(SoundId.Death0, SoundId.Death1, loopNext: false);
         }
 
+        public void PlayFruitBounce()
+        {
+            if (Muted) return;
+            audio.Play(SoundId.FruitBounce);
+        }
+
         public void PlayCredit()
         {
             audio.Play(SoundId.Credit);

@@ -24,8 +24,6 @@
         public override string DisplayName { get { return "MS PAC-MAN"; } }
         public override string AssetFolder { get { return Folder; } }
 
-        // Sons de Pac-Man jusqu'à l'étape 5 (pack Ms Pac-Man)
-        public override string SoundFolder { get { return PacManVariant.Folder + "sounds."; } }
 
         /// <summary>
         /// Labyrinthe de chaque niveau : 1-2 → 1, 3-5 → 2, 6-9 → 3, 10-13 → 4, puis par blocs de 4 niveaux

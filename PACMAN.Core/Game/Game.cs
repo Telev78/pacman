@@ -289,6 +289,7 @@ namespace PacmanWinForms
 
             // --- FRUIT BONUS ---
             int fruitPoints = Fruit.Update(CurrentLevel, DotsRemaining, Pacman, Map);
+            if (Fruit.HasBounced) sound.PlayFruitBounce();
             if (fruitPoints > 0)
             {
                 sound.PlayFruitEaten();

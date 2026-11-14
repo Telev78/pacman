@@ -43,6 +43,9 @@ namespace PacmanWinForms
 
         protected Random Rng { get { return random; } }
 
+        /// <summary>Vrai pendant la frame où le fruit rebondit (bruitage de Ms Pac-Man).</summary>
+        public bool HasBounced { get; protected set; }
+
         private int fruitTimer = 0;
         private int scoreTimer = 0;
         private int totalDots = 0;
@@ -68,6 +71,7 @@ namespace PacmanWinForms
         public int Update(int level, int dotsRemaining, Pacman pacman, LevelMap map)
         {
             int pointsEarned = 0;
+            HasBounced = false;
 
             if (IsActive)
             {
