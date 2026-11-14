@@ -11,4 +11,14 @@ namespace PacmanWinForms
         void OnInput(InputKey key);                    // Touche pressée (les crédits sont gérés par le ScreenManager)
         void Draw(GameRenderer renderer, Canvas g);  // Dessin à la résolution de l'arcade (224x288)
     }
+
+    /// <summary>L'écran de présentation (attract mode) d'un jeu : un crédit y mène à l'écran start.</summary>
+    public interface IAttractScreen : IScreen
+    {
+    }
+
+    /// <summary>L'écran "PUSH START BUTTON" d'un jeu.</summary>
+    public interface IStartScreen : IScreen
+    {
+    }
 }

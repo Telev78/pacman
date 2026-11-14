@@ -21,11 +21,23 @@ namespace PacmanWinForms
         private const int WideFruitScoreOffset = 3;
         private const int WideFruitScoreMinValue = 2000;
 
-        private readonly SpriteManager sprites = new SpriteManager();
+        // Au départ, les sprites de Pac-Man ; SetVariant les remplace quand un autre jeu est choisi
+        private const string DefaultSpritesVariantId = "pacman";
+        private SpriteManager sprites = new SpriteManager();
+        private string spritesVariantId = DefaultSpritesVariantId;
         private readonly Canvas backBuffer = new Canvas(DisplayConfig.NativeWidth, DisplayConfig.NativeHeight);
 
         // Les écrans utilisent les sprites et les outils de dessin du moteur
         public SpriteManager Sprites { get { return sprites; } }
+
+        /// <summary>Utilise la feuille de sprites du jeu choisi (sans effet si c'est déjà celle en place).</summary>
+        public void SetVariant(GameVariant variant)
+        {
+            if (variant.Id == spritesVariantId) return;
+
+            sprites = variant.CreateSprites();
+            spritesVariantId = variant.Id;
+        }
 
         /// <summary>
         /// Dessine un écran complet à la résolution de l'arcade (224x288) et renvoie l'image obtenue.

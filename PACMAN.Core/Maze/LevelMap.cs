@@ -11,8 +11,13 @@ namespace PacmanWinForms
         // Index de la tuile visuelle dans maze.png, ou -1 si vide
         public int[,] VisualGrid { get; private set; }
 
+        // Tunnels, zones lentes et virages interdits du labyrinthe chargé
+        public MazeDefinition Definition { get; private set; }
+
         public LevelMap()
         {
+            Definition = MazeDefinition.Original;
+
             Grid = new TileType[GameConfig.MapHeight, GameConfig.MapWidth];
             VisualGrid = new int[GameConfig.MapHeight, GameConfig.MapWidth];
 
@@ -23,6 +28,16 @@ namespace PacmanWinForms
                     VisualGrid[r, c] = -1;
                 }
             }
+        }
+
+        /// <summary>Charge un labyrinthe depuis ses ressources embarquées et mémorise sa définition.</summary>
+        public void Load(MazeDefinition definition)
+        {
+            using (Stream stream = Assets.Open(definition.ResourcePath))
+            {
+                LoadMapFromStream(stream);
+            }
+            Definition = definition;
         }
 
         /// <summary>

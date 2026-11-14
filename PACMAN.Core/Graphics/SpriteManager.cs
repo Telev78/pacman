@@ -88,9 +88,15 @@ namespace PacmanWinForms
             return new Sprite(assetSheet, x, y, width, height);
         }
 
-        public SpriteManager()
+        /// <summary>Feuille de sprites de Pac-Man.</summary>
+        public SpriteManager() : this(PacManVariant.Folder + "asset.png")
         {
-            assetSheet = LoadEmbeddedCanvas("asset.asset.png");
+        }
+
+        /// <param name="sheetResource">Ressource embarquée de la feuille, ex. "asset.pacman.asset.png".</param>
+        public SpriteManager(string sheetResource)
+        {
+            assetSheet = LoadEmbeddedCanvas(sheetResource);
             assetSheet.MakeTransparent(0x000000);   // Le noir pur de la feuille devient transparent
 
             emptySprite16 = Sprite.Empty(SpriteSize, SpriteSize);

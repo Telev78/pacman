@@ -11,6 +11,9 @@ namespace PacmanWinForms
         /// <summary>Volume général, de 0 (muet) à 1 (maximum).</summary>
         float Volume { get; set; }
 
+        /// <summary>Charge les sons d'un jeu (dossier de ressources, ex. "asset.pacman.sounds.") en remplacement des précédents.</summary>
+        void LoadSoundPack(string resourceFolder);
+
         /// <summary>Joue un son depuis le début (relance le son s'il jouait déjà). Peut boucler.</summary>
         void Play(SoundId id, bool loop = false);
 

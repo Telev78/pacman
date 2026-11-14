@@ -19,6 +19,9 @@ namespace PacmanSdl
             {
                 PacmanWinForms.Settings.Load();
 
+                string game = GetGameOption(args);
+                if (game != null) PacmanWinForms.Settings.SetGameOverride(game);
+
                 using (SdlHost host = new SdlHost())
                 {
                     host.Run();
@@ -47,6 +50,16 @@ namespace PacmanSdl
                 return info.InformationalVersion;
             }
             return assembly.GetName().Version.ToString(3);
+        }
+
+        private static string GetGameOption(string[] args)
+        {
+            for (int i = 0; i < args.Length; i++)
+            {
+                if (args[i] == "--game" && i + 1 < args.Length) return args[i + 1];
+                if (args[i].StartsWith("--game=")) return args[i].Substring(7);
+            }
+            return null;
         }
     }
 }

@@ -6,7 +6,7 @@ namespace PacmanWinForms
     /// Attract mode : présentation des personnages, puis scène de chasse
     /// (la démo viendra à l'étape D).
     /// </summary>
-    public sealed class AttractScreen : IScreen
+    public sealed class AttractScreen : IAttractScreen
     {
         // Chronologie en frames depuis le début de l'écran (mesurée sur une vidéo de l'arcade à 60,6 images/s)
         private const int TitleFrame = 2;

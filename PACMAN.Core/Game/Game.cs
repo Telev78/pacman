@@ -48,6 +48,7 @@ namespace PacmanWinForms
         public FruitManager Fruit { get; private set; }
 
         private SoundDirector sound;
+        private readonly GameVariant variant;
 
         private readonly ScoreKeeper scoreKeeper;
         public int Score { get { return player.Score; } }
@@ -91,20 +92,6 @@ namespace PacmanWinForms
         // Numéro de l'intermission à jouer (1 à 3), 0 s'il n'y en a pas
         public int PendingIntermission { get; private set; }
 
-        // Intermissions de l'arcade : après les niveaux 2, 5, 9, 13 et 17
-        private static int IntermissionAfterLevel(int level)
-        {
-            switch (level)
-            {
-                case 2: return 1;
-                case 5: return 2;
-                case 9:
-                case 13:
-                case 17: return 3;
-                default: return 0;
-            }
-        }
-
         // À appeler quand l'intermission est terminée : on passe au niveau suivant
         public void FinishIntermission()
         {
@@ -118,8 +105,9 @@ namespace PacmanWinForms
             return playerNumber <= players.Length ? players[playerNumber - 1].Score : 0;
         }
 
-        public Game(SoundDirector sound, int highScore, bool isDemo = false, int playerCount = 1)
+        public Game(GameVariant variant, SoundDirector sound, int highScore, bool isDemo = false, int playerCount = 1)
         {
+            this.variant = variant;
             this.sound = sound;
             IsDemo = isDemo;
             scoreKeeper = new ScoreKeeper(highScore);
@@ -137,7 +125,7 @@ namespace PacmanWinForms
             }
 
             player = players[0];
-            Fruit = new FruitManager(isDemo ? DemoSeed : (int?)null);
+            Fruit = variant.CreateFruit(isDemo ? DemoSeed : (int?)null);
             Pacman = new Pacman();
             ghostHouse = new GhostHouse(ghostList);
 
@@ -161,17 +149,7 @@ namespace PacmanWinForms
         // Charge un labyrinthe neuf pour un joueur et compte ses gommes
         private void LoadMaze(PlayerState p)
         {
-            Assembly assembly = Assembly.GetExecutingAssembly();
-            // Note la conversion des dossiers en points : asset.maps.original_maze.txt
-            string resourceName = "PacmanWinForms.asset.maps.original_maze.txt";
-
-            using (Stream stream = assembly.GetManifestResourceStream(resourceName))
-            {
-                if (stream == null)
-                    throw new FileNotFoundException("Fichier de carte embarqué introuvable : " + resourceName);
-
-                p.Map.LoadMapFromStream(stream);
-            }
+            p.Map.Load(variant.GetMaze(p.Level));
 
             int dots = 0;
             for (int r = 0; r < GameConfig.MapHeight; r++)
@@ -192,19 +170,11 @@ namespace PacmanWinForms
             Ghost.ResetRandom();
             sound.ResetBackground();
 
-            this.CurrentSpecs = GameConfig.GetSpecsForLevel(this.CurrentLevel);
+            this.CurrentSpecs = variant.GetSpecs(this.CurrentLevel);
 
             ghostList.Clear();
 
-            Blinky blinky = new Blinky();
-            Pinky pinky = new Pinky();
-            Inky inky = new Inky(blinky);
-            Clyde clyde = new Clyde();
-
-            ghostList.Add(blinky);
-            ghostList.Add(pinky);
-            ghostList.Add(inky);
-            ghostList.Add(clyde);
+            ghostList.AddRange(variant.CreateGhosts());
 
             SpawnPacman();
 
@@ -232,8 +202,8 @@ namespace PacmanWinForms
 
         private void SpawnPacman()
         {
-            Pacman.X = MazeLayout.PacmanStartX;
-            Pacman.Y = MazeLayout.PacmanStartY;
+            Pacman.X = variant.PacmanStartX;
+            Pacman.Y = variant.PacmanStartY;
             Pacman.CurrentDirection = Direction.Left;
             Pacman.NextDirection = Direction.None;
             Pacman.State = PacmanState.Alive;
@@ -649,7 +619,7 @@ namespace PacmanWinForms
             // 3. Fin des clignotements : niveau suivant
             if (t >= VictoryFlashFrames * 2 * VictoryFlashCount)
             {
-                int act = IntermissionAfterLevel(CurrentLevel);
+                int act = variant.IntermissionAfterLevel(CurrentLevel);
                 if (act > 0)
                 {
                     PendingIntermission = act;

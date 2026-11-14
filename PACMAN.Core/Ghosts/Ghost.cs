@@ -89,7 +89,7 @@ namespace PacmanWinForms
                 }
 
                 // Le tunnel ralentit tous les fantômes, y compris les fantômes effrayés
-                if (MazeLayout.IsInTunnelSlowZone(currentTileX, currentTileY))
+                if (map.Definition.IsInTunnelSlowZone(currentTileX, currentTileY))
                 {
                     currentSpeed = specs.GhostTunnel;
                 }
@@ -201,7 +201,7 @@ namespace PacmanWinForms
             int shortestDistance = int.MaxValue;
             
             // Aux intersections interdites aux virages vers le haut, les fantômes en Scatter ou Chase ne peuvent pas monter
-            bool upForbidden = Phase == GhostPhase.Active && MazeLayout.IsNoUpTile(currentTileX, currentTileY);
+            bool upForbidden = Phase == GhostPhase.Active && map.Definition.IsNoUpTile(currentTileX, currentTileY);
 
             foreach (Direction dir in directionsToTest)
             {
@@ -290,7 +290,7 @@ namespace PacmanWinForms
                 // Hors limites : seul le tunnel est valide
                 if (targetX < 0 || targetX >= GameConfig.MapWidth || targetY < 0 || targetY >= GameConfig.MapHeight)
                 {
-                    if (targetY == MazeLayout.TunnelRow && (testDir == Direction.Left || testDir == Direction.Right))
+                    if (map.Definition.IsTunnelRow(targetY) && (testDir == Direction.Left || testDir == Direction.Right))
                         return testDir;
                     continue;
                 }

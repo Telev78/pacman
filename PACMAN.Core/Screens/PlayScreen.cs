@@ -22,7 +22,7 @@ namespace PacmanWinForms
 
         public void Enter()
         {
-            game = new Game(manager.Sound, manager.HighScore, playerCount: playerCount);
+            game = new Game(manager.Variant, manager.Sound, manager.HighScore, playerCount: playerCount);
         }
 
         public void Update()
@@ -44,7 +44,7 @@ namespace PacmanWinForms
 
             if (game.State == GameState.Intermission)
             {
-                intermission = CreateIntermission(game.PendingIntermission, game.CurrentLevel);
+                intermission = manager.Variant.CreateIntermission(game.PendingIntermission, game.CurrentLevel, manager.Sound);
 
                 // Intermission pas encore écrite : on passe directement au niveau suivant
                 if (intermission == null) game.FinishIntermission();
@@ -69,17 +69,6 @@ namespace PacmanWinForms
         {
             if (intermission != null) intermission.Draw(renderer, g);
             else renderer.DrawGame(g, game);
-        }
-
-        private IIntermission CreateIntermission(int number, int level)
-        {
-            switch (number)
-            {
-                case 1: return new Intermission1Scene(manager.Sound, level);
-                case 2: return new Intermission2Scene(manager.Sound, level);
-                case 3: return new Intermission3Scene(manager.Sound, level);
-                default: return null;   
-            }
         }
     }
 }

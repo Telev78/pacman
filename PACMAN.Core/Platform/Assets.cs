@@ -5,7 +5,7 @@ namespace PacmanWinForms
     /// <summary>
     /// Accès unique aux ressources embarquées dans PACMAN.Core (image, sons, labyrinthe, démo).
     /// Les chemins sont relatifs au dossier du projet, avec des points à la place des séparateurs :
-    /// "asset.sounds.start.wav", "asset.asset.png", "asset.maps.original_maze.txt", "asset.demo.txt".
+    /// "asset.pacman.sounds.start.wav", "asset.pacman.asset.png", "asset.pacman.maps.original_maze.txt", "asset.pacman.demo.txt".
     /// </summary>
     public static class Assets
     {

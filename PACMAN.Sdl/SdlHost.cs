@@ -87,7 +87,9 @@ namespace PacmanSdl
             audioOutput = new SdlAudioOutput(audio);
             audio.OutputAvailable = audioOutput.Start();
 
-            screens = new ScreenManager(audio);
+            screens = new ScreenManager(audio, GameVariants.FindById(Settings.Game));
+            screens.VariantChanged += gameRenderer.SetVariant;
+            if (screens.Variant != null) gameRenderer.SetVariant(screens.Variant);
             screens.NotifyHandler = ShowNotification;
 
             if (Settings.StartFullscreen) SetFullscreen(true);
@@ -290,6 +292,7 @@ namespace PacmanSdl
             if (key.Scancode == SDL.Scancode.Escape)
             {
                 if (fullscreen) SetFullscreen(false);
+                else if (!key.Repeat) screens.OnInput(InputKey.Menu);
                 return;
             }
 

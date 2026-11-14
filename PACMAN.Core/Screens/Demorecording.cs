@@ -12,7 +12,6 @@ namespace PacmanWinForms
     /// </summary>
     public sealed class DemoRecording
     {
-        public const string ResourceName = "asset.demo.txt";
         public const string FileName = "demo.txt";
 
         public struct Entry
@@ -36,9 +35,9 @@ namespace PacmanWinForms
         /// <summary>
         /// Charge la démo embarquée dans l'exécutable. Renvoie null si elle n'existe pas (pas encore enregistrée).
         /// </summary>
-        public static DemoRecording LoadEmbedded()
+        public static DemoRecording LoadEmbedded(string resourceName)
         {
-            using (Stream stream = Assets.TryOpen(ResourceName))
+            using (Stream stream = Assets.TryOpen(resourceName))
             {
                 if (stream == null) return null;
 

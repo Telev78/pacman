@@ -26,6 +26,26 @@ namespace PacmanWinForms
 
         public static GameVersion Version { get; private set; } = GameVersion.Jap;
 
+        // Jeu lancé au démarrage : "ASK" (menu de choix), "PACMAN" ou "MSPACMAN"
+        private static string game = "ASK";
+        private static string gameOverride;
+
+        /// <summary>Jeu à lancer directement ("pacman", "mspacman"), ou null pour afficher le menu. L'option --game l'emporte sur PACMAN.ini.</summary>
+        public static string Game
+        {
+            get
+            {
+                string value = gameOverride ?? game;
+                return value.Equals("ASK", StringComparison.OrdinalIgnoreCase) ? null : value;
+            }
+        }
+
+        /// <summary>Option de ligne de commande --game : valable pour cette session seulement (jamais enregistrée).</summary>
+        public static void SetGameOverride(string value)
+        {
+            gameOverride = value;
+        }
+
         public static int Lives { get; private set; } = 3;            // Vies au départ : 1 à 5
         public static int BonusLife { get; private set; } = 10000;    // Seuil de la vie bonus : 10000, 15000, 20000 ; 0 = aucune
 
@@ -73,6 +93,10 @@ namespace PacmanWinForms
                         if (value.Equals("USA", StringComparison.OrdinalIgnoreCase)) Version = GameVersion.Usa;
                         else if (value.Equals("JAP", StringComparison.OrdinalIgnoreCase)) Version = GameVersion.Jap;
                     }
+                    else if (key.Equals("Game", StringComparison.OrdinalIgnoreCase))
+                    {
+                        if (value.Length > 0) game = value.ToUpperInvariant();
+                    }
                     else if (key.Equals("Lives", StringComparison.OrdinalIgnoreCase))
                     {
                         int lives;
@@ -111,6 +135,8 @@ namespace PacmanWinForms
                     "Volume=" + Volume.ToString(CultureInfo.InvariantCulture) + "\r\n" +
                     "; Version : JAP (Namco, noms japonais) ou USA (Midway, noms américains)\r\n" +
                     "Version=" + (Version == GameVersion.Usa ? "USA" : "JAP") + "\r\n" +
+                    "; Game : ASK (menu de choix au démarrage), PACMAN ou MSPACMAN (démarre directement ce jeu)\r\n" +
+                    "Game=" + game + "\r\n" +
                     "; Lives : nombre de vies au départ, de 1 à 5\r\n" +
                     "Lives=" + Lives.ToString(CultureInfo.InvariantCulture) + "\r\n" +
                     "; BonusLife : score donnant une vie bonus : 10000, 15000, 20000 ou NONE\r\n" +

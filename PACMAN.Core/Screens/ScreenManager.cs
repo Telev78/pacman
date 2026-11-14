@@ -9,7 +9,9 @@ namespace PacmanWinForms
     {
         public const int MaxCredits = 99;
 
+        private readonly IAudioEngine audio;
         private readonly SoundDirector sound;
+        private string loadedSoundFolder;
         private IScreen current;
 
         public int Credits { get; private set; }
@@ -28,11 +30,45 @@ namespace PacmanWinForms
         }
 
         public SoundDirector Sound { get { return sound; } }
+
+        /// <summary>Le jeu choisi (Pac-Man, Ms Pac-Man) : labyrinthes, fantômes, départ.</summary>
+        public GameVariant Variant { get; private set; }
         public IScreen Current { get { return current; } }
 
-        public ScreenManager(IAudioEngine audio)
+        /// <summary>Appelé quand un jeu est choisi (menu ou démarrage direct) : l'hôte y branche les sprites.</summary>
+        public event Action<GameVariant> VariantChanged;
+
+        /// <param name="variant">Jeu à lancer directement ; null pour afficher d'abord le menu de choix.</param>
+        public ScreenManager(IAudioEngine audio, GameVariant variant = null)
         {
+            this.audio = audio;
             sound = new SoundDirector(audio);
+
+            if (variant != null) SelectVariant(variant);
+            else ShowMenu();
+        }
+
+        public void ShowMenu()
+        {
+            SwitchTo(new GameSelectScreen(this));
+        }
+
+        /// <summary>Choisit le jeu (charge ses sons, prévient l'hôte) et démarre son attract mode.</summary>
+        public void SelectVariant(GameVariant variant)
+        {
+            // Un autre jeu repart d'un high score vide
+            if (Variant != null && Variant.Id != variant.Id) HighScore = 0;
+
+            if (loadedSoundFolder != variant.SoundFolder)
+            {
+                audio.LoadSoundPack(variant.SoundFolder);
+                loadedSoundFolder = variant.SoundFolder;
+            }
+
+            Variant = variant;
+            Action<GameVariant> handler = VariantChanged;
+            if (handler != null) handler(variant);
+
             ShowAttract();
         }
 
@@ -43,6 +79,20 @@ namespace PacmanWinForms
 
         public void OnInput(InputKey key)
         {
+            // Le menu gère ses touches lui-même (pas de crédit ni de son avant le choix du jeu)
+            if (current is GameSelectScreen)
+            {
+                current.OnInput(key);
+                return;
+            }
+
+            if (key == InputKey.Menu)
+            {
+                if (current is IAttractScreen || current is IStartScreen || (current is DemoScreen d && !d.IsRecording))
+                    ShowMenu();
+                return;
+            }
+
             // Un crédit peut être inséré à tout moment, quel que soit l'écran
             if (key == InputKey.Coin)
             {
@@ -53,7 +103,7 @@ namespace PacmanWinForms
             if (key == InputKey.Record)
             {
                 // Réservé au développement : depuis l'attract mode ou l'écran start
-                if (current is AttractScreen || current is StartScreen)
+                if (current is IAttractScreen || current is IStartScreen)
                     SwitchTo(new DemoScreen(this, recordMode: true));
                 return;
             }
@@ -66,7 +116,7 @@ namespace PacmanWinForms
             if (Credits < MaxCredits) Credits++;
 
             // En attract mode, un crédit mène directement à l'écran start
-            if (current is AttractScreen || (current is DemoScreen demo && !demo.IsRecording))
+            if (current is IAttractScreen || (current is DemoScreen demo && !demo.IsRecording))
             {
                 ShowStart();
             }
@@ -81,12 +131,12 @@ namespace PacmanWinForms
 
         public void ShowAttract()
         {
-            SwitchTo(new AttractScreen(this));
+            SwitchTo(Variant.CreateAttractScreen(this));
         }
 
         public void ShowStart()
         {
-            SwitchTo(new StartScreen(this));
+            SwitchTo(Variant.CreateStartScreen(this));
         }
 
         // Lance une partie (1 crédit par joueur)

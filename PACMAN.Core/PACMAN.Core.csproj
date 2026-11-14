@@ -14,10 +14,10 @@
 
   <ItemGroup>
     <!-- Images, carte et sons embarqués (mêmes noms de ressources qu'avant : PacmanWinForms.asset.xxx) -->
-    <EmbeddedResource Include="asset\asset.png" />
-    <EmbeddedResource Include="asset\maps\original_maze.txt" />
-    <EmbeddedResource Include="asset\sounds\*.wav" />
-    <EmbeddedResource Include="asset\demo.txt" Condition="Exists('asset\demo.txt')" />
+	<EmbeddedResource Include="asset\*\asset.png" />
+	<EmbeddedResource Include="asset\*\maps\*.txt" />
+	<EmbeddedResource Include="asset\*\sounds\*.wav" />
+	<EmbeddedResource Include="asset\*\demo.txt" />
   </ItemGroup>
 
 </Project>

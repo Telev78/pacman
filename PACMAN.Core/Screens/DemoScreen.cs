@@ -37,7 +37,7 @@ namespace PacmanWinForms
             }
             else
             {
-                recording = DemoRecording.LoadEmbedded();
+                recording = DemoRecording.LoadEmbedded(manager.Variant.DemoResource);
 
                 if (recording == null)
                 {
@@ -49,7 +49,7 @@ namespace PacmanWinForms
                 manager.Sound.Muted = true;
             }
 
-            game = new Game(manager.Sound, manager.HighScore, isDemo: true);
+            game = new Game(manager.Variant, manager.Sound, manager.HighScore, isDemo: true);
         }
 
         public void Update()

@@ -68,12 +68,30 @@ namespace PacmanWinForms
             set { outputAvailable = value; }
         }
 
+        /// <summary>
+        /// Moteur sans aucun son : l'hôte appelle ensuite LoadSoundPack (fait par ScreenManager) pour le jeu choisi.
+        /// </summary>
         public MixerAudioEngine()
         {
-            // Décodage de tous les sons en mémoire (une seule fois)
+        }
+
+        /// <summary>
+        /// Décode tous les sons d'un jeu en mémoire (une fois par choix de jeu) et remplace les précédents.
+        /// À appeler depuis le thread du jeu.
+        /// </summary>
+        public void LoadSoundPack(string resourceFolder)
+        {
+            Dictionary<SoundId, SoundData> loaded = new Dictionary<SoundId, SoundData>();
             foreach (KeyValuePair<SoundId, string> entry in FileNames)
             {
-                sounds[entry.Key] = LoadSound(entry.Key, entry.Value);
+                loaded[entry.Key] = LoadSound(entry.Key, resourceFolder, entry.Value);
+            }
+
+            StopAll();
+            sounds.Clear();
+            foreach (KeyValuePair<SoundId, SoundData> entry in loaded)
+            {
+                sounds[entry.Key] = entry.Value;
             }
         }
 
@@ -184,9 +202,9 @@ namespace PacmanWinForms
         // Décodage des WAV embarqués
         // ------------------------------------------------------------------
 
-        private static SoundData LoadSound(SoundId id, string fileName)
+        private static SoundData LoadSound(SoundId id, string resourceFolder, string fileName)
         {
-            string resourceName = "asset.sounds." + fileName + ".wav";
+            string resourceName = resourceFolder + fileName + ".wav";
 
             using (Stream stream = Assets.TryOpen(resourceName))
             {

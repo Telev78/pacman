@@ -172,7 +172,7 @@ namespace PacmanWinForms
 
             if (targetX < 0 || targetX >= GameConfig.MapWidth || targetY < 0 || targetY >= GameConfig.MapHeight)
             {
-                return (targetY == MazeLayout.TunnelRow && (dir == Direction.Left || dir == Direction.Right));
+                return (map.Definition.IsTunnelRow(targetY) && (dir == Direction.Left || dir == Direction.Right));
             }
 
             TileType tile = map.Grid[targetY, targetX];

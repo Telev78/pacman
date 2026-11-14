@@ -2,7 +2,7 @@
 
 namespace PacmanWinForms
 {
-    public sealed class StartScreen : IScreen
+    public sealed class StartScreen : IStartScreen
     {
         private readonly ScreenManager manager;
 
