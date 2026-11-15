@@ -200,7 +200,7 @@ namespace PacmanWinForms
             return Direction.None;
         }
 
-        // Appelé à chaque case : choisit la direction selon l'étape (rejoindre le nid, en faire le tour, partir)
+        // Appelé à chaque case : choisit la direction selon la partie du trajet (rejoindre le nid, en faire le tour, partir)
         private void Turn(LevelMap map)
         {
             int tx = Tiles.Of(fx);
@@ -233,6 +233,17 @@ namespace PacmanWinForms
                 : FirstStepToward(map, tx, ty, (x, y) => x == exitTile.X && y == exitTile.Y);
 
             if (step != Direction.None) direction = step;
+
+            // Sécurité : ne jamais traverser un mur
+            if (!CanEnter(map, tx + direction.Dx(), ty + direction.Dy(), direction))
+            {
+                Direction[] dirs = { direction.Opposite(), Direction.Up, Direction.Left, Direction.Down, Direction.Right };
+                foreach (Direction d in dirs)
+                {
+                    if (d != direction.Opposite() && CanEnter(map, tx + d.Dx(), ty + d.Dy(), d)) { direction = d; return; }
+                }
+                direction = direction.Opposite();
+            }
         }
 
         // Plus court chemin sans demi-tour (largeur d'abord) : renvoie la première direction à prendre

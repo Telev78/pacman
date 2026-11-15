@@ -3,8 +3,7 @@
 namespace PacmanWinForms
 {
     /// <summary>
-    /// Attract mode : présentation des personnages, puis scène de chasse
-    /// (la démo viendra à l'étape D).
+    /// Attract mode : présentation des personnages, puis scène de chasse, puis démo.
     /// </summary>
     public sealed class AttractScreen : IAttractScreen
     {
@@ -49,7 +48,7 @@ namespace PacmanWinForms
             {
                 chase.Update();
 
-                // Provisoire : la démo viendra à l'étape D, en attendant tout recommence
+                // Fin de la scène de chasse : place à la démo
                 if (chase.Finished)
                 {
                     manager.ShowDemo();

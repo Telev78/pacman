@@ -2,8 +2,8 @@
 {
     /// <summary>
     /// Tout ce qui change d'un jeu à l'autre (Pac-Man, Ms Pac-Man) : labyrinthes, position de départ,
-    /// fantômes. Le moteur (Game, Pacman, Ghost, ScreenManager...) ne connaît que cette classe.
-    /// Les sprites, sons, textes, fruits et intermissions y seront ajoutés dans les étapes suivantes.
+    /// fantômes, fruits, sprites, durées de vague, mort, intermissions et écrans. Le moteur (Game, Pacman, Ghost,
+    /// ScreenManager...) ne connaît que cette classe.
     /// </summary>
     public abstract class GameVariant
     {

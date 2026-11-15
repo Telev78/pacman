@@ -2,8 +2,8 @@
 namespace PacmanWinForms
 {
     /// <summary>
-    /// Ms Pac-Man. Étape 3 : labyrinthes et sprites de Ms Pac-Man ; les règles (fantômes, fruit, niveaux),
-    /// les sons, l'attract mode et les intermissions sont encore ceux de Pac-Man (étapes 4 à 6).
+    /// Ms Pac-Man : six labyrinthes, fantômes errants, fruit mobile, une seule phase Scatter par niveau,
+    /// animation de mort, attract mode, écran de démarrage et intermissions propres.
     /// </summary>
     public sealed class MsPacManVariant : GameVariant
     {
@@ -53,7 +53,7 @@ namespace PacmanWinForms
         public override int PacmanStartX { get { return MazeLayout.PacmanStartX; } }
         public override int PacmanStartY { get { return MazeLayout.PacmanStartY; } }
 
-        // Étape 4 : fantômes errants, fruit mobile ; vitesses, vagues et sorties du nid comme dans Pac-Man
+        // Vitesses et sorties du nid comme dans Pac-Man
         public override Ghost[] CreateGhosts()
         {
             // Pas de bug de débordement vers le haut ; Sue (orange) se comporte comme Clyde ;
@@ -93,7 +93,7 @@ namespace PacmanWinForms
             return new MsFruitManager(seed);
         }
 
-        // Étape 6 : intermissions de Ms Pac-Man
+        // Intermissions
         public override int IntermissionAfterLevel(int level)
         {
             // Acte 1 après le niveau 2, acte 2 après le 5, acte 3 après les niveaux 9, 13, 17...
@@ -132,7 +132,7 @@ namespace PacmanWinForms
             return new MsPacManSprites(SheetResource);
         }
 
-        // Étape 6 : attract mode et écran start de Ms Pac-Man
+        // Attract mode et écran de démarrage
         public override IAttractScreen CreateAttractScreen(ScreenManager manager)
         {
             return new MsAttractScreen(manager);
