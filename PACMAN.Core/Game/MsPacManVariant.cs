@@ -1,4 +1,5 @@
-﻿namespace PacmanWinForms
+﻿using System.Drawing;
+namespace PacmanWinForms
 {
     /// <summary>
     /// Ms Pac-Man. Étape 3 : labyrinthes et sprites de Ms Pac-Man ; les règles (fantômes, fruit, niveaux),
@@ -12,12 +13,17 @@
         // dans le visuel). Les labyrinthes 5 et 6 ont la même disposition que 3 et 4, avec d'autres couleurs.
         private static readonly MazeDefinition[] mazes =
         {
-            new MazeDefinition("Ms Pac-Man 1", Folder + "maps.maze1.txt", 0, 30),
+            new MazeDefinition("Ms Pac-Man 1", Folder + "maps.maze1.txt", 0, 30,
+                new Point(9, 14), new Point(18, 14), new Point(9, 26), new Point(18, 26)),
             new MazeDefinition("Ms Pac-Man 2", Folder + "maps.maze2.txt", 1, 32),
-            new MazeDefinition("Ms Pac-Man 3", Folder + "maps.maze3.txt", 2, 34),
-            new MazeDefinition("Ms Pac-Man 4", Folder + "maps.maze4.txt", 3, 28),
-            new MazeDefinition("Ms Pac-Man 5", Folder + "maps.maze5.txt", 4, 34),
-            new MazeDefinition("Ms Pac-Man 6", Folder + "maps.maze6.txt", 5, 28)
+            new MazeDefinition("Ms Pac-Man 3", Folder + "maps.maze3.txt", 2, 34,
+                new Point(9, 14), new Point(18, 14), new Point(9, 26), new Point(18, 26)),
+            new MazeDefinition("Ms Pac-Man 4", Folder + "maps.maze4.txt", 3, 28,
+                new Point(12, 14), new Point(15, 14), new Point(12, 23), new Point(15, 23)),
+            new MazeDefinition("Ms Pac-Man 5", Folder + "maps.maze5.txt", 4, 34,
+                new Point(9, 14), new Point(18, 14), new Point(9, 26), new Point(18, 26)),
+            new MazeDefinition("Ms Pac-Man 6", Folder + "maps.maze6.txt", 5, 28,
+                new Point(12, 14), new Point(15, 14), new Point(12, 23), new Point(15, 23))
         };
 
         public override string Id { get { return "mspacman"; } }
@@ -63,6 +69,9 @@
             // Inky et Sue gardent leur coin (ils sortent souvent trop tard du nid pour y aller)
             blinky.WandersInScatter = true;
             pinky.WandersInScatter = true;
+
+            // À la sortie du nid, chaque fantôme choisit sa direction d'après sa cible
+            foreach (Ghost g in ghosts) g.ExitsTowardTarget = true;
             return ghosts;
         }
 

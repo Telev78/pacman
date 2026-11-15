@@ -26,6 +26,9 @@ namespace PacmanWinForms
         /// <summary>Ms Pac-Man : en Scatter, le fantôme erre au hasard au lieu de rejoindre son coin.</summary>
         public bool WandersInScatter { get; set; }
 
+        /// <summary>Ms Pac-Man : en sortant du nid, le fantôme choisit gauche/droite selon sa cible (au lieu de toujours partir à gauche).</summary>
+        public bool ExitsTowardTarget { get; set; }
+
         // Le fantôme actif choisit-il ses virages au hasard (comme un fantôme effrayé) ?
         protected virtual bool ShouldWander()
         {
@@ -161,7 +164,14 @@ namespace PacmanWinForms
                     Phase = GhostPhase.Active;
                     Mode = globalMode;
                     // Direction de sortie : vers la gauche, ou vers la droite si le mode a changé pendant qu'il était dans le nid
-                    CurrentDirection = reverseRequested ? Direction.Right : Direction.Left;
+                    if (ExitsTowardTarget && !IsFrightened)
+                    {
+                        CurrentDirection = ChooseExitDirection(pacman);
+                    }
+                    else
+                    {
+                        CurrentDirection = reverseRequested ? Direction.Right : Direction.Left;
+                    }
                     reverseRequested = false;
                 }
                 return;
@@ -197,6 +207,21 @@ namespace PacmanWinForms
             // Déplacement physique d'un pixel strict
             X += CurrentDirection.Dx();
             Y += CurrentDirection.Dy();
+        }
+
+        // Sortie du nid (Ms Pac-Man) : au hasard si le fantôme erre, sinon la case (gauche ou droite) la plus proche de sa cible
+        private Direction ChooseExitDirection(Pacman pacman)
+        {
+            if (ShouldWander()) return rand.Next(0, 2) == 0 ? Direction.Left : Direction.Right;
+
+            Point target = GetCurrentTargetTile(pacman);
+            int row = MazeLayout.HouseExitY / GameConfig.TileSize;
+            int leftX = MazeLayout.HouseExitX / GameConfig.TileSize;   // 13
+            int rightX = leftX + 1;                                     // 14
+
+            int dl = (leftX - target.X) * (leftX - target.X) + (row - target.Y) * (row - target.Y);
+            int dr = (rightX - target.X) * (rightX - target.X) + (row - target.Y) * (row - target.Y);
+            return dr < dl ? Direction.Right : Direction.Left;          // Égalité : gauche (priorité arcade)
         }
 
         private Direction ChooseNextDirection(LevelMap map, Pacman pacman, int currentTileX, int currentTileY)

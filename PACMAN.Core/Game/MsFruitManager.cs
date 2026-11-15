@@ -13,7 +13,7 @@ namespace PacmanWinForms
     {
         private static readonly int[] FruitValues = { 100, 200, 500, 700, 1000, 2000, 5000 };
 
-        private const float FruitSpeed = 0.6f;             // pixels par frame
+        private const float FruitSpeed = 0.5f;             // pixels par frame
         private const int TileSize = GameConfig.TileSize;
         private const int BounceFrames = 16;
 

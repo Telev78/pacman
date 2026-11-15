@@ -63,7 +63,7 @@ namespace PacmanWinForms
         }
 
         /// <summary>Labyrinthe de Ms Pac-Man : les tunnels sont repérés dans la carte au chargement.</summary>
-        public MazeDefinition(string name, string resourcePath, int tileSetIndex, int dotTileId)
+        public MazeDefinition(string name, string resourcePath, int tileSetIndex, int dotTileId, params Point[] noUpTiles)
         {
             Name = name;
             ResourcePath = resourcePath;
@@ -72,7 +72,7 @@ namespace PacmanWinForms
             tunnelRows = new int[0];
             slowLeftMax = new int[0];
             slowRightMin = new int[0];
-            NoUpTiles = new Point[0];
+            NoUpTiles = noUpTiles ?? new Point[0];
             detectTunnels = true;
             analyzed = false;
         }

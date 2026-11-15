@@ -11,7 +11,7 @@
         public int Score;
         public bool BonusLifeAwarded;                  // La vie bonus n'est donnée qu'une fois par partie
         public int Lives;
-        public int Level = 2;
+        public int Level = 1;
 
         public LevelMap Map = new LevelMap();
         public int DotsRemaining;
