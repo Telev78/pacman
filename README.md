@@ -1,12 +1,12 @@
-# Pac-Man (C# / SDL3)
+# Pac-Man et Ms Pac-Man (C# / SDL3)
 
 **Français** | [English](README.en.md)
 
-Reproduction fidèle du Pac-Man d'arcade (1980) en C# sur SDL3 : même labyrinthe, mêmes règles, mêmes
-comportements des fantômes, et tout l'habillage d'une borne : crédits, attract mode, démo, mode 2 joueurs
-et les trois intermissions. Fonctionne sous Windows et Linux.
+Reproduction fidèle du Pac-Man d'arcade (1980) et de Ms Pac-Man (1982) en C# sur SDL3 : mêmes labyrinthes, mêmes règles,
+mêmes comportements des fantômes, et tout l'habillage d'une borne : choix du jeu, crédits, attract mode, démo, mode
+2 joueurs et intermissions. Fonctionne sous Windows et Linux.
 
-Projet personnel, non commercial. Pac-Man est une marque de Bandai Namco Entertainment.
+Projet personnel, non commercial. Pac-Man et Ms Pac-Man sont des marques de Bandai Namco Entertainment.
 
 ## Prérequis
 
@@ -33,14 +33,17 @@ Le projet de départ est `PACMAN.Sdl`. L'exécutable produit s'appelle `PACMAN.e
 ### Ressources attendues
 
 Les ressources sont embarquées dans la bibliothèque `PACMAN.Core`. Elles doivent se trouver dans le dossier
-`PACMAN.Core\asset\` :
+`PACMAN.Core\asset\`, avec un sous-dossier par jeu (`pacman\` et `mspacman\`) :
 
-| Fichier | Rôle |
+| Fichier (dans le dossier du jeu) | Rôle |
 |---|---|
-| `asset\asset.png` | Feuille de sprites unique (personnages, texte, fruits, intermissions…) |
-| `asset\maps\original_maze.txt` | Plan du labyrinthe |
-| `asset\sounds\*.wav` | Sons de l'arcade (WAV PCM 16 bits, 48 kHz) |
-| `asset\demo.txt` | Suite de touches de la démo (optionnel : sans lui, la démo n'est pas jouée) |
+| `asset.png` | Feuille de sprites du jeu (personnages, texte, fruits, intermissions…) |
+| `maps\original_maze.txt` | Plan du labyrinthe de Pac-Man |
+| `maps\maze1.txt` à `maze6.txt` | Plans des six labyrinthes de Ms Pac-Man |
+| `sounds\*.wav` | Sons de l'arcade (WAV PCM 16 bits, 48 kHz) |
+| `demo.txt` | Suite de touches de la démo (optionnel : sans lui, la démo n'est pas jouée) |
+
+L'icône commune aux deux jeux est `asset\icon.png`.
 
 L'icône du programme est `PACMAN.Sdl\Icon.ico`.
 
@@ -68,6 +71,15 @@ dotnet publish PACMAN.Sdl -p:PublishProfile=Linux-x64
 
 Les notices fournies aux utilisateurs sont dans `packaging\`, en français (`LISEZMOI-*.txt`) et en anglais (`README-*.txt`).
 
+## Choix du jeu
+
+Au lancement, un menu propose **Pac-Man** et **Ms Pac-Man** (flèches haut / bas, puis `1` ou `2` pour valider). Chaque jeu a
+ses propres sons, sprites, labyrinthes, attract mode et démo. `Échap` (hors plein écran) revient au menu : changer de
+jeu remet les crédits et le high score à zéro, comme si l'on changeait de borne.
+
+Pour lancer directement un jeu, sans menu : option `--game=pacman` ou `--game=mspacman` en ligne de commande, ou
+`Game=PACMAN` / `Game=MSPACMAN` dans `PACMAN.ini`.
+
 ## Commandes
 
 | Touche | Action |
@@ -75,8 +87,9 @@ Les notices fournies aux utilisateurs sont dans `packaging\`, en français (`LIS
 | `5` | Insérer un crédit (jusqu'à 99) |
 | `1` | Démarrer une partie à 1 joueur (1 crédit) |
 | `2` | Démarrer une partie à 2 joueurs (2 crédits) |
-| Flèches | Diriger Pac-Man |
+| Flèches | Diriger Pac-Man / Ms Pac-Man |
 | `Alt` + `Entrée` | Basculer plein écran / fenêtre (`Échap` pour quitter le plein écran) |
+| `Échap` | Revenir au menu de choix du jeu (hors plein écran) |
 | `F12` / `F11` | Volume + / − (pas de 10 %) |
 
 Comme à l'arcade, il n'y a pas de pause. Les touches `5`, `1` et `2` fonctionnent aussi au pavé numérique ; elles sont
@@ -104,15 +117,20 @@ Version=JAP
 Lives=3
 ; BonusLife : score donnant une vie bonus : 10000, 15000, 20000 ou NONE
 BonusLife=10000
+; Game : ASK (menu de choix au démarrage), PACMAN ou MSPACMAN (démarre directement ce jeu)
+Game=ASK
 ```
 
-- **Version JAP / USA** : change les noms et surnoms des fantômes (OIKAKE / « AKABEI »… ou SHADOW / « BLINKY »…),
+- **Version JAP / USA** (Pac-Man uniquement) : change les noms et surnoms des fantômes (OIKAKE / « AKABEI »… ou SHADOW / « BLINKY »…),
   le nom de Pac-Man (PUCKMAN / PAC-MAN) et la ligne de copyright (logo namco ou « © 1980 MIDWAY MFG.CO. »).
+- **Vies et vie bonus** : s'appliquent aux deux jeux.
 - **Fenêtre et plein écran** : l'image est agrandie par le plus grand multiple entier qui tient dans la fenêtre ou
   l'écran, centrée, avec des bandes noires, pour garder des pixels nets. La fenêtre est redimensionnable.
 - Le high score n'est jamais enregistré : à chaque lancement, il repart de zéro, comme à l'allumage d'une borne.
 
 ## Ce qui est reproduit
+
+### Commun aux deux jeux
 
 - **Boucle de jeu** à 60 Hz fixe, tous les timers en images ; rendu à la résolution native 224×288, agrandi d'un bloc.
 - **Fantômes** : cibles de Blinky, Pinky, Inky et Clyde, alternance Scatter / Chase par niveau, Elroy, sortie du nid
@@ -128,7 +146,24 @@ BonusLife=10000
   écran start (1 joueur / 1 ou 2 joueurs selon les crédits), démo « GAME OVER » rejouée à partir de touches enregistrées,
   retour à l'attract mode.
 - **Mode 2 joueurs** : labyrinthe, score, vies, niveau et fruit propres à chaque joueur, alternance à chaque vie perdue.
-- **Intermissions** : après les niveaux 2, 5, 9, 13 et 17 (actes 1, 2, 3, 3, 3).
+- **Intermissions** : après les niveaux 2, 5, 9, 13 et 17 (actes 1, 2, 3, 3, 3), propres à chaque jeu.
+
+### Spécifique à Ms Pac-Man
+
+- **Labyrinthes** : six labyrinthes, enchaînés selon le niveau (1-2, 3-5, 6-9, 10-13, puis alternance de variantes de
+  couleur par blocs de 4 niveaux), avec leurs tunnels et leurs zones interdites aux virages vers le haut
+  (le labyrinthe 2 n'en a pas).
+- **Fantômes** : une seule phase Scatter de 7 s au début du niveau, puis Chase jusqu'à la fin ; pendant ce Scatter,
+  Blinky et Pinky errent au hasard (sauf Blinky en Elroy), Inky et Sue rejoignent leurs coins ; Sue se comporte comme
+  Clyde ; à la sortie du nid, chaque fantôme choisit gauche ou droite d'après sa cible ; pas de bug de débordement
+  vers le haut. Vitesses, seuils d'Elroy, mode effrayé et compteurs de sortie du nid sont ceux de Pac-Man.
+- **Fruits** : apparition à 64 et 176 gommes ; le fruit est mobile : il entre par un tunnel, rejoint le nid, en fait
+  le tour dans le sens des aiguilles d'une montre puis repart par un autre tunnel, en rebondissant (0,5 px par
+  image). Le second fruit n'apparaît pas si le premier est encore à l'écran. Sept fruits aux niveaux 1 à 7, puis un
+  fruit tiré au hasard (fixe pour un niveau donné).
+- **Mort** : animation de rotation de 900° en commençant la bouche vers le bas, gel et son calés sur l'arcade.
+- **Écrans** : attract mode, écran start et démo propres à Ms Pac-Man ; les intermissions (« They meet », « The
+  chase », « Junior ») sont rejouées image par image d'après des enregistrements de l'arcade.
 
 Les valeurs d'animation (vitesses, délais, positions, phases des jambes, durées de scène) ont été mesurées image par image sur
 des enregistrements de l'arcade.
@@ -140,18 +175,20 @@ Deux projets : `PACMAN.Core`, la bibliothèque du jeu sans aucune dépendance à
 
 ```
 PACMAN.Core/          Bibliothèque du jeu (net10.0)
-  Game/               Game (machine à états d'une partie), PlayerState, ScoreKeeper, FruitManager, WaveScheduler,
-                      GameConfig, LevelSpecs, Pacman
+  Game/               Game (machine à états d'une partie), PlayerState, ScoreKeeper, FruitManager / MsFruitManager,
+                      WaveScheduler, GameConfig, LevelSpecs, Pacman,
+                      GameVariant (ce qui change d'un jeu à l'autre) : PacManVariant, MsPacManVariant, GameVariants
   Ghosts/             Ghost et les quatre fantômes, GhostHouse (nid), GhostMode / GhostPhase
   Maze/               LevelMap, MazeLayout, Tiles, TileType, Direction
-  Screens/            IScreen + ScreenManager (crédits), AttractScreen, StartScreen, PlayScreen, DemoScreen,
-                      ChaseScene, Intermission1/2/3Scene (IIntermission), ArcadeTexts, DemoRecording
-  Graphics/           Canvas (image en mémoire), Sprite, PngDecoder, GameRenderer (dessin), SpriteManager
-                      (feuille de sprites avec cache), HudLayout
+  Screens/            IScreen + ScreenManager (crédits), GameSelectScreen (choix du jeu), AttractScreen, StartScreen,
+                      PlayScreen, DemoScreen, ChaseScene, Intermission1/2/3Scene (IIntermission), ArcadeTexts,
+                      DemoRecording ; équivalents Ms Pac-Man : MsAttractScreen, MsStartScreen, MsIntermissionScene
+  Graphics/           Canvas (image en mémoire), Sprite, PngDecoder, GameRenderer (dessin), SpriteManager et
+                      MsPacManSprites (feuilles de sprites avec cache), HudLayout
   Audio/              IAudioEngine, MixerAudioEngine (mélangeur + volume), SoundDirector (règles de lecture),
                       SoundId, SoundVoice, WavDecoder
   Platform/           Settings (PACMAN.ini), DisplayConfig, InputKey, Assets (ressources embarquées)
-  asset/              Feuille de sprites, labyrinthe, sons, démo
+  asset/              pacman/ et mspacman/ : feuille de sprites, labyrinthes, sons, démo
 PACMAN.Sdl/           Hôte SDL3 (exécutable PACMAN)
   Program.cs          Point d'entrée, chargement des réglages
   SdlHost.cs          Fenêtre, boucle à pas fixe 60 Hz, affichage, clavier, manette, plein écran, volume
@@ -164,6 +201,9 @@ Principes :
 
 - `PACMAN.Core` ne connaît ni la fenêtre, ni le clavier, ni la carte son : le clavier et la manette sont traduits en
   `InputKey` par l'hôte, et les écrans (`IScreen`) ne voient que cela.
+- `GameVariant` regroupe tout ce qui change d'un jeu à l'autre (labyrinthes, fantômes, fruits, durées des vagues,
+  mort, sprites, écrans, intermissions) : le moteur ne connaît que cette classe, ce qui permet d'ajouter un jeu
+  sans toucher à la boucle de jeu.
 - `ScreenManager` possède les crédits, le son et le high score de la session, et enchaîne les écrans
   (attract → start → partie → intermission → …).
 - Tout ce qui est dessiné l'est dans un `Canvas` natif de 224×288 (pixels ARGB en mémoire). L'hôte l'envoie dans une
@@ -180,13 +220,16 @@ Principes :
 
 ## Crédits
 
-Pac-Man est une création de Namco (aujourd'hui Bandai Namco Entertainment) ; ce projet est un hommage sans but lucratif.
+Pac-Man est une création de Namco et Ms Pac-Man une création de Midway (aujourd'hui Bandai Namco Entertainment) ; ce projet est un hommage sans but lucratif.
 Les ressources (sprites et sons) sont fournies avec le projet, dans le dossier `PACMAN.Core\asset\`, pour un usage personnel et non commercial.
 
-- **Sprites** : feuille de sprites mise en ligne par Superjustinbros sur spriters-resource.com (l'auteur original
-  n'est pas connu avec certitude). La feuille utilisée par le jeu en est une adaptation personnelle.
-- **Sons** : pack mis en ligne par Inthegrave sur sounds.spriters-resource.com, avec comme contributeurs crédités
-  125scratch et NamelessSpriter.
+- **Sprites** : feuilles de sprites mises en ligne par [Superjustinbros](https://www.spriters-resource.com/profile/superjustinbros/)
+  sur spriters-resource.com. Les feuilles utilisées par le jeu en sont une adaptation personnelle.
+- **Sons** : 
+    - Pac Man : pack mis en ligne par [Inthegrave](https://sounds.spriters-resource.com/profile/inthegrave/) sur
+  sounds.spriters-resource.com
+    - Ms Pac Man : pack mis en ligne par [125scratch](https://sounds.spriters-resource.com/profile/125scratch/) sur
+  sounds.spriters-resource.com
 - **Fenêtre, entrées, audio** : [SDL3](https://libsdl.org) et ses liaisons C# [SDL3#](https://github.com/edwardgushchin/SDL3-CS)
   (licence zlib).
 

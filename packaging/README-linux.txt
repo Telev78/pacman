@@ -1,4 +1,4 @@
-﻿PAC-MAN (64-bit Linux)
+﻿PAC-MAN and MS. PAC-MAN (64-bit Linux)
 
 Nothing to install: unpack the archive anywhere you like, then in a terminal:
 
@@ -21,12 +21,14 @@ Settings (PACMAN.ini file, created on first launch next to the executable):
   Version     JAP (Namco) or USA (Midway)
   Lives       number of starting lives, from 1 to 5
   BonusLife   10000, 15000, 20000 or NONE
+  Game        ASK (selection menu), PACMAN or MSPACMAN (starts that game directly)
 
 Controls:
   5 (or keypad 5)   insert a coin
   1 / 2             start a 1-player / 2-player game
-  Arrow keys        steer Pac-Man
+  Arrow keys        steer Pac-Man / Ms. Pac-Man (menu: up / down, then 1 or 2)
   F11 / F12         volume down / up
   Alt + Enter       full screen (Esc to leave it)
+  Esc               back to the game selection menu
   Gamepad: D-pad or left stick = directions, Select = coin,
            Start or A = 1 player, Y = 2 players
