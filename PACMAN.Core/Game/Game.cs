@@ -56,9 +56,6 @@ namespace PacmanWinForms
 
         // Séquences de mort et de fin de niveau (en frames à 60 Hz)
         private const int DeathFreezeFrames = 60;       // 1 s de gel avant l'animation
-        private const int DeathFramesPerSprite = 12;    // 200 ms par sprite
-        private const int DeathSpriteCount = 12;
-        private const int DeathEndPauseFrames = 30;     // 0,5 s après l'animation
         private const int VictoryFreezeFrames = 60;     // 1 s de gel avant le clignotement
         private const int VictoryFlashFrames = 14;      // Durée d'une couleur (blanc ou bleu)
         private const int VictoryFlashCount = 4;        // Nombre de clignotements
@@ -282,7 +279,7 @@ namespace PacmanWinForms
 
             if (State != GameState.Playing) return;
 
-            if (waves.Update(CurrentLevel, IsFrightenedMode))
+            if (waves.Update(CurrentLevel, IsFrightenedMode, variant))
             {
                 OnWaveChanged();
             }
@@ -448,7 +445,8 @@ namespace PacmanWinForms
                     }
                     else if (ghost.Phase == GhostPhase.Active)
                     {
-                        sound.PlayDeath(); // Coupe les sirènes et lance le son de mort dès le contact
+                        // Coupe les sirènes ; le son de mort démarre dès le contact, ou plus tard selon le jeu
+                        if (variant.DeathSoundDelayFrames == 0) sound.PlayDeath(); else sound.StopAll();
                         State = GameState.Dying;
                         dyingTimer = 0;
                         break; // Inutile de vérifier les autres fantômes
@@ -574,6 +572,8 @@ namespace PacmanWinForms
         {
             dyingTimer++;
 
+            if (variant.DeathSoundDelayFrames > 0 && dyingTimer == variant.DeathSoundDelayFrames) sound.PlayDeath();
+
             // 1. Gel : tout est figé et les fantômes restent visibles
             if (dyingTimer <= DeathFreezeFrames) return;
 
@@ -584,8 +584,8 @@ namespace PacmanWinForms
                 Pacman.State = PacmanState.Dying;
             }
 
-            int animationFrames = DeathSpriteCount * DeathFramesPerSprite;
-            Pacman.DeathAnimationFrame = Math.Min(t / DeathFramesPerSprite, DeathSpriteCount - 1);
+            int animationFrames = variant.DeathAnimationFrames;
+            Pacman.DeathAnimationFrame = variant.DeathFrameAt(t);
 
             if (IsDemo)
             {
@@ -594,7 +594,7 @@ namespace PacmanWinForms
             }
 
             // 3. Pause finale, puis vie suivante ou game over
-            if (t >= animationFrames + DeathEndPauseFrames)
+            if (t >= animationFrames + variant.DeathEndPauseFrames)
             {
                 PrepareNextLifeOrGameOver();
                 Pacman.State = PacmanState.Alive;

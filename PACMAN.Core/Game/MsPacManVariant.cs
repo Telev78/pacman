@@ -51,15 +51,27 @@
         public override Ghost[] CreateGhosts()
         {
             // Pas de bug de débordement vers le haut ; Sue (orange) se comporte comme Clyde ;
-            // en Scatter, les quatre fantômes errent au hasard (sauf Blinky en Cruise Elroy)
+            // en Scatter, Blinky et Pinky errent au hasard (sauf Blinky en Cruise Elroy)
             Blinky blinky = new Blinky();
             Pinky pinky = new Pinky(false);
             Inky inky = new Inky(blinky, false);
             Clyde sue = new Clyde();
 
             Ghost[] ghosts = { blinky, pinky, inky, sue };
-            foreach (Ghost ghost in ghosts) ghost.WandersInScatter = true;
+
+            // Pendant l'unique phase Scatter, seuls Blinky et Pinky errent au hasard ;
+            // Inky et Sue gardent leur coin (ils sortent souvent trop tard du nid pour y aller)
+            blinky.WandersInScatter = true;
+            pinky.WandersInScatter = true;
             return ghosts;
+        }
+
+        // Une seule phase Scatter de 7 s au début du niveau, puis Chase jusqu'à la fin du niveau
+        private const int ScatterSeconds = 7;
+
+        public override int GetWaveDurationFrames(int level, int waveIndex)
+        {
+            return waveIndex == 0 ? ScatterSeconds * GameConfig.FramesPerSecond : int.MaxValue;
         }
 
         public override LevelSpecs GetSpecs(int level)
@@ -85,6 +97,25 @@
         public override IIntermission CreateIntermission(int number, int level, SoundDirector sound)
         {
             return number >= 1 && number <= 3 ? new MsIntermissionScene(number, level, sound) : null;
+        }
+
+        // Mort de Ms Pac-Man, mesurée sur l'arcade : après le gel, elle reste 30 frames bouche vers le bas, puis fait
+        // 10 quarts de tour (900°) en 7,5 frames chacun, reste bouche vers le haut ~62 frames et disparaît.
+        // Le son de mort (1,14 s) démarre avec la rotation.
+        private const int DeathFreezeAndStart = 61;   // Gel de 60 frames + première frame de l'animation
+        private const int DeathHoldFrames = 30;
+        private const int DeathQuarterTurns = 10;
+
+        public override int DeathAnimationFrames { get { return 159; } }
+        public override int DeathEndPauseFrames { get { return 7; } }
+        public override int DeathSoundDelayFrames { get { return DeathFreezeAndStart + DeathHoldFrames - 1; } }
+
+        public override int DeathFrameAt(int t)
+        {
+            if (t >= DeathAnimationFrames) return 11;   // Disparue
+            if (t < DeathHoldFrames) return 0;
+            int turns = (2 * (t - DeathHoldFrames + 1) + 14) / 15;   // Un quart de tour toutes les 7,5 frames
+            return System.Math.Min(turns, DeathQuarterTurns);
         }
 
         public override SpriteManager CreateSprites()

@@ -23,13 +23,13 @@
 
         // À appeler à chaque frame de jeu. Renvoie true si le mode global vient de changer.
         // Le timer est figé quand isFrozen est vrai (mode Frightened).
-        public bool Update(int level, bool isFrozen)
+        public bool Update(int level, bool isFrozen, GameVariant variant)
         {
             if (isFrozen) return false;
             if (waveIndex >= LastWaveIndex) return false;
 
             timerFrames++;
-            if (timerFrames < GameConfig.GetWaveDurationFrames(level, waveIndex))
+            if (timerFrames < variant.GetWaveDurationFrames(level, waveIndex))
                 return false;
 
             waveIndex++;

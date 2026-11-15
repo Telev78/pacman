@@ -39,6 +39,29 @@
         /// <summary>Crée la scène d'une intermission, ou null si elle n'existe pas.</summary>
         public abstract IIntermission CreateIntermission(int number, int level, SoundDirector sound);
 
+        // Animation de mort (en frames de jeu à 60 Hz, comptées après le gel d'1 s qui suit le contact)
+
+        /// <summary>
+        /// Durée d'une vague Scatter (index pair) ou Chase (index impair), en frames ; int.MaxValue = infinie.
+        /// Par défaut, les vagues de Pac-Man.
+        /// </summary>
+        public virtual int GetWaveDurationFrames(int level, int waveIndex)
+        {
+            return GameConfig.GetWaveDurationFrames(level, waveIndex);
+        }
+
+        /// <summary>Durée de l'animation de mort ; ensuite Pac-Man a disparu.</summary>
+        public virtual int DeathAnimationFrames { get { return 144; } }
+
+        /// <summary>Pause entre la fin de l'animation et la vie suivante.</summary>
+        public virtual int DeathEndPauseFrames { get { return 30; } }
+
+        /// <summary>Image de l'animation de mort (numéro passé à GetPacmanDeathSprite) pour la frame t de l'animation.</summary>
+        public virtual int DeathFrameAt(int t) { return System.Math.Min(t / 12, 11); }
+
+        /// <summary>Moment du son de mort, en frames après le contact (0 = dès le contact).</summary>
+        public virtual int DeathSoundDelayFrames { get { return 0; } }
+
         /// <summary>Crée le gestionnaire de fruit bonus (seed fixe pour la démo).</summary>
         public abstract FruitManager CreateFruit(int? seed);
 

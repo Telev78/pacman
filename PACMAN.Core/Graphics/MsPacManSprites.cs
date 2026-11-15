@@ -78,13 +78,14 @@ namespace PacmanWinForms
         }
 
         /// <summary>
-        /// Mort : Ms Pac-Man tourne sur elle-même (droite, haut, gauche, bas, ...) puis se fige, bouche fermée.
-        /// (Approximation de l'arcade ; la feuille n'a pas de sprites de mort dédiés.)
+        /// Mort : Ms Pac-Man (bouche mi-ouverte) tourne sur elle-même, en commençant bouche vers le bas
+        /// (bas, gauche, haut, droite, bas, ...), 10 quarts de tour, et finit bouche vers le haut. Image 11 : disparue.
+        /// (La feuille n'a pas de sprites de mort dédiés : ce sont les sprites de direction.)
         /// </summary>
         public override Sprite GetPacmanDeathSprite(int frame)
         {
-            int[] spinRows = { 0, 2, 1, 3 };   // Sens inverse des aiguilles d'une montre
-            if (frame >= 11) return PacmanCell(3, 2);
+            if (frame >= 11) return base.GetPacmanDeathSprite(12);   // Sprite vide
+            int[] spinRows = { 3, 1, 2, 0 };
             return PacmanCell(spinRows[frame % 4], 1);
         }
 

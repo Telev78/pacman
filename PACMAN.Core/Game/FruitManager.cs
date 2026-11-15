@@ -29,6 +29,9 @@ namespace PacmanWinForms
         protected virtual int FirstFruitDots { get { return 70; } }
         protected virtual int SecondFruitDots { get { return 170; } }
 
+        // Le second fruit est-il ignoré si le premier est encore à l'écran quand son seuil est atteint ? (Ms Pac-Man)
+        protected virtual bool SecondFruitIgnoredIfFirstActive { get { return false; } }
+
         // Le fruit disparaît-il après 9 à 10 secondes ? (Ms Pac-Man : il disparaît en quittant le labyrinthe)
         protected virtual bool ExpiresByTimer { get { return true; } }
 
@@ -113,7 +116,7 @@ namespace PacmanWinForms
             if (!spawned170 && dotsEaten >= SecondFruitDots)
             {
                 spawned170 = true;
-                Spawn(level, map);
+                if (!(IsActive && SecondFruitIgnoredIfFirstActive)) Spawn(level, map);
             }
 
             return pointsEarned;
