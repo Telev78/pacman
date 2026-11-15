@@ -20,6 +20,16 @@ namespace PacmanWinForms
 
         private readonly ScreenManager manager;
         private readonly IReadOnlyList<GameVariant> choices = GameVariants.All;
+        private int EntryCount { get { return choices.Count; } }
+
+        // Code secret (Konami) qui ouvre le menu des intermissions : B = Start 2 joueurs, A = Start 1 joueur
+        private static readonly InputKey[] SecretCode =
+        {
+            InputKey.Up, InputKey.Up, InputKey.Down, InputKey.Down,
+            InputKey.Left, InputKey.Right, InputKey.Left, InputKey.Right,
+            InputKey.Start2, InputKey.Start1
+        };
+        private int codeProgress;
         private int selected;
         private int tick;
 
@@ -32,6 +42,7 @@ namespace PacmanWinForms
         {
             tick = 0;
             selected = 0;
+            codeProgress = 0;
 
             // Au retour au menu, le curseur repart sur le jeu en cours
             if (manager.Variant != null)
@@ -50,13 +61,33 @@ namespace PacmanWinForms
 
         public void OnInput(InputKey key)
         {
+            // Le code avance d'une touche à chaque bonne touche ; une mauvaise touche le remet à zéro
+            // (et peut en recommencer un si c'est un Haut).
+            if (key == SecretCode[codeProgress])
+            {
+                codeProgress++;
+                if (codeProgress == SecretCode.Length)
+                {
+                    codeProgress = 0;
+                    manager.ShowIntermissionMenu();
+                    return;
+                }
+
+                // Les touches B puis A du code ne doivent pas lancer une partie
+                if (key == InputKey.Start1 || key == InputKey.Start2) return;
+            }
+            else
+            {
+                codeProgress = key == InputKey.Up ? 1 : 0;
+            }
+
             switch (key)
             {
                 case InputKey.Up:
-                    selected = (selected + choices.Count - 1) % choices.Count;
+                    selected = (selected + EntryCount - 1) % EntryCount;
                     break;
                 case InputKey.Down:
-                    selected = (selected + 1) % choices.Count;
+                    selected = (selected + 1) % EntryCount;
                     break;
                 case InputKey.Start1:
                 case InputKey.Start2:
@@ -69,7 +100,7 @@ namespace PacmanWinForms
         {
             renderer.DrawText(g, "SELECT GAME", 8, TitleRow, ArcadeColor.Cyan);
 
-            for (int i = 0; i < choices.Count; i++)
+            for (int i = 0; i < EntryCount; i++)
             {
                 int row = FirstEntryRow + i * EntrySpacing;
                 bool isSelected = (i == selected);
@@ -80,7 +111,7 @@ namespace PacmanWinForms
                 if (isSelected)
                 {
                     int frame = CursorFrames[(tick / AnimFramesPerStep) % CursorFrames.Length];
-                    Sprite cursor = renderer.Sprites.GetPacmanSprite(frame, Direction.Right);
+                    Sprite cursor = renderer.SpritesFor(choices[i]).GetPacmanSprite(frame, Direction.Right);
                     GameRenderer.DrawSprite(g, cursor, CursorColumn * GameConfig.TileSize, row * GameConfig.TileSize - GameConfig.TileSize / 2);
                 }
             }

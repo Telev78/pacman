@@ -25,6 +25,23 @@ namespace PacmanWinForms
         // Les écrans utilisent les sprites et les outils de dessin du moteur
         public SpriteManager Sprites { get { return sprites; } }
 
+        private readonly System.Collections.Generic.Dictionary<string, SpriteManager> spritesByVariant =
+            new System.Collections.Generic.Dictionary<string, SpriteManager>();
+
+        /// <summary>Sprites d'un jeu précis, quel que soit le jeu en cours (curseurs des menus).</summary>
+        public SpriteManager SpritesFor(GameVariant variant)
+        {
+            if (variant.Id == spritesVariantId) return sprites;
+
+            SpriteManager found;
+            if (!spritesByVariant.TryGetValue(variant.Id, out found))
+            {
+                found = variant.CreateSprites();
+                spritesByVariant[variant.Id] = found;
+            }
+            return found;
+        }
+
         /// <summary>Utilise la feuille de sprites du jeu choisi (sans effet si c'est déjà celle en place).</summary>
         public void SetVariant(GameVariant variant)
         {

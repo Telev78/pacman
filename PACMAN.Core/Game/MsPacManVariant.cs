@@ -75,12 +75,16 @@
         // Étape 6 : intermissions de Ms Pac-Man
         public override int IntermissionAfterLevel(int level)
         {
+            // Acte 1 après le niveau 2, acte 2 après le 5, acte 3 après les niveaux 9, 13, 17...
+            if (level == 2) return 1;
+            if (level == 5) return 2;
+            if (level == 9 || level == 13 || level == 17) return 3;
             return 0;
         }
 
         public override IIntermission CreateIntermission(int number, int level, SoundDirector sound)
         {
-            return null;
+            return number >= 1 && number <= 3 ? new MsIntermissionScene(number, level, sound) : null;
         }
 
         public override SpriteManager CreateSprites()

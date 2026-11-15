@@ -110,6 +110,21 @@
             audio.PlaySequence(SoundId.Intermission, SoundId.Intermission, loopNext: false);
         }
 
+        /// <summary>Musique de l'intermission 1, 2 ou 3 de Ms Pac-Man (jouée une seule fois).</summary>
+        public void PlayMsIntermission(int number)
+        {
+            if (Muted) return;
+            SoundId id = number == 2 ? SoundId.Intermission2 : number == 3 ? SoundId.Intermission3 : SoundId.Intermission;
+            audio.Play(id);
+        }
+
+        /// <summary>Choc des deux fantômes à la fin de l'intermission 1 de Ms Pac-Man.</summary>
+        public void PlayIntermissionBump()
+        {
+            if (Muted) return;
+            audio.Play(SoundId.IntermissionBump);
+        }
+
         public float Volume
         {
             get { return audio.Volume; }

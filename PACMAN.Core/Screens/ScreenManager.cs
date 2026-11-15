@@ -60,6 +60,25 @@ namespace PacmanWinForms
         /// <summary>Choisit le jeu (charge ses sons, prévient l'hôte) et démarre son attract mode.</summary>
         public void SelectVariant(GameVariant variant)
         {
+            ApplyVariant(variant);
+            ShowAttract();
+        }
+
+        /// <summary>Menu de test : liste toutes les intermissions de tous les jeux.</summary>
+        public void ShowIntermissionMenu()
+        {
+            SwitchTo(new IntermissionMenuScreen(this));
+        }
+
+        /// <summary>Joue une intermission seule (test), puis revient au menu des intermissions.</summary>
+        public void PlayIntermissionTest(GameVariant variant, int number, int level)
+        {
+            ApplyVariant(variant);
+            SwitchTo(new IntermissionTestScreen(this, number, level));
+        }
+
+        private void ApplyVariant(GameVariant variant)
+        {
             if (loadedSoundFolder != variant.SoundFolder)
             {
                 audio.LoadSoundPack(variant.SoundFolder);
@@ -69,8 +88,6 @@ namespace PacmanWinForms
             Variant = variant;
             Action<GameVariant> handler = VariantChanged;
             if (handler != null) handler(variant);
-
-            ShowAttract();
         }
 
         public void Update()
@@ -89,7 +106,9 @@ namespace PacmanWinForms
 
             if (key == InputKey.Menu)
             {
-                if (current is IAttractScreen || current is IStartScreen || (current is DemoScreen d && !d.IsRecording))
+                if (current is IntermissionTestScreen) ShowIntermissionMenu();
+                else if (current is IntermissionMenuScreen) ShowMenu();
+                else if (current is IAttractScreen || current is IStartScreen || (current is DemoScreen d && !d.IsRecording))
                     ShowMenu();
                 return;
             }
