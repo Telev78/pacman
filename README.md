@@ -74,7 +74,7 @@ Les notices fournies aux utilisateurs sont dans `packaging\`, en français (`LIS
 ## Choix du jeu
 
 Au lancement, un menu propose **Pac-Man** et **Ms Pac-Man** (flèches haut / bas, puis `1` ou `2` pour valider). Chaque jeu a
-ses propres sons, sprites, labyrinthes, attract mode et démo. `Échap` (hors plein écran) revient au menu : changer de
+ses propres sons, sprites, labyrinthes, attract mode et démo. `Échap` (hors plein écran) revient au menu depuis l'attract mode, la démo ou l'écran start (pas pendant une partie) : changer de
 jeu remet les crédits et le high score à zéro, comme si l'on changeait de borne.
 
 Pour lancer directement un jeu, sans menu : option `--game=pacman` ou `--game=mspacman` en ligne de commande, ou
@@ -89,7 +89,7 @@ Pour lancer directement un jeu, sans menu : option `--game=pacman` ou `--game=ms
 | `2` | Démarrer une partie à 2 joueurs (2 crédits) |
 | Flèches | Diriger Pac-Man / Ms Pac-Man |
 | `Alt` + `Entrée` | Basculer plein écran / fenêtre (`Échap` pour quitter le plein écran) |
-| `Échap` | Revenir au menu de choix du jeu (hors plein écran) |
+| `Échap` | Revenir au menu de choix du jeu, hors partie et hors plein écran |
 | `F12` / `F11` | Volume + / − (pas de 10 %) |
 
 Comme à l'arcade, il n'y a pas de pause. Les touches `5`, `1` et `2` fonctionnent aussi au pavé numérique ; elles sont
@@ -225,11 +225,11 @@ Les ressources (sprites et sons) sont fournies avec le projet, dans le dossier `
 
 - **Sprites** : feuilles de sprites mises en ligne par [Superjustinbros](https://www.spriters-resource.com/profile/superjustinbros/)
   sur spriters-resource.com. Les feuilles utilisées par le jeu en sont une adaptation personnelle.
-- **Sons** : 
-    - Pac Man : pack mis en ligne par [Inthegrave](https://sounds.spriters-resource.com/profile/inthegrave/) sur
-  sounds.spriters-resource.com
-    - Ms Pac Man : pack mis en ligne par [125scratch](https://sounds.spriters-resource.com/profile/125scratch/) sur
-  sounds.spriters-resource.com
+- **Sons** :
+    - Pac-Man : pack mis en ligne par [Inthegrave](https://sounds.spriters-resource.com/profile/inthegrave/) sur
+      sounds.spriters-resource.com
+    - Ms Pac-Man : pack mis en ligne par [125scratch](https://sounds.spriters-resource.com/profile/125scratch/) sur
+      sounds.spriters-resource.com
 - **Fenêtre, entrées, audio** : [SDL3](https://libsdl.org) et ses liaisons C# [SDL3#](https://github.com/edwardgushchin/SDL3-CS)
   (licence zlib).
 

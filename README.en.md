@@ -72,7 +72,7 @@ The notices shipped to users are in `packaging\`, in French (`LISEZMOI-*.txt`) a
 ## Game selection
 
 At launch, a menu offers **Pac-Man** and **Ms. Pac-Man** (up / down arrows, then `1` or `2` to confirm). Each game has
-its own sounds, sprites, mazes, attract mode and demo. `Esc` (when not in full screen) goes back to the menu:
+its own sounds, sprites, mazes, attract mode and demo. `Esc` (when not in full screen) goes back to the menu from the attract mode, the demo or the start screen (not during a game):
 switching games resets the credits and the high score, as if changing cabinets.
 
 To start a game directly, without the menu: use the `--game=pacman` or `--game=mspacman` command-line option, or
@@ -87,7 +87,7 @@ To start a game directly, without the menu: use the `--game=pacman` or `--game=m
 | `2` | Start a 2-player game (2 credits) |
 | Arrow keys | Steer Pac-Man / Ms. Pac-Man |
 | `Alt` + `Enter` | Toggle full screen / windowed (`Esc` leaves full screen) |
-| `Esc` | Back to the game selection menu (when not in full screen) |
+| `Esc` | Back to the game selection menu, outside a game and when not in full screen |
 | `F12` / `F11` | Volume up / down (10 % steps) |
 
 As in the arcade, there is no pause. Keys `5`, `1` and `2` also work on the numeric keypad; they are recognized by
@@ -222,8 +222,11 @@ The resources (sprites and sounds) are provided with the project, in the `PACMAN
 
 - **Sprites**: sprite sheets uploaded by [Superjustinbros](https://www.spriters-resource.com/profile/superjustinbros/)
   on spriters-resource.com. The sheets used by the game are a personal adaptation of them.
-- **Sounds**: packs uploaded by [125scratch](https://sounds.spriters-resource.com/profile/125scratch/) on
-  sounds.spriters-resource.com, with [Brian Fan](https://sounds.spriters-resource.com/profile/brian+fan/) as contributor.
+- **Sounds**:
+    - Pac-Man: pack uploaded by [Inthegrave](https://sounds.spriters-resource.com/profile/inthegrave/) on
+      sounds.spriters-resource.com
+    - Ms. Pac-Man: pack uploaded by [125scratch](https://sounds.spriters-resource.com/profile/125scratch/) on
+      sounds.spriters-resource.com
 - **Window, input, audio**: [SDL3](https://libsdl.org) and its C# bindings [SDL3#](https://github.com/edwardgushchin/SDL3-CS)
   (zlib license).
 
