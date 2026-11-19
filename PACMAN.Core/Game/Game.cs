@@ -527,6 +527,10 @@ namespace PacmanWinForms
             CurrentLevel++;
             IsNextLevelTransition = true;
 
+            // Les règles "après une mort" ne valent que pour le niveau en cours :
+            // un nouveau niveau repart de zéro pour ce joueur
+            player.HasLostALife = false;
+
             InitializeGameValue();
             readyTimer = 120;        // 120 frames = ~2 secondes à 60 Hz
         }
